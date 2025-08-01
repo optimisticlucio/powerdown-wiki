@@ -40,6 +40,8 @@ Thumbnail tinytext NOT NULL, -- References a File DB url
 CreationDate date NOT NULL,
 LastEditDate timestamp NOT NULL, -- SHOULD NOT BE EDITABLE TO USERS!!
 Format enum(IMAGE, VIDEO) NOT NULL -- I think I should change this. This does not play well with everything else. Maybe just set the format based on the contents of the urls? Whether they're .png or .mov or anything?
+-- TO HANDLE: IMG LINKS
+-- TO HANDLE: TAGS
 
 ```
 
