@@ -7,41 +7,43 @@ graph LR
 
 source["Users"]
 main["Main Code"]
+creator["Creator"]
 
 subgraph Art Databases
-    artdb["Metadata"]
-    artfiledb["Image Files"]
+    artdb["Post"]
+    artimagedb["Image"]
     arttagdb["Tags"]
+    arttoartistdb["Art to Artist"]
 end
 
 
 source --- main
 main --- artdb
-artdb --> artfiledb
+artdb --> artimagedb
 arttagdb --> artdb
+arttoartistdb <--> artdb
+creator <--> arttoartistdb
 ```
 
 ## Art Databases
 
-The art databases will consist of four databases:
+The art databases will consist of several databases:
 
-- One holding most metadata for each art post. (Post DB)
-- One holding the tags of each post. (Tags DB)
-- One holding the img/video files of the posts. (File DB)
-- One holding links *to* the File DB, connecting it to the relevant post from Post DB (Image DB)
+- **Post DB,** holding the metadata that's 1:1 for each post. Title, thumbnail, etc.
+- **Tag DB,** holding the tags of each post.
+- **File DB,** holding the img/video files of the posts.
+- **Image DB,** holding links *to* the File DB, connecting it to the relevant post from Post DB.
+- **ArtToArtist DB,** holding foreign keys from Post DB and Creator DB, connecting art with artist. (This will allow searching art by artist, and having more than one artist per art piece.)
 
-The Post database will be an SQLite db run on Cloudflare's D1 infrastructure. It'll be a single table, with the following columns:
+The Post database will be an SQLite db run on Cloudflare's D1 infrastructure, with the following columns:
 
 ```sql
 ID int NOT NULL PRIMARY KEY,
 Title varchar(255) NOT NULL,
 Thumbnail tinytext NOT NULL, -- References a File DB url
--- HOW DO I HANDLE ARTISTS? JSON OR FOREIGN KEY?
 CreationDate date NOT NULL,
 LastEditDate timestamp NOT NULL, -- SHOULD NOT BE EDITABLE TO USERS!!
 Format enum(IMAGE, VIDEO) NOT NULL -- I think I should change this. This does not play well with everything else. Maybe just set the format based on the contents of the urls? Whether they're .png or .mov or anything?
--- TO HANDLE: IMG LINKS
--- TO HANDLE: TAGS
 
 ```
 
