@@ -17,8 +17,8 @@ subgraph Art Databases
 end
 
 
-source --- main
-main --- artdb
+source --> main
+main --> artdb
 artdb --> artimagedb
 arttagdb --> artdb
 arttoartistdb <--> artdb
@@ -35,7 +35,7 @@ The art databases will consist of several databases:
 - **Image DB,** holding links *to* the File DB, connecting it to the relevant post from Post DB.
 - **ArtToArtist DB,** holding foreign keys from Post DB and Creator DB, connecting art with artist. (This will allow searching art by artist, and having more than one artist per art piece.)
 
-The Post database will be an SQLite db run on Cloudflare's D1 infrastructure, with the following columns:
+The Post database will be an SQLite table run on Cloudflare's D1 infrastructure, with the following columns:
 
 ```sql
 ID int NOT NULL PRIMARY KEY,
@@ -47,7 +47,7 @@ Format enum(IMAGE, VIDEO) NOT NULL -- I think I should change this. This does no
 
 ```
 
-The Tags database will be another D1 database, this one exclusively holding the tags of each art piece.
+The Tags database will be another D1 table, this one exclusively holding the tags of each art piece.
 
 The File database will be a R2 Cloudflare database. They allow up to 10GB for free per month which is very nice.
 
@@ -57,3 +57,11 @@ TODO!
 
 - What's the max length we expect a title to be? It shouldn't be too long for useability. Right now it's 255 just for the sake of it.
 - How can we make sure this db will handle emojis and special characters appropriately?
+
+## Creators
+
+This is a D1 SQLite table representing the authors, artists, etc who contribute to the site.
+
+### Considerations
+
+- Should we be able to connect users to Creators? 
