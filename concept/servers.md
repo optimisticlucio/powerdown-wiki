@@ -102,6 +102,7 @@ The Post database will include the following columns:
 ```sql
 ID int NOT NULL PRIMARY KEY,
 Title varchar(255) NOT NULL,
+Slug varchar(255) NOT NULL, -- The slug to reach this art: /art-archive/[slug]
 Thumbnail tinytext NOT NULL, -- References a File DB url
 CreationDate date NOT NULL,
 LastEditDate timestamp NOT NULL, -- SHOULD NOT BE EDITABLE TO USERS!! default is CreationDate.
@@ -156,6 +157,7 @@ ShortName varchar(12) NOT NULL,
 Thumbnail tinytext NOT NULL, -- References an File DB url
 Creator varchar(255) FOREIGN KEY REFERENCES Creator(Username),
 PageContents LONGTEXT,
+CharacterTag varchar(255), 
 -- TODO: Fill in all the stupid details I allowed in character pages until now
 ```
 
