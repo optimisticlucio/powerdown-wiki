@@ -10,9 +10,9 @@ TODO
 
 ---
 
-## Databases
+## Database
 
-The databases will be mostly SQLite tables stored on Cloudflare's D1 service, and partially file hosting databases on the R2 service.
+The database will be mostly SQLite tables stored on Cloudflare's D1 service, and partially file hosting on the R2 service.
 
 ```mermaid
 graph LR
@@ -62,20 +62,20 @@ character --> creator
 
 ### User
 
-The user databases will consist of the following:
+The user tables will consist of the following:
 
-- **User DB,** holding the info regarding the users registered to the site.
-- **OpenID DB,** holding the indentifiers for each user on various OpenID protocols I implemented for login. (Initially just github or discord, but making it a table already to not bite it later.)
-- **Session DB,** holding the current sessions of each user.
+- **User,** holding the info regarding the users registered to the site.
+- **OpenID,** holding the indentifiers for each user on various OpenID protocols I implemented for login. (Initially just github or discord, but making it a table already to not bite it later.)
+- **Session,** holding the current sessions of each user.
 
-The User DB will include the following columns:
+The User table will include the following columns:
 
 ```sql
     ID int NOT NULL PRIMARY KEY,
     Username varchar(30) NOT NULL,
 ```
 
-The OpenID DB will include the following columns:
+The OpenID table will include the following columns:
 
 ```sql
     TokenIssuer varchar(255? /*how long?*/) NOT NULL,
@@ -89,15 +89,15 @@ The OpenID DB will include the following columns:
 
 ### Art
 
-The art databases will consist of the following:
+The art tables will consist of the following:
 
-- **Post DB,** holding the metadata that's 1:1 for each post. Title, thumbnail, etc.
-- **Tag DB,** holding the tags of each post.
-- **File DB,** holding the img/video files of the posts.
-- **Image DB,** holding links *to* the File DB, connecting it to the relevant post from Post DB.
-- **ArtToArtist DB,** holding foreign keys from Post DB and Creator DB, connecting art with artist. (This will allow searching art by artist, and having more than one artist per art piece.)
+- **Post,** holding the metadata that's 1:1 for each post. Title, thumbnail, etc.
+- **Tag,** holding the tags of each post.
+- **File,** holding the img/video files of the posts.
+- **Image,** holding links *to* the File table, connecting it to the relevant post from Post table.
+- **ArtToArtist,** holding foreign keys from Post table and Creator table, connecting art with artist. (This will allow searching art by artist, and having more than one artist per art piece.)
 
-The Post database will include the following columns:
+The Post table will include the following columns:
 
 ```sql
 ID int NOT NULL PRIMARY KEY,
@@ -119,7 +119,7 @@ Tag varchar(64) NOT NULL,
 BelongsTo int NOT NULL FOREIGN KEY REFERENCES Post(ID)
 ```
 
-The File database will be a R2 Cloudflare database. They allow up to 10GB for free per month which is very nice.
+File will be on Cloudflare's R2. They allow up to 10GB for free per month which is very nice.
 
 ArtToArtist will associate the items in Post with their creators.
 
@@ -131,7 +131,7 @@ Creator varchar(255) NOT NULL FOREIGN KEY REFERENCES Creator(Username)
 #### Considerations
 
 - What's the max length we expect a title to be? It shouldn't be too long for useability. Right now it's 255 just for the sake of it.
-- How can we make sure this db will handle emojis and special characters appropriately?
+- How can we make sure this table will handle emojis and special characters appropriately?
 
 ### Creator
 
@@ -143,13 +143,13 @@ Username varchar(255) NOT NULL PRIMARY KEY
 
 ### Character
 
-The Character databases will consist of the following:
+The Character tables will consist of the following:
 
-- **Character DB**, an sql table with data on the various characters.
-- **Ritual DB**, an sql table with ritual-relevant data on the characters who this applies to.
-- **File DB**, holding the various image associated with the characters.
+- **Character**, an sql table with data on the various characters.
+- **Ritual**, an sql table with ritual-relevant data on the characters who this applies to.
+- **File**, holding the various image associated with the characters.
 
-The columns of Character DB will be:
+The columns of Character will be:
 
 ```sql
 ID int NOT NULL PRIMARY KEY,
