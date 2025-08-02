@@ -25,10 +25,13 @@ subgraph Art
     artimagedb["Image"]
     arttagdb["Tags"]
     arttoartistdb["Art to Artist"]
+    artfile["File"]
 
     artdb --> artimagedb
     arttagdb --> artdb
     arttoartistdb --> artdb
+    artdb --> artfile
+    artimagedb --> artfile
 end
 
 subgraph User
@@ -40,10 +43,18 @@ subgraph User
     openid --> user
 end
 
+subgraph Character
+    character["Character"]
+    ritual["Ritual"]
+    characterfile["File"]
+
+    ritual --> character
+    character --> characterfile
+end
 
 arttoartistdb --> creator
 creator --> user
-
+character --> creator
 
 ```
 
@@ -95,21 +106,61 @@ Thumbnail tinytext NOT NULL, -- References a File DB url
 CreationDate date NOT NULL,
 LastEditDate timestamp NOT NULL, -- SHOULD NOT BE EDITABLE TO USERS!! default is CreationDate.
 Format enum(IMAGE, VIDEO) NOT NULL, -- I think I should change this. This does not play well with everything else. Maybe just set the format based on the contents of the urls? Whether they're .png or .mov or anything?
-PostedBy int FOREIGN KEY REFERENCES User(ID) -- Nullable. Null means it's from the static site to webapp import.
+PostedBy int FOREIGN KEY REFERENCES User(ID) -- Nullable. Null means it's from the [static site to webapp import process].
 
 ```
 
 The Tags database will be another D1 table, this one exclusively holding the tags of each art piece.
 
+```sql
+ID int NOT NULL PRIMARY KEY,
+Tag varchar(64) NOT NULL,
+BelongsTo int NOT NULL FOREIGN KEY REFERENCES Post(ID)
+```
+
 The File database will be a R2 Cloudflare database. They allow up to 10GB for free per month which is very nice.
 
-TODO!
+ArtToArtist will associate the items in Post with their creators.
+
+```sql
+PostID int NOT NULL FOREIGN KEY REFERENCES Post(ID)
+Creator varchar(255) NOT NULL FOREIGN KEY REFERENCES Creator(Username)
+```
 
 #### Considerations
 
 - What's the max length we expect a title to be? It shouldn't be too long for useability. Right now it's 255 just for the sake of it.
 - How can we make sure this db will handle emojis and special characters appropriately?
 
-## Creators
+### Creator
 
-This is a D1 SQLite table representing the authors, artists, etc who contribute to the site.
+An SQL table representing the authors, artists, etc who contribute to the site.
+
+```sql
+Username varchar(255) NOT NULL PRIMARY KEY
+```
+
+### Character
+
+The Character databases will consist of the following:
+
+- **Character DB**, an sql table with data on the various characters.
+- **Ritual DB**, an sql table with ritual-relevant data on the characters who this applies to.
+- **File DB**, holding the various image associated with the characters.
+
+The columns of Character DB will be:
+
+```sql
+ID int NOT NULL PRIMARY KEY,
+ShortName varchar(12) NOT NULL,
+Thumbnail tinytext NOT NULL, -- References an File DB url
+Creator varchar(255) FOREIGN KEY REFERENCES Creator(Username),
+PageContents LONGTEXT,
+-- TODO: Fill in all the stupid details I allowed in character pages until now
+```
+
+TODO: Write down the ritual-related stuff.
+
+#### Considerations
+
+- Is storing all the page text as one big value a good idea? I won't ever need it outside of the context of loading the page, so there aren't any modularity issues to worry about.
