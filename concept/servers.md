@@ -4,12 +4,6 @@ This is the current format I think would be good for the server, before I start 
 
 ---
 
-## Code
-
-TODO
-
----
-
 ## Database
 
 The database will be mostly SQLite tables stored on Cloudflare's D1 service, and partially file hosting on the R2 service.
