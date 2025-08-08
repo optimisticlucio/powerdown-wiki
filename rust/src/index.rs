@@ -1,3 +1,8 @@
+use axum::{routing::get, Router};
+
+pub fn router() -> Router {
+    Router::new().route("/", get(homepage))
+}
 
 struct FrontpageItem {
     pub name: String,
@@ -5,6 +10,7 @@ struct FrontpageItem {
     pub image_url: String
 }
 
-pub async fn homepage() -> &'static str {
+async fn homepage() -> &'static str {
     "Huh, it worked!"
 }
+

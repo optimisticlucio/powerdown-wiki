@@ -15,7 +15,9 @@ This code's going to be working on cloudflare's infrastructure, including
 ```mermaid
 graph LR
 
-lib>"lib.rs<br/>Entry Point"]
+main>"main.rs<br/>Entry Point"]
+
+lib["lib.rs"]
 
 index["index.rs<hr/>Handles root pages like index or 404"]
 
@@ -48,9 +50,11 @@ subgraph Stories
     stories["stories.rs"]
 end
 
-static["static.rs?"]
+static["static_files.rs"]
 misc["misc.rs"]
 search["search.rs"]
+
+main ---> lib
 
 lib -- "/" --> index
 lib -- "/art-archive/" --> art

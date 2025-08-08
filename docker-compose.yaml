@@ -1,0 +1,7 @@
+services:
+  rust-backend:
+    build: rust/.
+  postgres:
+    image: postgres
+  ngnix:
+    image: ngnix
