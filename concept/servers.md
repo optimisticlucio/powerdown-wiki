@@ -6,7 +6,7 @@ This is the current format I think would be good for the server, before I start 
 
 ## Database
 
-The database will be mostly SQLite tables stored on Cloudflare's D1 service, and partially file hosting on the R2 service.
+The database will be partially stored on a Postgres Docker Image ran locally, and partially [TODO: Figure out if there's some convenient way to do file storage here or do I just send it all to AWS directly]
 
 ```mermaid
 graph LR
@@ -65,16 +65,16 @@ The user tables will consist of the following:
 The User table will include the following columns:
 
 ```sql
-    ID int NOT NULL PRIMARY KEY,
+    ID bigserial NOT NULL PRIMARY KEY,
     Username varchar(30) NOT NULL,
 ```
 
 The OpenID table will include the following columns:
 
 ```sql
-    TokenIssuer varchar(255? /*how long?*/) NOT NULL,
-    IssuerUserID varchar(255?) NOT NULL,
-    LocalUserID int NOT NULL FOREIGN KEY REFERENCES User(ID),
+    TokenIssuer varchar(256? /*how long?*/) NOT NULL,
+    IssuerUserID varchar(256?) NOT NULL,
+    LocalUserID bigserial NOT NULL FOREIGN KEY REFERENCES User(ID),
 ```
 
 #### Considerations
@@ -94,31 +94,31 @@ The art tables will consist of the following:
 The Post table will include the following columns:
 
 ```sql
-ID int NOT NULL PRIMARY KEY,
+ID bigserial NOT NULL PRIMARY KEY,
 Title varchar(255) NOT NULL,
 Slug varchar(255) NOT NULL, -- The slug to reach this art: /art-archive/[slug]
-Thumbnail tinytext NOT NULL, -- References a File DB url
+Thumbnail text NOT NULL, -- References a File DB url
 CreationDate date NOT NULL,
-LastEditDate timestamp NOT NULL, -- SHOULD NOT BE EDITABLE TO USERS!! default is CreationDate.
+LastEditDate timestamp NOT NULL, -- SHOULD NOT BE EDITABLE TO USERS!!
 Format enum(IMAGE, VIDEO) NOT NULL, -- I think I should change this. This does not play well with everything else. Maybe just set the format based on the contents of the urls? Whether they're .png or .mov or anything?
-PostedBy int FOREIGN KEY REFERENCES User(ID) -- Nullable. Null means it's from the [static site to webapp import process].
+PostedBy bigserial FOREIGN KEY REFERENCES User(ID) -- Nullable. Null means it's from the [static site to webapp import process].
 
 ```
 
-The Tags database will be another D1 table, this one exclusively holding the tags of each art piece.
+The Tags database will be table, this one exclusively holding the tags of each art piece.
 
 ```sql
-ID int NOT NULL PRIMARY KEY,
+ID bigserial NOT NULL PRIMARY KEY,
 Tag varchar(64) NOT NULL,
-BelongsTo int NOT NULL FOREIGN KEY REFERENCES Post(ID)
+BelongsTo bigserial NOT NULL FOREIGN KEY REFERENCES Post(ID)
 ```
 
-File will be on Cloudflare's R2. They allow up to 10GB for free per month which is very nice.
+File will be on [TODO: select where to store files during runtime].
 
 ArtToArtist will associate the items in Post with their creators.
 
 ```sql
-PostID int NOT NULL FOREIGN KEY REFERENCES Post(ID)
+PostID bigserial NOT NULL FOREIGN KEY REFERENCES Post(ID)
 Creator varchar(255) NOT NULL FOREIGN KEY REFERENCES Creator(Username)
 ```
 
@@ -146,11 +146,11 @@ The Character tables will consist of the following:
 The columns of Character will be:
 
 ```sql
-ID int NOT NULL PRIMARY KEY,
+ID bigserial NOT NULL PRIMARY KEY,
 ShortName varchar(12) NOT NULL,
-Thumbnail tinytext NOT NULL, -- References an File DB url
+Thumbnail text NOT NULL, -- References an File DB url
 Creator varchar(255) FOREIGN KEY REFERENCES Creator(Username),
-PageContents LONGTEXT,
+PageContents text,
 CharacterTag varchar(255), 
 -- TODO: Fill in all the stupid details I allowed in character pages until now
 ```

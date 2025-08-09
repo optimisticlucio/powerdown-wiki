@@ -13,4 +13,3 @@ struct FrontpageItem {
 async fn homepage() -> &'static str {
     "Huh, it worked!"
 }
-
