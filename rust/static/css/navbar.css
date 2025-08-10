@@ -26,6 +26,8 @@ nav {
     .title {
         font-size: 2em;
         font-weight: 800;
+        min-height: min-content;
+        margin: auto;
     }
 
     .left, .right {

@@ -2,6 +2,7 @@
 @import url(fonts.css);
 @import url(navbar.css);
 @import url(characters.css);
+@import url(frontpage.css);
 
 :root {
     font-family: "Urbanist", "Courier New", Courier, monospace;

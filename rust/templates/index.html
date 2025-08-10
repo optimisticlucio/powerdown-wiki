@@ -3,8 +3,53 @@
 {% block title %}Front Page{% endblock %}
 
 {% block content %}
-<h1>Welcome!</h1>
-<p>
-    If you can notice, this isn't ready yet. Come back later!
-</p>
+
+<div class="wrapper wide frontpage">
+    <div class="frontpage-top">
+        <div class="titles">
+            <h1>Power Down: Archive</h1>
+            <h2>{{ random_quote }}</h2>
+        </div>
+        
+        <div class="logo">
+            <img src="https://powerdown.wiki/assets/img/pd_logo.png">
+        </div>
+
+        <div class="links">
+            <a class="onboard" href="/onboarding">
+                <img src="https://powerdown.wiki//assets/img/clueless.png">
+                <span>
+                    New Here?
+                </span>
+            </a>
+
+            <a class="discord" href="/">
+                <img src="https://powerdown.wiki//assets/img/discord-logo.svg">
+                <span>
+                    Join PD!
+                </span>
+            </a>
+        </div>
+    </div>
+
+    <div class="frontpage-bottom">
+        <div class="frontpage-buttons">
+            {%- for button in buttons -%}
+                <a class="button" href="{{ button.url }}">
+                    <span>
+                        {{ button.name }}
+                    </span>
+                    <img src="{{ button.image_url }}">
+                </a>
+            {%- endfor -%}
+        </div>
+
+        <div class="joke-area">
+            <div>
+                <div>This Website is Sponsored By:</div>
+                <img id="brought-by-img" src="https://powerdown.wiki/{{ random_ad }}">
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -92,3 +92,24 @@ pub fn get_test_characters() -> Vec<Character> {
         }
     ]
 }
+
+pub fn get_frontpage_quotes() -> Vec<String> {
+    vec!["Because discord will not last forever, but random web forums from the 1980s will outlast us all.",
+    "Discord? More like Pisscorp.",
+    "The real Power Down was the HTML we cried over along the way.",
+    "What do you mean <body> has a 8 px margin around itself by default?? WHY??",
+    "I built an entire website before I unboxed an Unusual hat."
+    ].into_iter().map(String::from).collect()
+}
+
+pub fn get_frontpage_ads() -> Vec<String> {
+    vec!["/assets/img/ads/its-radical.gif",
+    "/assets/img/ads/jason.png",
+    "/assets/img/ads/Orbeez.jpg",
+    "/assets/img/ads/penny.png",
+    "/assets/img/ads/rabbl.jpg",
+    "/assets/img/ads/dodrinkos.png",
+    "/assets/img/ads/sock.png",
+    "/assets/img/ads/not-a-virus.png"
+    ].into_iter().map(String::from).collect()
+}
