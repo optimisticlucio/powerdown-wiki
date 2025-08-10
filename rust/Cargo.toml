@@ -7,7 +7,6 @@ authors = ["optimisticlucio <73440828+optimisticlucio@users.noreply.github.com>"
 [dependencies]
 tower-service = "0.3.3"
 openidconnect = "4.0.1"
-tera = "1"
 lazy_static = "1.5.0"
 ammonia = "4.1.1"
 serde = "1.0.219"
@@ -15,3 +14,5 @@ css-minify = "0.5.2"
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 axum = "0.8.4"
 postgres = "0.19.10"
+tower = "0.5.2"
+askama = "0.14.0"
