@@ -1,0 +1,34 @@
+{% extends "base-template.html" %}
+
+{% block title %}Characters{% endblock %}
+
+{% block content %}
+<div class="wrapper wide character-selector">
+    <h1>Characters</h1>
+    <h2>{{ random_subtitle }}</h2>
+
+    {% if birthday_characters.len() > 0 %}
+    <div class="wrapper dark birthday">
+        {% for character in birthday_characters %}
+        <img src="{{character.thumbnail_url}}">
+        {% endfor %}
+        <div>
+            <h1>Happy Birthday to [GET THEIR NAMES, FUCKHEAD]!</h1>
+            <p>Today is [GET DATE OF TODAY, FUCKHEAD.], meaning it's their birthday!</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="character-grid">
+        {% for character in characters %}
+        <a href="ADD-URLS-DICKHEAD" class="character-box">
+            <img class="character-icon" src="{{ character.thumbnail_url }}">
+            <p>
+                {{ character.name }}
+            </p>
+        </a>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

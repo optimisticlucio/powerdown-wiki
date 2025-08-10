@@ -34,14 +34,12 @@ lazy_static! {
 #[derive(Template)] 
 #[template(path = "index.html")]
 struct FrontpageTemplate {
-    title: &'static str,
     navbar: Navbar,
     buttons: &'static Vec<FrontpageItem>
 }
 
 async fn homepage() -> Html<String> {
     FrontpageTemplate {
-        title: "Front Page",
         navbar: Navbar::not_logged_in(),
         buttons: &FRONTPAGE_ITEMS
     }.render().unwrap().into()

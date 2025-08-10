@@ -5,17 +5,21 @@ use std::time;
 use tower::ServiceBuilder;
 use std::fs;
 use lazy_static::lazy_static;
+use askama::{Template};
+
+use crate::navbar::Navbar;
 
 mod index;
 mod static_files;
 mod characters;
 mod navbar;
+mod test_data;
 
 pub fn router() -> Router {
     Router::new()
         .merge(index::router())
-        .nest("/static/", static_files::router())
-        .nest("/characters/", characters::router())
+        .nest("/static", static_files::router())
+        .nest("/characters", characters::router())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
@@ -42,11 +46,18 @@ async fn root_error_handler(err: BoxError) -> (StatusCode, String) {
     }
 }
 
+#[derive(Template)] 
+#[template(path = "404.html")]
+struct PageNotFound {
+    navbar: Navbar
+}
+
 async fn page_not_found() -> (StatusCode, Html<String>) {
-    // TODO: Put navbar on this shit, it looks naked.
     (
         StatusCode::NOT_FOUND, 
-        fs::read_to_string("static/404.html")
-            .unwrap_or(String::from("404 PAGE CONTENT DID NOT LOAD. PAGE LUCIO, STAT.")).into()
+        PageNotFound {
+            navbar: Navbar::not_logged_in()
+        }.render()
+            .unwrap_or(String::from("404 PAGE CONTENT CRASHED ON COMPILATION. PAGE LUCIO, STAT.")).into()
     )
 }
