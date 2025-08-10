@@ -16,3 +16,4 @@ axum = "0.8.4"
 postgres = "0.19.10"
 tower = "0.5.2"
 askama = "0.14.0"
+tower-http = {version = "0.6.6", features = ["fs"]}

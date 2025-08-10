@@ -1,0 +1,59 @@
+nav {
+    font: 1em "Urbanist";
+    justify-content: space-between;
+    display: flex;
+    background-color: var(--bright-shade);
+    padding: 0.5em;
+
+    a {
+        text-decoration: none;
+    }
+
+    .curr-page {
+        color: white;
+    }
+
+    .nav-item {
+        color: var(--brightest-shade);
+        transition: color 0.5s;
+
+        &:hover {
+            color: white;
+            transition: color 0.3s;
+        }
+    }
+
+    .title {
+        font-size: 2em;
+        font-weight: 800;
+    }
+
+    .left, .right {
+        padding-right: 0.5em;
+        display: flex;
+        align-items: center;
+
+        * {
+            display: inherit;
+            gap: 2ch;
+        }
+    }
+}
+
+@media screen and (max-width: 1100) {
+    nav {
+        font-size: 1.1em;
+
+        .title {
+            display: none;
+        }
+
+        .right {
+            display: none;
+        }
+
+        .left {
+            margin: auto;
+        }
+    }
+}

@@ -1,3 +1,7 @@
 :root {
-    
+    --brightest-shade: #9D9EB8;
+    --bright-shade: #636474;
+    --neutral-shade: #464652;
+    --dark-shade: #373740;
+    --darkest-shade: #2E2E38;
 }

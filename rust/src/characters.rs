@@ -4,7 +4,7 @@ pub fn router() -> Router {
     Router::new().route("/", get("NOT IMPLEMENTED"))
 }
 
-struct Character {
+pub struct Character {
     pub is_hidden: bool,
     pub archival_reason: Option<String>, // If none, not archived.
 
@@ -22,3 +22,7 @@ struct Character {
 }
 
 // TODO: Get character ritual info
+
+pub fn get_with_birthday_today() -> Vec<Character> {
+    unimplemented!("Return characters who's birthday is today, relative to the server.")
+}

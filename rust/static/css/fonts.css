@@ -1,0 +1,19 @@
+@font-face {
+    font-family: "Lexend";
+    src: url("/static/fonts/Lexend-VariableFont_wght.ttf") format("opentype");
+    }
+
+@font-face {
+    font-family: "Urbanist";
+    src: url("/static/fonts/Urbanist-VariableFont_wght.ttf");
+}
+
+@font-face {
+    font-family: "Voltaire";
+    src: url("/static/fonts/Voltaire-Regular.ttf");
+}
+
+@font-face {
+    font-family: "Comic Sans MS";
+    src: url("/static/fonts/ComicSansMS3.ttf");
+}
