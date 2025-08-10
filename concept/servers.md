@@ -13,6 +13,7 @@ graph LR
 
 creator["Creator"]
 
+quotes["QuotesAndJokes"]
 
 subgraph Art
     artdb["Post"]
@@ -160,3 +161,18 @@ TODO: Write down the ritual-related stuff.
 #### Considerations
 
 - Is storing all the page text as one big value a good idea? I won't ever need it outside of the context of loading the page, so there aren't any modularity issues to worry about.
+
+### Quotes and Jokes
+
+The Quotes and Jokes table will hold... well, quotes and jokes. For the most part they're used in randomly pulled headers.
+
+```sql
+Funny text,
+Association text -- If it's a quote, if it's for a specific page? Written here. 
+```
+
+#### Considerations
+
+- Is this too generic of a table? Making a table for each of these types feels like overkill.
+- Should Association be an enum?
+- God those column names are awful.

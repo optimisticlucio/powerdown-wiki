@@ -14,6 +14,7 @@ mod static_files;
 mod characters;
 mod navbar;
 mod test_data;
+mod utils;
 
 pub fn router() -> Router {
     Router::new()
