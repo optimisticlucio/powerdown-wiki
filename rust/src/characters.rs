@@ -27,6 +27,7 @@ pub struct Character {
     pub infobox: Vec<(String, String)>,
     // TODO: relationships?
     // TODO: custom css
+    pub page_contents: String,
 }
 
 // TODO: Get character ritual info
