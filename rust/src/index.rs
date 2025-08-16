@@ -26,7 +26,7 @@ lazy_static! {
         },
         FrontpageItem {
             name: "Characters",
-            url: "https://powerdown.wiki/characters",
+            url: "/characters",
             image_url: "https://powerdown.wiki/assets/img/characters.png"
         }
     ];

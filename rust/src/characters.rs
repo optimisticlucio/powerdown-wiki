@@ -1,5 +1,3 @@
-use std::clone;
-
 use askama::Template;
 use axum::{response::Html, routing::get, Router};
 use rand::seq::IndexedRandom;
@@ -7,37 +5,22 @@ use crate::{navbar::Navbar, test_data, utils};
 use lazy_static::lazy_static;
 use chrono;
 
+mod page;
+pub mod structs;
+
+pub use structs::Character;
+
 pub fn router() -> Router {
     Router::new().route("/", get(character_index))
+        .route("/{character_slug}", get(page::character_page))
 }
-
-#[derive(Clone)]
-pub struct Character {
-    pub is_hidden: bool,
-    pub archival_reason: Option<String>, // If none, not archived.
-
-    pub name: String,
-    pub long_name: Option<String>,
-    pub subtitles: Vec<String>,
-    // TODO: character author
-    // TODO: character logo
-    // TODO: character birthday
-    pub thumbnail_url: String,
-    pub img_url: String,
-    pub infobox: Vec<(String, String)>,
-    // TODO: relationships?
-    // TODO: custom css
-    pub page_contents: String,
-}
-
-// TODO: Get character ritual info
 
 pub fn get_with_birthday_today() -> Vec<Character> {
     unimplemented!("Return characters who's birthday is today, relative to the server.")
 }
 
 #[derive(Template)] 
-#[template(path = "character-index.html")]
+#[template(path = "characters/index.html")]
 struct CharacterIndex<'a> {
     navbar: Navbar,
     random_subtitle: &'a str,

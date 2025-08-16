@@ -8,6 +8,7 @@ pub fn get_test_characters() -> Vec<Character> {
             name: "Skyber".to_owned(),
             long_name: None,
             subtitles: vec!["Electi Prime", "True Form", "Fallen Goddess", "#1 Plot Device", "ERA's Largest Ego", "Walking Corpse"].into_iter().map(String::from).collect(),
+            author: "Sir Skyber".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/characters/page-imgs/skyber-page.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/skyber.png".to_owned(),
             infobox: vec![
@@ -51,6 +52,7 @@ Skyber is obsessed with the delicate dance between endless pleasure and heart-sh
             name: "Sky".to_owned(),
             long_name: None,
             subtitles: vec!["Elusive Dragoness", "Scaled Pyromancer", "Violet Card Dealer", "Out of Your League", "Lady Luck"].into_iter().map(String::from).collect(),
+            author: "Sir Skyber".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/characters/page-imgs/sky-page.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/sky.png".to_owned(),
             infobox: vec![
@@ -81,6 +83,7 @@ Sky is able to conjure and manipulate abnormal violet flames that require no oxy
             name: "Preston".to_owned(),
             long_name: None,
             subtitles: vec!["Prick", "One-Eyed Rat", "Occulant Void"].into_iter().map(String::from).collect(),
+            author: "CharredCactus".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/art-archive/preston.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/preston.png".to_owned(),
             infobox: vec![
@@ -111,6 +114,7 @@ Preston’s ability to name himself ‘eye-inventory’ is connected to his left
             name: "Abigail".to_owned(),
             long_name: None,
             subtitles: vec!["Arachnid Cowgirl"].into_iter().map(String::from).collect(),
+            author: "Prushy".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/characters/page-imgs/abi.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/abigail.png".to_owned(),
             infobox: vec![
@@ -140,6 +144,7 @@ Abigail can achieve "Bullet Time", increasing her perception tenfold, to the poi
             name: "Melanie".to_owned(),
             long_name: Some("Nurse Melanie".to_owned()),
             subtitles: vec!["Miss Mystery"].into_iter().map(String::from).collect(),
+            author: "Kn0wledge".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/art-archive/nurse-melanie-transparent.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/melanie.png".to_owned(),
             infobox: vec![
