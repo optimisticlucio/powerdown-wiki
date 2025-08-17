@@ -4,6 +4,7 @@ use rand::seq::IndexedRandom;
 use crate::{navbar::Navbar, test_data, utils};
 use lazy_static::lazy_static;
 use chrono;
+use axum_extra::routing::RouterExt;
 
 mod page;
 pub mod structs;
@@ -12,7 +13,7 @@ pub use structs::Character;
 
 pub fn router() -> Router {
     Router::new().route("/", get(character_index))
-        .route("/{character_slug}", get(page::character_page))
+        .route_with_tsr("/{character_slug}", get(page::character_page))
 }
 
 pub fn get_with_birthday_today() -> Vec<Character> {

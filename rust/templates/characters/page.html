@@ -1,27 +1,29 @@
 {% extends "base-template.html" %}
 
-{% block title %}TODO: GIVE NAME{% endblock %}
+{% block title %}{{ name }}{% endblock %}
 
 {% block customhead %}
-<style>
-    .overlay::before {
-        {{ page.css-code }}
-    }
-</style>
+    {% if let Some(overlay_css) = overlay_css %}
+        <style>
+            .overlay::before {
+                {{ overlay_css }}
+            }
+        </style>
+    {% endif %}
 {% endblock%}
 
 {% block body %}
 <div class="overlay">
     {{ navbar | safe }}
     <div class="wrapper dark character-div">
-        {% if let Some(archival_reason) = character.archival_reason %}
+        {% if let Some(retirement_reason) = retirement_reason %}
             <div class="exclusion-reason">
                 <img src="//powerdown.wiki/assets/img/Alert Icon.png">
                 <div class="exclusion-text">
                     <div class="exclusion-title">
                         THIS CHARACTER IS NOT ACTIVELY IN POWER DOWN
                     </div>
-                    TODO: Parse Exclusion Formatting
+                    {{ retirement_reason | safe }}
                 </div>
             </div>
         {% endif %}
@@ -29,77 +31,32 @@
             <div class="left">
                 <div class="titles">
                     <div>
-                        <h1>{{ character-title }}</h1>
-                        {%- comment %} check if logo exists. If not, do not include this section. {% endcomment -%}
-                        {%- assign logo_path = '/assets/img/characters/logos/' | append: page.logo-file -%}
-                        {%- capture logo_exists %}{% file_exists {{ logo_path }} %}{% endcapture -%}
-                        
-                        {%- if page.logo-file and logo_exists != "false" -%}
+                        <h1>{{ name }}</h1>
+                        {% if let Some(logo_path) = character_logo %}
                             <img src="{{ logo_path }}">
-                        {%- endif -%}
+                        {% endif %}
                     </div>
-                    <h2 id="character-subtitle">{{ character-subtitle }}</h2>
+                    <h2 id="character-subtitle">{{ subtitle }}</h2>
                     <p class="text">
-                        {% for item in page.infobox-data %}
-                            <strong>{{item[0]}}:</strong> {{item[1]}} <br>
+                        {% for item in infobox %}
+                            <strong>{{item.0}}:</strong> {{item.1}} <br>
                         {% endfor %}
                     </p>
-                    <a class="text" href="/tags/{{ page.character-title | downcase | replace: ' ', '-' }}">
-                        ART OF {{ character-title }}
+                    <a class="text" href="/tags/{{ tag }}">
+                        ART OF {{ name }}
                     </a>
                 </div>
             </div>
             <div class="right">
-                <img src="/assets/img/{{ page.character-img-file }}">
-                {% if page.character-author != blank %}
-                    <p>
-                        Author: {{ page.character-author }}
-                    </p>
-                {% endif %}
+                <img src="{{ page_img }}">
+                <p>
+                    Creator: {{ creator }}
+                </p>
             </div>
         </div>
 
         <div class="character-bottom">
-{% comment %} Do NOT move this shit. If it moves it breaks. You move it, I kill you. {% endcomment %}
-{%- capture this-goddamn-thing -%} 
-</p>
-
-<p>
-{%- endcapture -%}
-{% capture newline %} 
-{% endcapture %}
-        
-                {% capture text_of_link %}
-                    {{ content }}
-                {% endcapture %}
-                {%- capture clean_text -%}
-                    {{ text_of_link | replace: this-goddamn-thing, '</br></br>' | replace: "</h1>", '</span> </h1> <div class="text">' | replace: "<h1", '</div> <h1> <span' | remove_first: "</div>"}} </div>
-                {%- endcapture %}
-
-                {{ image }}
-                {{ clean_text }} 
-
-                {% comment %} Relationships section {% endcomment %}
-                {% if page.relationships %} 
-                    <h1><span>Relationships</span></h1>
-
-                    <div class="text">
-                        {% for relationship in page.relationships %}
-                        {% assign character_link = relationship[0] | replace: ' ', '-' %}
-                            <div class="relationship">
-                                <a href="/characters/{{ character_link }}"><img src="/assets/img/characters/thumbnails/{{relationship[0] | downcase}}.png"></a>
-
-                                <div class="relationtext">
-                                    <a href="/characters/{{ character_link }}">
-                                        <h2>{{relationship[0]}}</h2>
-                                    </a>
-
-                                    {{relationship[1]}}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
+                {{ content | safe }} 
         </div>
     </div>
     

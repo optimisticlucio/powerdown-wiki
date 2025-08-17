@@ -1,11 +1,12 @@
 use axum::{
     error_handling::HandleErrorLayer, http::StatusCode, response::{Html, IntoResponse}, BoxError, Router
 };
+use axum_extra::routing::RouterExt;
 use std::time;
-use tower::ServiceBuilder;
-
+use tower::{ServiceBuilder, layer::Layer};
 
 use crate::navbar::Navbar;
+use tower_http::normalize_path::NormalizePathLayer;
 
 mod index;
 mod static_files;
@@ -18,10 +19,12 @@ mod errs;
 pub fn router() -> Router {
     Router::new()
         .merge(index::router())
-        .nest("/static", static_files::router())
-        .nest("/characters", characters::router())
+        // Use nest_service, and not nest. The latter has some funky behaviour wrt trailing slashes.
+        .nest_service("/static", static_files::router())
+        .nest_service("/characters", characters::router())
         .layer(
             ServiceBuilder::new()
+                .layer(NormalizePathLayer::trim_trailing_slash())
                 .layer(HandleErrorLayer::new(root_error_handler))
                 .timeout(time::Duration::from_secs(10))
         )

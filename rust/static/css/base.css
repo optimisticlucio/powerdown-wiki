@@ -1,0 +1,104 @@
+
+:root {
+    font-family: "Urbanist", "Courier New", Courier, monospace;
+    color: white;
+    background-color: var(--neutral-shade);
+    text-align: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+body {
+    margin: 0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+h1 {
+    font-family: "Voltaire";
+}
+
+h2 {
+    color: var(--brightest-shade);
+}
+
+a {
+    color: white;
+}
+
+
+.wrapper {
+    text-align: left;
+    max-width: 900px;
+    padding: 1em;
+    padding-bottom: 20px;
+    margin: auto;
+    overflow: auto;
+
+    strong, b {
+        font-weight: 800;
+    }
+
+    > :first-child {
+        margin-top: 0;
+        padding-top: 0;
+    }
+
+    h1 {
+        margin-bottom: 0;
+    }
+
+    h2 {
+        margin: 0.25em 1em 1em;
+    }
+
+    img {
+        max-width: 100%;
+    }
+
+    .text {
+        background-color: var(--dark-shade);
+        padding: 1em;
+        letter-spacing: 0.15ch;
+        line-height: 1.4em;
+        word-spacing: .2ch;
+        margin: 1em 0;
+
+        h1, h2, h3, h4 {
+            line-height: initial;
+        }
+
+        > :first-child {
+                margin-top: 0;
+            }
+    
+        > :last-child {
+                margin-bottom: 0;
+            }
+        
+        
+    }
+
+    &.dark {
+        background-color: var(--dark-shade);
+
+        .text {
+            background-color: var(--darkest-shade);
+        }
+    }
+
+    &.wide {
+        max-width: min(1200px, 80%)
+    }
+    
+    .buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 2ch;
+        font-size: 0.8em;
+        margin: 1em auto;
+    }
+}

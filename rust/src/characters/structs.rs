@@ -8,13 +8,13 @@ pub struct Character {
     pub long_name: Option<String>,
     pub subtitles: Vec<String>,
     pub author: String,
-    // TODO: character logo
+    pub logo_url: Option<String>,
     // TODO: character birthday
     pub thumbnail_url: String,
     pub img_url: String,
     pub infobox: Vec<(String, String)>,
     // TODO: relationships?
-    // TODO: custom css
+    pub overlay_css: Option<String>,
     pub page_contents: String,
 }
 

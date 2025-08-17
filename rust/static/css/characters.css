@@ -4,7 +4,6 @@ img.character-icon {
     object-fit: cover;
 }
 
-
 .character-selector {
     .birthday {
         margin: 1em auto;
@@ -48,6 +47,250 @@ img.character-icon {
                 margin-top: 0.5em;
                 margin-bottom: 0em;
                 font-weight: 500;
+            }
+        }
+    }
+}
+
+.character-div {
+    text-align: left;
+    margin: auto;
+
+    img {
+        position: relative;
+        z-index: 20;
+    }
+
+    strong {
+        color: var(--brightest-shade);
+    }
+    
+    h1 {
+        margin: revert;
+        font-size: 4em;
+    }
+
+    h2 {
+        font-size: 2em;
+        text-transform: uppercase;
+        font-family: 'Voltaire';
+        color: var(--brightest-shade);;
+        margin: 0;
+    }
+
+    .exclusion-reason {
+        display: flex; 
+        justify-content: center;
+        text-wrap: balance;
+        padding: 5px;
+        margin: 15px;
+        background-color: var(--darkest-shade);;
+
+        img {
+            width: 75px;
+            height: 75px;
+            margin: auto;
+            margin-left: 2.5%;
+        }
+
+        .exclusion-text {
+            margin: 5px;
+            text-align: center;
+
+            .exclusion-title {
+                font-weight: bold;
+                font-size: 1.5em;
+            }
+            
+            p {
+                margin: 7px;
+            }
+        }
+    }
+
+    .character-top {
+        margin-top: 10px;
+        width: 90%;
+        margin: auto;
+        display: flex; 
+        align-content: stretch;
+        justify-content: center;
+
+        .left {
+            display: flex; 
+            justify-content: center;
+
+            .titles {
+                div {
+                    display: flex;
+                    justify-content: space-between;
+                }
+
+                h1 {
+                    font-size: 4em;
+                    letter-spacing: .4rem;
+                    text-transform: uppercase;
+                    font-family: 'Voltaire';
+                    margin: 0;
+                }
+
+                .text {
+                    max-width: 20em;
+                }
+
+                a.text {
+                    display: block;
+                    font-size: 1.5em;
+                    text-transform: uppercase;
+                    font-family: 'Voltaire';
+                    text-decoration: none;
+                    text-align: center;
+
+                    &:hover {
+                        filter:brightness(0.6);
+                    }
+                }
+
+                p {
+                    text-align: left;
+                }
+
+                
+            }
+            
+            img {
+                z-index: 20;
+                margin: auto;
+                max-width: 4em; 
+                max-height: 4em;
+            }
+            
+        }
+        .right {
+            margin-left: 2em;
+            align-content: center;
+
+            img {
+                margin: auto;
+                object-fit: contain;
+                max-height: 25em;
+                max-width: 22em;
+            }
+
+            p {
+                text-align: right;
+                text-transform: uppercase;
+                font-family: 'Voltaire';
+                line-height: 0%;
+            }
+        }
+    }
+
+    .character-bottom {
+        text-align: left;
+        padding-left: 10%;
+        padding-right: 10%;
+
+        h1, h2 {
+            font-size: 2em;
+            text-transform: uppercase;
+            font-family: 'Voltaire';
+        }
+
+        h1 {
+            position: relative;
+            padding-left: 2em;
+            color: var(--brightest-shade);
+            text-align: left;
+            margin: 1em 0;
+            border: none;
+
+            &::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: var(--brightest-shade);;
+                z-index: 0;
+                transform: translateY(-50%);
+            }
+        
+            span {
+                position: relative;
+                background: var(--dark-shade);;
+                padding: 0 0.5ch;
+                z-index: 1;
+            }
+        }
+
+
+        p {
+            margin-top: 1em;
+            margin-bottom: 1em;
+            margin: 0%;
+        }
+
+        .relationship {
+            display: flex;
+            margin: 0.5em 0;
+            
+            &.text {
+                padding: 0.5em;
+            }
+
+            h1 {
+                padding-left: 0%;
+                padding-right: 0%;
+            }
+
+            img {
+                margin: auto 1ch;
+                width: 75px;
+                height: 75px;
+                max-width: unset;
+            }
+
+            .relationtext {
+                margin: auto;
+                margin-left: 0;
+
+                a {
+                    text-decoration: none;
+                }
+                h2 {
+                    font-size: 1.2em;
+                    margin: 0%;
+                }
+            }
+        }
+    }
+}
+
+/* CHARACTER OVERLAYS CODE */
+
+.overlay {
+    position: relative;
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: max(100%, 100vh);
+        z-index: 10;
+        pointer-events: none;
+    } 
+}
+
+@media screen and (max-width: 1100px) {
+    .character-div {
+        .character-top {
+            .right {
+                img {
+                    max-width: 40vw;
+                }
             }
         }
     }

@@ -11,6 +11,8 @@ pub fn get_test_characters() -> Vec<Character> {
             author: "Sir Skyber".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/characters/page-imgs/skyber-page.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/skyber.png".to_owned(),
+            logo_url: Some("https://powerdown.wiki//assets/img/characters/logos/Skyber.png".to_owned()),
+            overlay_css: Some(r#"mix-blend-mode: overlay; background: #453663;"#.to_owned()),
             infobox: vec![
                 ("Name", "Skyber Wyrmond"),
                 ("Age", "Unknown"),
@@ -55,6 +57,8 @@ Skyber is obsessed with the delicate dance between endless pleasure and heart-sh
             author: "Sir Skyber".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/characters/page-imgs/sky-page.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/sky.png".to_owned(),
+            logo_url: Some("https://powerdown.wiki//assets/img/characters/logos/Skyber.png".to_owned()),
+            overlay_css: Some(r#"mix-blend-mode: overlay; background: rgb(118, 103, 170);"#.to_owned()),
             infobox: vec![
                 ("Name", "Sky Starr"),
                 ("Age", "22"),
@@ -66,6 +70,8 @@ Skyber is obsessed with the delicate dance between endless pleasure and heart-sh
             ].into_iter().map(|(x,y)| (String::from(x), String::from(y))).collect(),
             page_contents:
 r#"
+TESTING. THIS IS TEST STUFF. WOO YEA BABY
+
 # Bio
 
 There is shockingly little to say about the sharp-dressed president of the Games and Recreation club. Sky somehow feels as if she’s just arrived at E.R.A. with her cousin, Noa, and at the same time, feels like they’ve always been there. When asked how long she’s been away from her home in London, she tends to answer something like “longer than you”.
@@ -86,6 +92,8 @@ Sky is able to conjure and manipulate abnormal violet flames that require no oxy
             author: "CharredCactus".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/art-archive/preston.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/preston.png".to_owned(),
+            logo_url: Some("https://powerdown.wiki//assets/img/characters/logos/Preston.png".to_owned()),
+            overlay_css: Some(r#"mix-blend-mode: overlay; background: #c4c261;"#.to_owned()),
             infobox: vec![
                 ("Name", "Preston Puntur"),
                 ("Age", "21"),
@@ -117,6 +125,8 @@ Preston’s ability to name himself ‘eye-inventory’ is connected to his left
             author: "Prushy".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/characters/page-imgs/abi.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/abigail.png".to_owned(),
+            logo_url: Some("https://powerdown.wiki//assets/img/characters/logos/Abigail.png".to_owned()),
+            overlay_css: Some(r#"mix-blend-mode: overlay; background: linear-gradient(180deg, #631209 0%, #754b36 100%);"#.to_owned()),
             infobox: vec![
                 ("Name", "Abigail Brookes"),
                 ("Age", "Mid-30s"),
@@ -147,6 +157,8 @@ Abigail can achieve "Bullet Time", increasing her perception tenfold, to the poi
             author: "Kn0wledge".to_owned(),
             img_url: "https://powerdown.wiki/assets/img/art-archive/nurse-melanie-transparent.png".to_owned(),
             thumbnail_url: "https://powerdown.wiki/assets/img/characters/thumbnails/melanie.png".to_owned(),
+            overlay_css: Some(r#"mix-blend-mode: overlay; background: #5145a0;"#.to_owned()),
+            logo_url: None,
             infobox: vec![
                 ("Name", "Melanie"),
                 ("Age", "???"),
