@@ -15,6 +15,7 @@ mod navbar;
 mod test_data;
 mod utils;
 mod errs;
+mod stories;
 
 pub fn router() -> Router {
     Router::new()

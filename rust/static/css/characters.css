@@ -227,9 +227,7 @@ img.character-icon {
 
 
         p {
-            margin-top: 1em;
-            margin-bottom: 1em;
-            margin: 0%;
+            margin: 1em 0;
         }
 
         .relationship {

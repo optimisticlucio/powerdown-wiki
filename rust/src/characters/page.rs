@@ -65,7 +65,17 @@ pub async fn character_page(
 }
 
 fn parse_character_page_contents(unparsed_contents: &str) -> Option<String> {
-    let mut parsed_contents = markdown_to_html(unparsed_contents, &comrak::Options::default())
+    let mut parsed_contents = markdown_to_html(unparsed_contents, &comrak::Options{
+        extension: comrak::ExtensionOptions { 
+            ..comrak::ExtensionOptions::default()
+        },
+        parse: comrak::ParseOptions {
+            ..comrak::ParseOptions::default()
+        },
+        render: comrak::RenderOptions {
+            ..comrak::RenderOptions::default()
+        }    
+    })
         .replace("<h1>", r#"</div> <h1> <span>"#)
         .replace("</h1>", r#"</span> </h1> <div class="text">"#);
 
