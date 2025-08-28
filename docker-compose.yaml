@@ -2,9 +2,9 @@ services:
   rust-backend:
     build: rust/.
 
-  localstack:
-    image: localstack/localstack
+  #localstack:
+  #  image: localstack/localstack
   postgres:
     image: postgres
-  ngnix:
-    image: ngnix
+  #ngnix:
+  #  image: ngnix
