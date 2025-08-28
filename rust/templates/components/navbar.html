@@ -7,4 +7,11 @@
             </div>
         </a>
     </div>
+    <div class="right">
+        {% if let Some(user) = user %}
+        <div>
+            User: {{ user.username }}
+        </div>
+        {% endif %}
+    </div>
 </nav>

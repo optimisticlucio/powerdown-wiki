@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::{response::Html, routing::get, Router};
 use rand::seq::IndexedRandom;
-use crate::{navbar::Navbar, test_data, utils};
+use crate::{user::User, test_data, utils};
 use lazy_static::lazy_static;
 use chrono;
 use axum_extra::routing::RouterExt;
@@ -23,7 +23,7 @@ pub fn get_with_birthday_today() -> Vec<Character> {
 #[derive(Template)] 
 #[template(path = "characters/index.html")]
 struct CharacterIndex<'a> {
-    navbar: Navbar,
+    user: Option<User>,
     random_subtitle: &'a str,
     characters: &'a Vec<Character>,
     birthday_characters: &'a Vec<Character>,
@@ -56,7 +56,7 @@ async fn character_index() -> Html<String> {
     };
 
     CharacterIndex {
-        navbar: Navbar::not_logged_in(),
+        user: None,
         random_subtitle: RANDOM_SUBTITLES.choose(&mut rand::rng()).unwrap(),
         characters: &displayed_characters,
         birthday_characters: &birthday_characters,

@@ -4,7 +4,7 @@ use ammonia::url::form_urlencoded::parse;
 use axum::{extract::Path, response::{ IntoResponse}};
 use askama::Template;
 use rand::seq::IndexedRandom;
-use crate::{errs::RootErrors, navbar::Navbar};
+use crate::{errs::RootErrors, user::User};
 use crate::test_data;
 use crate::utils::template_to_response;
 use comrak::{create_formatter, markdown_to_html};
@@ -12,7 +12,7 @@ use comrak::{create_formatter, markdown_to_html};
 #[derive(Template)] 
 #[template(path = "characters/page.html")]
 struct CharacterPage<'a> {
-    navbar: Navbar,
+    user: Option<User>,
 
     retirement_reason: Option<&'a str>,
     overlay_css: Option<&'a str>,
@@ -42,7 +42,7 @@ pub async fn character_page(
 
         template_to_response(
             CharacterPage {
-                navbar: Navbar::not_logged_in(), //TODO: Hook up
+                user: None,
 
                 retirement_reason: retirement_reason.as_deref(),
                 overlay_css: chosen_char.overlay_css.as_deref(), 

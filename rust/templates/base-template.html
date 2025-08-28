@@ -12,7 +12,7 @@
     </head> 
     <body>
         {% block body %}
-            {{ navbar | safe }}
+            {% include "components/navbar.html" %}
             {% block content %} 
             <p>Whoops! Someone forgot to fill in the Content Block!</p>
             {% endblock %}

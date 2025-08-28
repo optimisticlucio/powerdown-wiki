@@ -4,7 +4,7 @@ use axum::{
 use std::fs;
 use lazy_static::lazy_static;
 use askama::{Template};
-use crate::Navbar;
+use crate::user::User;
 
 pub enum RootErrors {
     NOT_FOUND,
@@ -31,14 +31,14 @@ lazy_static! {
 #[derive(Template)] 
 #[template(path = "404.html")]
 struct PageNotFound {
-    navbar: Navbar
+    user: Option<User>
 }
 
 fn page_not_found() -> (StatusCode, Html<String>) {
     (
         StatusCode::NOT_FOUND, 
         PageNotFound {
-            navbar: Navbar::not_logged_in() // TODO: Connect with user navbar
+            user: None
         }.render()
             .unwrap_or(String::from("404 PAGE CONTENT CRASHED ON COMPILATION. PAGE LUCIO, STAT.")).into()
     )

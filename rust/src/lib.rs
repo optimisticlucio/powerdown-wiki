@@ -5,17 +5,16 @@ use axum_extra::routing::RouterExt;
 use std::time;
 use tower::{ServiceBuilder, layer::Layer};
 
-use crate::navbar::Navbar;
 use tower_http::normalize_path::NormalizePathLayer;
 
 mod index;
 mod static_files;
 mod characters;
-mod navbar;
 mod test_data;
 mod utils;
 mod errs;
 mod stories;
+mod user;
 
 pub fn router() -> Router {
     Router::new()

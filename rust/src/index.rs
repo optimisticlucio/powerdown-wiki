@@ -4,7 +4,7 @@ use axum::{
     Router};
 use askama::{Template};
 use rand::seq::IndexedRandom;
-use crate::{navbar::Navbar, test_data};
+use crate::{user::User, test_data};
 use lazy_static::lazy_static;
 
 pub fn router() -> Router {
@@ -35,7 +35,7 @@ lazy_static! {
 #[derive(Template)] 
 #[template(path = "index.html")]
 struct FrontpageTemplate<'a> {
-    navbar: Navbar,
+    user: Option<User>,
     buttons: &'static Vec<FrontpageItem>,
     random_quote: &'a str,
     random_ad: &'a str,
@@ -43,7 +43,7 @@ struct FrontpageTemplate<'a> {
 
 async fn homepage() -> Html<String> {
     FrontpageTemplate {
-        navbar: Navbar::not_logged_in(),
+        user: None,
         buttons: &FRONTPAGE_ITEMS,
         random_quote: &test_data::get_frontpage_quotes().choose(&mut rand::rng()).unwrap(),
         random_ad: &test_data::get_frontpage_ads().choose(&mut rand::rng()).unwrap(),

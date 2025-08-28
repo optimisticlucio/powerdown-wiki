@@ -14,7 +14,7 @@
 
 {% block body %}
 <div class="overlay">
-    {{ navbar | safe }}
+    {% include "components/navbar.html" %}
     <div class="wrapper dark character-div">
         {% if let Some(retirement_reason) = retirement_reason %}
             <div class="exclusion-reason">
