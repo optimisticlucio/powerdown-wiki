@@ -19,3 +19,7 @@ target/
 target
 node_modules
 .wrangler
+
+# If the enviroment file ever reaches the git repo I will personally find whoever uploaded
+# it and turn you into sausage meat.
+.env
