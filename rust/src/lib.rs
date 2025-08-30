@@ -2,7 +2,7 @@ use axum::{
     error_handling::HandleErrorLayer, http::StatusCode, response::{Html, IntoResponse}, BoxError, Router
 };
 use axum_extra::routing::RouterExt;
-use std::time;
+use std::{sync::Arc, time};
 use tower::{ServiceBuilder, layer::Layer};
 
 use tower_http::normalize_path::NormalizePathLayer;
@@ -16,6 +16,10 @@ mod errs;
 mod stories;
 mod user;
 
+pub mod server_state;
+pub use server_state::ServerState;
+
+// TODO: Figure out how to pass around ServerState
 pub fn router() -> Router {
     Router::new()
         .merge(index::router())
