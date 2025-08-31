@@ -23,9 +23,8 @@ pub use server_state::ServerState;
 pub fn router() -> Router {
     Router::new()
         .merge(index::router())
-        // Use nest_service, and not nest. The latter has some funky behaviour wrt trailing slashes.
-        .nest_service("/static", static_files::router())
-        .nest_service("/characters", characters::router())
+        .nest("/static", static_files::router())
+        .nest("/characters", characters::router())
         .layer(
             ServiceBuilder::new()
                 .layer(NormalizePathLayer::trim_trailing_slash())
