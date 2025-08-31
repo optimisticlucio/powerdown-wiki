@@ -1,5 +1,5 @@
 use askama::Template;
-use axum::{response::Html, routing::get, Router};
+use axum::{response::Html, routing::get, extract::State, Router};
 use rand::seq::IndexedRandom;
 use crate::{user::User, test_data, utils, ServerState};
 use lazy_static::lazy_static;
@@ -11,7 +11,7 @@ pub mod structs;
 
 pub use structs::Character;
 
-pub fn router() -> Router {
+pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(character_index))
         .route_with_tsr("/{character_slug}", get(page::character_page))
 }
@@ -41,7 +41,7 @@ lazy_static!{
         ].into_iter().map(String::from).collect();
 }
 
-async fn character_index() -> Html<String> {
+async fn character_index(State(state): State<ServerState>) -> Html<String> {
     let test_characters = test_data::get_test_characters(); // TODO: Hook up to DB.
 
     let displayed_characters: Vec<Character> = test_characters.iter().filter(|character| !character.is_hidden && character.archival_reason.is_none()).map(Character::clone).collect();

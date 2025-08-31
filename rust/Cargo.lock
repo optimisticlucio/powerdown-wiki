@@ -2677,6 +2677,7 @@ dependencies = [
  "chrono",
  "comrak",
  "css-minify",
+ "deadpool",
  "deadpool-postgres",
  "lazy_static",
  "openidconnect",

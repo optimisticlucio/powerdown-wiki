@@ -6,8 +6,9 @@ use askama::{Template};
 use rand::seq::IndexedRandom;
 use crate::{user::User, test_data};
 use lazy_static::lazy_static;
+use crate::ServerState;
 
-pub fn router() -> Router {
+pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(homepage))
 }
 

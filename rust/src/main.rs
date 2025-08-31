@@ -1,3 +1,4 @@
+use powerdown_wiki::ServerState;
 use tower::Layer;
 use axum::{
     Router,
@@ -12,7 +13,7 @@ use tower_http::normalize_path::NormalizePathLayer;
 #[tokio::main]
 async fn main() {
     // TODO: Move the middleware soldering outside of main.
-    let app = powerdown_wiki::router();
+    let app = powerdown_wiki::router(ServerState::initalize().await);
 
     // this can be any `tower::Layer`
     let middleware = NormalizePathLayer::trim_trailing_slash();

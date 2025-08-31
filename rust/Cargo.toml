@@ -26,3 +26,4 @@ tokio-postgres = "0.7.13"
 aws-config = { version= "1.8.5", features = ["behavior-version-latest"] }
 aws-sdk-dynamodb = "1.90.0"
 tower-layer = "0.3.3"
+deadpool = "0.12.2"

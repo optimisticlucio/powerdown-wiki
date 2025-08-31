@@ -5,8 +5,6 @@ use axum_extra::routing::RouterExt;
 use std::{sync::Arc, time};
 use tower::{ServiceBuilder, layer::Layer};
 
-use tower_http::normalize_path::NormalizePathLayer;
-
 mod index;
 mod static_files;
 mod characters;
@@ -20,18 +18,18 @@ pub mod server_state;
 pub use server_state::ServerState;
 
 // TODO: Figure out how to pass around ServerState
-pub fn router() -> Router {
+pub fn router(state: ServerState) -> Router<()> {
     Router::new()
         .merge(index::router())
         .nest("/static", static_files::router())
         .nest("/characters", characters::router())
         .layer(
             ServiceBuilder::new()
-                .layer(NormalizePathLayer::trim_trailing_slash())
                 .layer(HandleErrorLayer::new(root_error_handler))
                 .timeout(time::Duration::from_secs(10))
         )
         .fallback(fallback)
+        .with_state(state)
 }
 
 async fn root_error_handler(err: BoxError) -> impl IntoResponse {
