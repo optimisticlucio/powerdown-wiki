@@ -1,3 +1,5 @@
+use std::env;
+
 use deadpool::managed::Pool;
 use deadpool_postgres::{self, Manager, ManagerConfig, RecyclingMethod, Runtime};
 use postgres::NoTls;
@@ -21,22 +23,14 @@ impl ServerState {
     async fn initialize_db() -> Pool<Manager>{
         let mut db_config = deadpool_postgres::Config::new();
 
-        // TODO: Actually hook up to the stupid db.
         db_config.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });
-        // TODO: Settings!
+        db_config.dbname = Some("powerdown_db".to_owned()); // Hardcoded in docker-compose
+        db_config.host = Some("postgres".to_owned()); // The postgres docker container's name. 
+        db_config.password = env::var("POSTGRES_PASSWORD").ok();
 
         let db_pool = db_config.create_pool(Some(deadpool::Runtime::Tokio1), NoTls).unwrap();
-
-        // TODO: I think this part is just for testing and I can remove it?
-        for i in 1..10i32 {
-            let client = db_pool.get().await.unwrap();
-            let stmt = client.prepare_cached("SELECT 1 + $1").await.unwrap();
-            let rows = client.query(&stmt, &[&i]).await.unwrap();
-            let value: i32 = rows[0].get(0);
-            assert_eq!(value, i + 1);
-        }
 
         db_pool
     }
