@@ -55,6 +55,19 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
         utils::join_names_human_readable(only_names)
     };
 
+    let random_subtitle = {
+        let statement = "TODO: WRITE QUERY";
+
+        match state.db_pool.get().await {
+            // TODO: Turn this unwrap into something that handles error better.
+            Ok(db_connection) => 
+                db_connection.query(statement, &[]).await.unwrap()
+                    .get(0).unwrap()
+                    .get(0),
+            _ => "Insert funny text here.".to_owned() // "Oh shit it broke" text that won't seem too odd for a random user.
+        }
+    };
+
     CharacterIndex {
         user: None,
         random_subtitle: RANDOM_SUBTITLES.choose(&mut rand::rng()).unwrap(),

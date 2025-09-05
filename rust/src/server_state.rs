@@ -7,7 +7,7 @@ use tokio::join;
 
 #[derive(Clone)]
 pub struct ServerState {
-    db_pool: Pool<Manager>
+    pub db_pool: Pool<Manager>
 }
 
 impl ServerState {
