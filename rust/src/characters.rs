@@ -56,7 +56,7 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
     };
 
     let random_subtitle = {
-        let statement = "TODO: WRITE QUERY";
+        let statement = "TODO: WRITE QUERY"; // TODO: That.
 
         match state.db_pool.get().await {
             // TODO: Turn this unwrap into something that handles error better.

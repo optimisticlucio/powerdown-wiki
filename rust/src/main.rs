@@ -1,12 +1,8 @@
 use powerdown_wiki::ServerState;
 use tower::Layer;
 use axum::{
-    Router,
     ServiceExt, // for `into_make_service`
-    response::Response,
-    middleware::Next,
     extract::Request,
-    routing::get
 };
 use tower_http::normalize_path::NormalizePathLayer;
 
