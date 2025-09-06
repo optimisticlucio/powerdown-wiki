@@ -18,7 +18,7 @@ async fn main() {
     // this way the middleware will run before `Router` receives the request
     let app_with_middleware = middleware.layer(app);
 
-    let listener = tokio::net::TcpListener::bind("localhost:8080").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
     axum::serve(listener, ServiceExt::<Request>::into_make_service(app_with_middleware))
         .await

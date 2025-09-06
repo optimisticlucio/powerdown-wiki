@@ -56,7 +56,7 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
     };
 
     let random_subtitle = {
-        let statement = "TODO: WRITE QUERY"; // TODO: That.
+        let statement = "SELECT *  FROM quotes WHERE association = 'character_index' ORDER BY RANDOM() LIMIT 1;"; 
 
         match state.db_pool.get().await {
             // TODO: Turn this unwrap into something that handles error better.
@@ -70,7 +70,7 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
 
     CharacterIndex {
         user: None,
-        random_subtitle: RANDOM_SUBTITLES.choose(&mut rand::rng()).unwrap(),
+        random_subtitle: &random_subtitle,
         characters: &displayed_characters,
         birthday_characters: &birthday_characters,
         date_today_readable: &date_today_readable,
