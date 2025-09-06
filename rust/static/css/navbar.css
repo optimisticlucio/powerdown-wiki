@@ -42,7 +42,7 @@ nav {
     }
 }
 
-@media screen and (max-width: 1100) {
+@media screen and (max-width: 1100px) {
     nav {
         font-size: 1.1em;
 

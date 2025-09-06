@@ -156,3 +156,13 @@
             }
         }
 }
+
+@media screen and (max-width: 1100px) {
+    .frontpage {
+        .joke-area {
+            .brought-by {
+                padding: 1ch 2ch;
+            }
+        }
+    }
+}

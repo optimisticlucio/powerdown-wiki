@@ -1,11 +1,7 @@
-use std::io::Write;
-
-use ammonia::url::form_urlencoded::parse;
-use axum::{extract::Path, response::{ IntoResponse}};
+use axum::{extract::{Path, State}, response::{ IntoResponse}};
 use askama::Template;
 use rand::seq::IndexedRandom;
-use crate::{errs::RootErrors, user::User};
-use crate::test_data;
+use crate::{characters::{BaseCharacter, PageCharacter, structs::{InfoboxRow}}, errs::RootErrors, user::User, ServerState};
 use crate::utils::template_to_response;
 use comrak::{create_formatter, markdown_to_html};
 
@@ -16,13 +12,14 @@ struct CharacterPage<'a> {
 
     retirement_reason: Option<&'a str>,
     overlay_css: Option<&'a str>,
+    custom_css: Option<&'a str>,
 
     creator: &'a str,
     tag: &'a str,
     
     name: &'a str,
     subtitle: &'a str,
-    infobox: Vec<(String, String)>,
+    infobox: Vec<InfoboxRow>,
 
     page_img: &'a str,
     character_logo: Option<&'a str>,
@@ -31,11 +28,10 @@ struct CharacterPage<'a> {
 }
 
 pub async fn character_page(
-    Path(character_slug): Path<String>
+    Path(character_slug): Path<String>,
+    State(state): State<ServerState>
 ) -> impl IntoResponse {
-    // TODO: Actually connect to a database.
-
-    if let Some(chosen_char) = test_data::get_test_characters().iter().find(|character| character.name.to_lowercase() == character_slug) {
+    if let Some(chosen_char) = PageCharacter::get_by_slug(character_slug, state.db_pool.get().await.unwrap()).await {
 
         let parsed_content = parse_character_page_contents(&chosen_char.page_contents).unwrap_or("PARSING FAILED!".to_owned());
         let retirement_reason = chosen_char.archival_reason.as_ref().map(|f| markdown_to_html(&f, &comrak::Options::default()));
@@ -46,14 +42,15 @@ pub async fn character_page(
 
                 retirement_reason: retirement_reason.as_deref(),
                 overlay_css: chosen_char.overlay_css.as_deref(), 
-                creator: &chosen_char.author,
-                tag: &chosen_char.name.to_ascii_lowercase().replace(" ", "-"),
+                custom_css: chosen_char.custom_css.as_deref(),
+                creator: &chosen_char.creator,
+                tag: &chosen_char.tag.unwrap_or("".to_owned()),
 
-                name: chosen_char.long_name.clone().unwrap_or(chosen_char.name.clone()).as_ref(),
+                name: chosen_char.long_name.clone().unwrap_or(chosen_char.base_character.name.clone()).as_ref(),
 
                 subtitle: chosen_char.subtitles.choose(&mut rand::rng()).unwrap(),
                 infobox: chosen_char.infobox.clone(),
-                page_img: &chosen_char.img_url,
+                page_img: &chosen_char.page_img_url,
                 character_logo: chosen_char.logo_url.as_deref(),
                 content: &parsed_content 
             }

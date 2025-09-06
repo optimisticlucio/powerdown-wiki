@@ -10,6 +10,9 @@
             }
         </style>
     {% endif %}
+    {% if let Some(custom_css) = custom_css %}
+        <style>{{ custom_css }}</style>
+    {% endif %}
 {% endblock%}
 
 {% block body %}
@@ -39,7 +42,7 @@
                     <h2 id="character-subtitle">{{ subtitle }}</h2>
                     <p class="text">
                         {% for item in infobox %}
-                            <strong>{{item.0}}:</strong> {{item.1}} <br>
+                            <strong>{{item.title}}:</strong> {{item.description}} <br>
                         {% endfor %}
                     </p>
                     <a class="text" href="/tags/{{ tag }}">

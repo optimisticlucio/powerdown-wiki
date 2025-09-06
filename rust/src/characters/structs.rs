@@ -2,7 +2,7 @@ use chrono;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
-use postgres_types::{FromSql, Type};
+use postgres_types::{FromSql, ToSql, Type};
 
 #[derive(Clone)]
 pub struct Character { // TODO: Dump all places that use this.
@@ -30,6 +30,7 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     db_id: i32, // The internal ID. Shouldn't be shown to user.
     pub is_hidden: bool,
     pub is_archived: bool,
+    pub slug: String,
     pub name: String,
     pub thumbnail_url: String,
 }
@@ -42,6 +43,7 @@ pub struct PageCharacter { // Info relevant to character page
     pub subtitles: Vec<String>,
     pub creator: String,
     pub archival_reason: Option<String>,
+    pub tag: Option<String>,
 
     pub logo_url: Option<String>,
     pub page_img_url: String,
@@ -52,10 +54,11 @@ pub struct PageCharacter { // Info relevant to character page
     pub page_contents: String
 }
 
-#[derive(Debug, FromSql, Clone)]
+#[derive(Debug, FromSql, ToSql, Clone)]
+#[postgres(name = "infobox_row")]
 pub struct InfoboxRow {
-    title: String,
-    description: String,
+    pub title: String,
+    pub description: String,
 }
 
 impl BaseCharacter {
@@ -88,7 +91,8 @@ impl BaseCharacter {
             is_hidden: row.get("is_hidden"),
             is_archived: archival_reason.is_some(),
             name: row.get("short_name"),
-            thumbnail_url: row.get("thumbnail")
+            thumbnail_url: row.get("thumbnail"),
+            slug: row.get("page_slug")
         }
     }
 }
@@ -97,7 +101,7 @@ impl PageCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
     pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<PageCharacter> {
         let character_row = db_connection.query_one(
-            "SELECT * FROM character WHERE page_slug='$1'", 
+            "SELECT * FROM character WHERE page_slug=$1", 
             &[&slug]).await.ok()?;
 
         Some(Self::from_db_row(&character_row))
@@ -113,7 +117,8 @@ impl PageCharacter {
                 is_hidden: row.get("is_hidden"),
                 is_archived: archival_reason.is_some(),
                 name: row.get("short_name"),
-                thumbnail_url: row.get("thumbnail")
+                thumbnail_url: row.get("thumbnail"),
+                slug: row.get("page_slug")
             },
             long_name: row.get("long_name"),
             subtitles: row.get("subtitles"),
@@ -124,7 +129,8 @@ impl PageCharacter {
             infobox: row.get("infobox"),
             overlay_css: row.get("overlay_css"),
             custom_css: row.get("custom_css"),
-            page_contents: row.get("page_text")
+            page_contents: row.get("page_text"),
+            tag: row.get("relevant_tag")
         }
     }
 }

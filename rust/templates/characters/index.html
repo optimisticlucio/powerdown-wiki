@@ -21,7 +21,7 @@
 
     <div class="character-grid">
         {% for character in characters %}
-        <a href="/characters/{{ character.name.to_lowercase() }}" class="character-box">
+        <a href="/characters/{{ character.slug }}" class="character-box">
             <img class="character-icon" src="{{ character.thumbnail_url }}">
             <p>
                 {{ character.name }}
