@@ -56,7 +56,7 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
     };
 
     let random_subtitle = {
-        let statement = "SELECT *  FROM quotes WHERE association = 'character_index' ORDER BY RANDOM() LIMIT 1;"; 
+        let statement = "SELECT *  FROM quote WHERE association = 'character_index' ORDER BY RANDOM() LIMIT 1;"; 
 
         match state.db_pool.get().await {
             // TODO: Turn this unwrap into something that handles error better.

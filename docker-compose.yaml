@@ -16,9 +16,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: powerdown_db
       POSTGRES_USER: ${POSTGRES_USER}
+      TZ: "Asia/Jerusalem"
     volumes:
     #  - pd_postgres:/var/lib/postgresql/data  # TODO: Uncomment once the db is ready
       - ./postgres/init:/docker-entrypoint-initdb.d
+    # TODO: Delete the temporary volumes out once finished with development.
+    tmpfs:
+      - /var/lib/postgresql/data
 
   #ngnix:
   #  image: ngnix

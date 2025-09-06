@@ -1,11 +1,11 @@
 CREATE TYPE quote_association AS ENUM ('character_index', 'homepage', 'sex_joke');
 
-CREATE TABLE quotes (
+CREATE TABLE quote (
     line text,
     association quote_association
 );
 
-INSERT INTO quotes(line, association)
+INSERT INTO quote(line, association)
 SELECT joke, 'character_index'
 FROM unnest(ARRAY[
     'Heh. Women.',
@@ -28,7 +28,7 @@ FROM unnest(ARRAY[
     'And now, for real, actual facts about Doctor Seanen Goldman!'
     ]) AS joke;
 
-INSERT INTO quotes(line, association)
+INSERT INTO quote(line, association)
 SELECT joke, 'homepage'
 FROM unnest(ARRAY[
     'Because discord will not last forever, but random web forums from the 1980s will outlast us all.',
@@ -46,7 +46,7 @@ FROM unnest(ARRAY[
     'We''ll set up an IRC server just as soon as we find an IRC client that doesn''t look like ass.'
     ]) AS joke;
 
-INSERT INTO quotes(line, association)
+INSERT INTO quote(line, association)
 SELECT joke, 'sex_joke'
 FROM unnest(ARRAY[
     'Did you know nudism used to be a sign of heroism in ancient Greece? You''re being very brave right now.',
