@@ -1,7 +1,5 @@
 use axum::{
-    routing::get,
-    response::Html,
-    Router};
+    extract::State, response::Html, routing::get, Router};
 use askama::{Template};
 use rand::seq::IndexedRandom;
 use crate::{user::User, test_data};
@@ -42,11 +40,24 @@ struct FrontpageTemplate<'a> {
     random_ad: &'a str,
 }
 
-async fn homepage() -> Html<String> {
+async fn homepage(State(state): State<ServerState>) -> Html<String> {
+    let random_subtitle = {
+        let statement = "SELECT *  FROM quotes WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;"; 
+
+        match state.db_pool.get().await {
+            // TODO: Turn this unwrap into something that handles error better.
+            Ok(db_connection) => 
+                db_connection.query(statement, &[]).await.unwrap()
+                    .get(0).unwrap()
+                    .get(0),
+            _ => "Designed so well, that you're already seeing error texts on the home page. Message Lucio, something broke.".to_owned() // "Oh shit it broke" text that won't seem too odd for a random user.
+        }
+    };
+
     FrontpageTemplate {
         user: None,
         buttons: &FRONTPAGE_ITEMS,
-        random_quote: &test_data::get_frontpage_quotes().choose(&mut rand::rng()).unwrap(),
+        random_quote: &random_subtitle,
         random_ad: &test_data::get_frontpage_ads().choose(&mut rand::rng()).unwrap(),
     }.render().unwrap().into()
 }
