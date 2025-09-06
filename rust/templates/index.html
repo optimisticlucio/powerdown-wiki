@@ -17,14 +17,14 @@
 
         <div class="links">
             <a class="onboard" href="/onboarding">
-                <img src="https://powerdown.wiki//assets/img/clueless.png">
+                <img src="https://powerdown.wiki/assets/img/clueless.png">
                 <span>
                     New Here?
                 </span>
             </a>
 
             <a class="discord" href="/">
-                <img src="https://powerdown.wiki//assets/img/discord-logo.svg">
+                <img src="https://powerdown.wiki/assets/img/discord-logo.svg">
                 <span>
                     Join PD!
                 </span>
@@ -49,6 +49,21 @@
                 <div>This Website is Sponsored By:</div>
                 <img id="brought-by-img" src="https://powerdown.wiki/{{ random_ad }}">
             </div>
+            {%- for character in birthday_characters -%}
+            <div class="wrapper birthday">
+                <img src="{{ character.thumbnail_url }}" />
+                {%- if loop.first -%}
+                <div>
+                    <p>Today is {{ today_date }}!</p>
+                    <h1>Also known as {{ character.name }}'s birthday!</h1>
+                </div>
+                {%- else -%}
+                <div>
+                    <h1>...and {{ character.name }}'s birthday!</h1>
+                </div>
+                {%- endif -%}
+            </div>
+            {%- endfor -%}
         </div>
     </div>
 </div>

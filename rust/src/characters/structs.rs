@@ -59,6 +59,7 @@ struct InfoboxRow {
 }
 
 impl BaseCharacter {
+    /// Gets BaseCharacter for all characters in the database.
     pub async fn get_all_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Limit this query to only what's necessary to speed it up.
         let character_rows = db_connection.query(
@@ -68,6 +69,17 @@ impl BaseCharacter {
         character_rows.iter().map(Self::from_db_row).collect()
     }
 
+    /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
+    pub async fn get_birthday_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
+        // TODO: Limit this query to only what's necessary to speed it up.
+        let character_rows = db_connection.query(
+            "SELECT * FROM character WHERE birthday = CURRENT_DATE",
+            &[]).await.unwrap();
+
+        character_rows.iter().map(Self::from_db_row).collect()
+    }
+
+    /// Converts a DB row with the relevant info to a BaseCharacter struct.
     fn from_db_row(row: &Row) -> Self {
         let archival_reason: Option<String> = row.get("archival_reason");
 
@@ -91,6 +103,7 @@ impl PageCharacter {
         Some(Self::from_db_row(&character_row))
     }
 
+    /// Converts a DB row with the relevant info to a PageCharacter struct.
     fn from_db_row(row: &Row) -> Self {
         let archival_reason: Option<String> = row.get("archival_reason");
 

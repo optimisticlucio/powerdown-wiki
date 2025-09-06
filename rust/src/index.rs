@@ -2,9 +2,10 @@ use axum::{
     extract::State, response::Html, routing::get, Router};
 use askama::{Template};
 use rand::seq::IndexedRandom;
-use crate::{user::User, test_data};
+use crate::{test_data, user::User, utils};
 use lazy_static::lazy_static;
-use crate::ServerState;
+use crate::{ServerState, characters};
+
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(homepage))
@@ -38,6 +39,8 @@ struct FrontpageTemplate<'a> {
     buttons: &'static Vec<FrontpageItem>,
     random_quote: &'a str,
     random_ad: &'a str,
+    birthday_characters: Vec<characters::BaseCharacter>,
+    today_date: &'a str
 }
 
 async fn homepage(State(state): State<ServerState>) -> Html<String> {
@@ -54,10 +57,14 @@ async fn homepage(State(state): State<ServerState>) -> Html<String> {
         }
     };
 
+    let birthday_characters = characters::BaseCharacter::get_birthday_characters(state.db_pool.get().await.unwrap()).await;
+
     FrontpageTemplate {
         user: None,
         buttons: &FRONTPAGE_ITEMS,
         random_quote: &random_subtitle,
         random_ad: &test_data::get_frontpage_ads().choose(&mut rand::rng()).unwrap(),
+        birthday_characters,
+        today_date: &utils::format_date_to_human_readable(chrono::Local::now().into())
     }.render().unwrap().into()
 }

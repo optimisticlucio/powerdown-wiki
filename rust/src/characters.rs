@@ -9,7 +9,7 @@ use axum_extra::routing::RouterExt;
 mod page;
 pub mod structs;
 
-pub use structs::Character;
+pub use structs::{Character, BaseCharacter, PageCharacter};
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(character_index))

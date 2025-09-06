@@ -4,8 +4,7 @@ img.character-icon {
     object-fit: cover;
 }
 
-.character-selector {
-    .birthday {
+.birthday {
         margin: 1em auto;
         display: flex;
         flex-direction: row;
@@ -19,15 +18,26 @@ img.character-icon {
 
         div {
             margin: auto 1em;
-            h1 {
+
+            :first-child {
                 margin-top:0;
-                font-size: 1.5em;
             }
-            p {
+
+            :last-child {
                 margin-bottom:0;
+            }
+
+            :only-child {
+                margin: auto 1em;
+            }
+
+            h1 {
+                font-size: 1.5em;
             }
         }
     }
+
+.character-selector {
 
     .character-grid {
         display: grid;
