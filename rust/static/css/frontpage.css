@@ -94,16 +94,16 @@
         margin-top: 1em;
 
         .frontpage-buttons {
-            flex-grow: 1;
+            flex-grow: 3;
             display: grid;
             justify-items: stretch;
             gap: 1em;
-            grid-template-columns: repeat(auto-fit, minmax(18em, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
             justify-content: space-between;
             height: min-content;
 
             .button {
-                background-color: var(--dark-shade);
+                background-color: var(--darkest-shade);
                 display: flex;
                 justify-content: space-between;
                 padding: 1ch;
@@ -111,7 +111,7 @@
                 text-decoration: none;
 
                 span {
-                    font-size: 1.3em;
+                    font-size: 2em;
                     margin: auto 1ch;
                     font-weight: 600;
                     overflow-wrap: break-word;
@@ -128,21 +128,31 @@
 
     .joke-area {
             margin-left: 1em;
+            width: 35%;
 
-            div {
-                background-color: var(--dark-shade);
-                padding: 0.5ch 1ch;
-                width: min-content;
+            .brought-by {
+                background-color: var(--bright-shade);
+                padding: 1.5em 2.5em;
+                display: flex;
+                flex-direction: column;
 
                 div {
                     white-space: pre;
-                    font-size: 0.9em;
+                    font-size: 1.2em;
                     font-weight: bold;
+                    text-align: center;
+                    margin-bottom: 1em;
                 }
 
                 img {
-                    width: 100%;
+                    max-width: 100%;
+                    max-height: 15em;
+                    object-fit: contain;
                 }
+            }
+
+            .birthday {
+                font-size: 0.9em;
             }
         }
 }

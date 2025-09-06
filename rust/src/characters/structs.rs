@@ -27,7 +27,7 @@ pub struct Character { // TODO: Dump all places that use this.
 
 #[derive(Clone)]
 pub struct BaseCharacter { // Info relevant to absolute most uses of a character
-    db_id: i64, // The internal ID. Shouldn't be shown to user.
+    db_id: i32, // The internal ID. Shouldn't be shown to user.
     pub is_hidden: bool,
     pub is_archived: bool,
     pub name: String,
@@ -53,7 +53,7 @@ pub struct PageCharacter { // Info relevant to character page
 }
 
 #[derive(Debug, FromSql, Clone)]
-struct InfoboxRow {
+pub struct InfoboxRow {
     title: String,
     description: String,
 }
@@ -73,7 +73,7 @@ impl BaseCharacter {
     pub async fn get_birthday_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Limit this query to only what's necessary to speed it up.
         let character_rows = db_connection.query(
-            "SELECT * FROM character WHERE birthday = CURRENT_DATE",
+            "SELECT * FROM character WHERE EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE)",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()
@@ -81,7 +81,7 @@ impl BaseCharacter {
 
     /// Converts a DB row with the relevant info to a BaseCharacter struct.
     fn from_db_row(row: &Row) -> Self {
-        let archival_reason: Option<String> = row.get("archival_reason");
+        let archival_reason: Option<String> = row.get("retirement_reason");
 
         BaseCharacter {
             db_id: row.get("id"),
@@ -105,7 +105,7 @@ impl PageCharacter {
 
     /// Converts a DB row with the relevant info to a PageCharacter struct.
     fn from_db_row(row: &Row) -> Self {
-        let archival_reason: Option<String> = row.get("archival_reason");
+        let archival_reason: Option<String> = row.get("retirement_reason");
 
         Self {
             base_character: BaseCharacter {

@@ -45,13 +45,13 @@
         </div>
 
         <div class="joke-area">
-            <div>
+            <div class="brought-by">
                 <div>This Website is Sponsored By:</div>
                 <img id="brought-by-img" src="https://powerdown.wiki/{{ random_ad }}">
             </div>
             {%- for character in birthday_characters -%}
             <div class="wrapper birthday">
-                <img src="{{ character.thumbnail_url }}" />
+                <img class="character-icon" src="{{ character.thumbnail_url }}" />
                 {%- if loop.first -%}
                 <div>
                     <p>Today is {{ today_date }}!</p>

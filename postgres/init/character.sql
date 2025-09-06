@@ -29,23 +29,26 @@ CREATE TABLE character (
     page_text text -- Assumed to be in Markdown format.
 );
 
+-- TODO: Create a Ritual table
+
 INSERT INTO character(is_hidden, creator, page_slug, 
     thumbnail,
     short_name, subtitles,
     infobox,
     page_image, logo, overlay_css,
-
     page_text)
 VALUES(TRUE, 'Sir Skyber', 'skyber',
     'https://powerdown.wiki/assets/img/characters/thumbnails/skyber.png',
     'Skyber', ARRAY['Electi Prime', 'True Form', 'Fallen Goddess', '#1 Plot Device', 'ERA''s Largest Ego', 'Walking Corpse'],
-    ARRAY[('Name', 'Skyber Wyrmond'),
-                ('Age', 'Unknown'),
-                ('Height', '8ft'),
-                ('Gender', 'Female'),
-                ('Birthday', 'Unknown'),
-                ('Deaths', 'Three'),
-                ('Calamities Caused', 'At least twelve')],
+    ARRAY[
+        ('Name', 'Skyber Wyrmond')::infobox_row,
+        ('Age', 'Unknown')::infobox_row,
+        ('Height', '8ft')::infobox_row,
+        ('Gender', 'Female')::infobox_row,
+        ('Birthday', 'Unknown')::infobox_row,
+        ('Deaths', 'Three')::infobox_row,
+        ('Calamities Caused', 'At least twelve')::infobox_row
+    ],
     'https://powerdown.wiki/assets/img/characters/page-imgs/skyber-page.png', 'https://powerdown.wiki/assets/img/characters/logos/Skyber.png', 'mix-blend-mode: overlay; background: #453663;',
     '# Bio
 
@@ -68,3 +71,39 @@ Skyber is obsessed with the delicate dance between endless pleasure and heart-sh
 
 **Transcendence -** Skyber is able to empower an Electi to re-focus their ability into it''s true form, a godlike, reality bending power. However, Skyber can only sustain such focus for a short moment, leaving her entirely drained. This poses such unimaginable risks that even a gambling addict like Skyber would instantly fold on rather than ever consider it beyond a life or death situation. 
 ');
+
+INSERT INTO character(creator, page_slug, birthday,
+    thumbnail,
+    short_name, subtitles,
+    infobox,
+    page_image, logo, overlay_css,
+    page_text)
+VALUES('Sir Skyber', 'ridley', '2000-09-06',
+    'https://powerdown.wiki/assets/img/characters/thumbnails/ridley.png',
+    'Ridley', ARRAY['Lives To Instantly Regret It', 'Reads One Piece', 'Lives in a Cupboard', 'ERA''s Premier Manfailure', 'Needs a Break', 'Pokemon Aficionado', 'Missing Weezer Member'],
+    ARRAY[
+        ('Name', 'Ridley Ka''dhori')::infobox_row,
+        ('Age', '18')::infobox_row,
+        ('Height', '5''6" / 167 cm')::infobox_row,
+        ('Gender', 'Male (he/him)')::infobox_row,
+        ('Birthday', '6th of September')::infobox_row,
+        ('Favorite Pokémon', 'Houndoom')::infobox_row,
+        ('Friends', 'Like 6')::infobox_row
+    ],
+    'https://powerdown.wiki/assets/img/characters/page-imgs/ridley-page.png', 'https://powerdown.wiki/assets/img/characters/logos/Ridley.png', 'mix-blend-mode: overlay; background: linear-gradient(180deg, #948CFF 0%, #FF4D85 100%)',
+    '# Bio
+
+Nobody at E.R.A. knew who Ridley was until they suddenly really did—specifically, when he accidentally flooded the academy''s entire underground water system with several metric tons of highly absorbent polymer spheres. Or at least, some people know about him rather than none.
+
+Ridley is a timid recluse whose life functions more like a cosmic joke than a narrative arc. He is not particularly gifted, particularly confident, or particularly lucky. In fact, he seems to possess the rare and deeply unfortunate superpower of being exactly where catastrophe is about to happen. Sometimes causing it. Sometimes being it. And that''s on top of already being an Electi.
+
+Stuck in the guard barracks under permanent house arrest, he shuffles through life with the enthusiasm of a man dreading the next piano to drop, surviving by sheer, highly trained reflex and the occasional misplaced act of kindness.
+
+
+# Electi
+
+Ridley can replicate any given item given a reference and the base materials required to make a duplicate.
+
+Replication requires intimate knowledge of the object being replicated. Unfortunately for Ridley, he sucks at it. He is often seen wearing his personal project, a warped second pair of glasses, atop his head.'
+
+);
