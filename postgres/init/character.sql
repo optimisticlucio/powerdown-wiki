@@ -107,3 +107,34 @@ Ridley can replicate any given item given a reference and the base materials req
 Replication requires intimate knowledge of the object being replicated. Unfortunately for Ridley, he sucks at it. He is often seen wearing his personal project, a warped second pair of glasses, atop his head.'
 
 );
+
+INSERT INTO character(creator, page_slug,
+    retirement_reason,
+    thumbnail,
+    short_name, subtitles,
+    infobox,
+    page_image, logo, overlay_css,
+    page_text)
+VALUES (
+    'Prushy', 'abigail',
+    'While not officially retired from the project, the author remains in extended hiatus to focus on their mental health. For now, **Abigail is not to be included in current or future events.**',
+    'https://powerdown.wiki/assets/img/characters/thumbnails/abigail.png',
+    'Abigail', ARRAY['Arachnid Cowgirl'],
+    ARRAY[
+        ('Name', 'Abigail Brookes')::infobox_row,
+        ('Age', 'Mid-30''s')::infobox_row,
+        ('Height', '6''0" / 183cm')::infobox_row,
+        ('Gender', 'Female (she/her)')::infobox_row,
+        ('Favorite Food', 'Her husband')::infobox_row,
+        ('2nd Favorite Food', 'Pork n'' beans')::infobox_row,
+        ('Haws yee''d', 'Many')::infobox_row
+    ],
+    'https://powerdown.wiki/assets/img/characters/page-imgs/abi.png', 'https://powerdown.wiki/assets/img/characters/logos/Abigail.png', 'mix-blend-mode: overlay; background: linear-gradient(180deg, #631209 0%, #754b36 100%);',
+    '# Bio
+
+Abigail is a former outlaw turned law enforcement in the technologically obsolete region in the Southern United States known as the Frontier. Her personality is rough, with a very aggressive demeanor about her. She drinks heavily and smokes frequently to cope with a tragic past. Although her persona and appearance are rugged and dissatisfied, she enjoys simplicity in nature and prefers to camp outdoors, playing her guitar by a small fire and pitched tent. She had been invited by ERA Academy to teach about the law, history, and life in the Frontier and what to expect upon visitation. She currently resides and does so reluctantly at the encouragement of her daughter Jesse, whom she consistently keeps in touch with.
+
+# Electi Ability: Bullet Time
+
+Abigail can achieve "Bullet Time", increasing her perception tenfold, to the point the world seems slow to her eyes for a few moments. Using this ability causes extreme cognitive strain, often leaving her in a drunken-like haze after a mere moment of use, and loss of consciousness entirely under further use.'
+);
