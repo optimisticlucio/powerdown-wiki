@@ -13,6 +13,7 @@ mod utils;
 mod errs;
 mod stories;
 mod user;
+mod art;
 
 pub mod server_state;
 pub use server_state::ServerState;

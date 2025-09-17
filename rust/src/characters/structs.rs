@@ -4,25 +4,6 @@ use deadpool_postgres::Manager;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql, Type};
 
-#[derive(Clone)]
-pub struct Character { // TODO: Dump all places that use this.
-    pub is_hidden: bool,
-    pub archival_reason: Option<String>, // If none, not archived.
-
-    pub name: String,
-    pub long_name: Option<String>,
-    pub subtitles: Vec<String>,
-    pub author: String,
-    pub logo_url: Option<String>,
-    // TODO: character birthday
-    pub thumbnail_url: String,
-    pub img_url: String,
-    pub infobox: Vec<(String, String)>,
-    // TODO: relationships?
-    pub overlay_css: Option<String>,
-    pub page_contents: String,
-}
-
 // TODO: Get character ritual info
 
 #[derive(Clone)]
@@ -30,6 +11,7 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     db_id: i32, // The internal ID. Shouldn't be shown to user.
     pub is_hidden: bool,
     pub is_archived: bool,
+    pub is_main_character: bool,
     pub slug: String,
     pub name: String,
     pub thumbnail_url: String,
@@ -52,6 +34,14 @@ pub struct PageCharacter { // Info relevant to character page
     pub overlay_css: Option<String>,
     pub custom_css: Option<String>,
     pub page_contents: String
+}
+
+#[derive(Clone)]
+pub struct RitualCharacter {
+    pub base_character: BaseCharacter,
+
+    pub power_name: String,
+    pub power_description: String
 }
 
 #[derive(Debug, FromSql, ToSql, Clone)]
@@ -89,6 +79,7 @@ impl BaseCharacter {
         BaseCharacter {
             db_id: row.get("id"),
             is_hidden: row.get("is_hidden"),
+            is_main_character: row.get("is_main_character"),
             is_archived: archival_reason.is_some(),
             name: row.get("short_name"),
             thumbnail_url: row.get("thumbnail"),
@@ -115,6 +106,7 @@ impl PageCharacter {
             base_character: BaseCharacter {
                 db_id: row.get("id"),
                 is_hidden: row.get("is_hidden"),
+                is_main_character: row.get("is_main_character"),
                 is_archived: archival_reason.is_some(),
                 name: row.get("short_name"),
                 thumbnail_url: row.get("thumbnail"),
@@ -134,3 +126,5 @@ impl PageCharacter {
         }
     }
 }
+
+// TODO: impl RitualCharacter

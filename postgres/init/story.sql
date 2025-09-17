@@ -4,7 +4,7 @@ CREATE TABLE story (
     title text NOT NULL,
     tagline text,
     description text,
-    creators text[] NOT NULL, -- TODO: Assure not empty
+    creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     creation_date date NOT NULL,
     -- TODO: Figure out how to do "last modification date"

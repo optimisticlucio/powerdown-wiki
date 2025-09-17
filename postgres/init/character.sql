@@ -9,16 +9,17 @@ CREATE TABLE character (
     retirement_reason text, -- Assumed to be in Markdown format.
     is_hidden boolean NOT NULL DEFAULT FALSE, 
     page_slug text NOT NULL UNIQUE,
+    is_main_character boolean NOT NULL DEFAULT FALSE, -- Each creator should have one main character, unrelated to story importance.
 
     short_name text NOT NULL,
     long_name text,
-    subtitles text[] NOT NULL,
+    subtitles text[] NOT NULL CONSTRAINT nonzero_subtitles CHECK (array_length(subtitles, 1) > 0),
     relevant_tag text,
     creator text NOT NULL,
 
     thumbnail text NOT NULL, -- Assumed to be a URL
 
-    infobox infobox_row[],
+    infobox infobox_row[] NOT NULL DEFAULT ARRAY[],
     page_image text NOT NULL, -- Assumed to be a URL
     logo text, -- Assumed to be a URL
     overlay_css text, -- Everything here goes inside a <style>.overlay { }</style> 
@@ -29,7 +30,15 @@ CREATE TABLE character (
     page_text text -- Assumed to be in Markdown format.
 );
 
--- TODO: Create a Ritual table
+CREATE TABLE ritual_info(
+    character_id int PRIMARY KEY
+        REFERENCES character(id)
+        ON DELETE CASCADE,
+    power_name text NOT NULL,
+    power_description text NOT NULL
+)
+
+
 
 INSERT INTO character(is_hidden, creator, page_slug, 
     thumbnail,
@@ -108,7 +117,21 @@ Replication requires intimate knowledge of the object being replicated. Unfortun
 
 );
 
-INSERT INTO character(creator, page_slug,
+WITH ridley_id AS (
+    SELECT id FROM characters WHERE slug='ridley';
+)
+INSERT INTO ritual_info (
+    character_id,
+    power_name,
+    power_description
+)
+VALUES (
+    ridley_id,
+    'Dupe-licate',
+    'Can create replicas of any item. The replicas depend on intimate knowledge of the item being replicated, and typically this results in an imperfect clone because he sucks at it.'
+);
+
+INSERT INTO character(creator, page_slug, is_main_character,
     retirement_reason,
     thumbnail,
     short_name, subtitles,
@@ -116,7 +139,7 @@ INSERT INTO character(creator, page_slug,
     page_image, logo, overlay_css,
     page_text)
 VALUES (
-    'Prushy', 'abigail',
+    'Prushy', 'abigail', TRUE,
     'While not officially retired from the project, the author remains in extended hiatus to focus on their mental health. For now, **Abigail is not to be included in current or future events.**',
     'https://powerdown.wiki/assets/img/characters/thumbnails/abigail.png',
     'Abigail', ARRAY['Arachnid Cowgirl'],
@@ -137,4 +160,67 @@ Abigail is a former outlaw turned law enforcement in the technologically obsolet
 # Electi Ability: Bullet Time
 
 Abigail can achieve "Bullet Time", increasing her perception tenfold, to the point the world seems slow to her eyes for a few moments. Using this ability causes extreme cognitive strain, often leaving her in a drunken-like haze after a mere moment of use, and loss of consciousness entirely under further use.'
+);
+
+WITH abigail_id AS (
+    SELECT id FROM characters WHERE slug='abigail';
+)
+INSERT INTO ritual_info (
+    character_id,
+    power_name,
+    power_description
+)
+VALUES (
+    abigail_id,
+    'Bullet Time',
+    'Time seems to slow in her perception, allowing quicker reaction. Causes extreme cognitive strain.'
+);
+
+INSERT INTO character(creator, page_slug, is_main_character,
+    thumbnail,
+    short_name, subtitles,
+    infobox,
+    birthday,
+    page_image, logo, overlay_css,
+    page_text)
+VALUES (
+    'HivemindHypnosis', 'gabriel', TRUE,
+    'https://powerdown.wiki/assets/img/characters/thumbnails/gabriel.png',
+    'Gabriel', ARRAY['Ento-Freak'],
+    ARRAY[
+        ('Name', 'Gabriel Torres')::infobox_row,
+        ('Age', '20 years old')::infobox_row,
+        ('Height', '5''10"')::infobox_row,
+        ('Gender', 'Male')::infobox_row,
+        ('Birthday', 'October 24th')::infobox_row,
+        ('Favorite Food', 'Corn Beef Hash')::infobox_row,
+        ('Favorite Color', 'Orange')::infobox_row,
+        ('Least Favorite Food', 'Mango (Allergic)')::infobox_row,
+        ('Kids Killed', '1-ish')::infobox_row
+    ],
+    '2000-10-24',
+    'https://powerdown.wiki/assets/img/art-archive/judgy-gabriel.png', 'https://powerdown.wiki/assets/img/characters/logos/Gabe.png', 'mix-blend-mode: overlay; background: #EC9706;',
+    '# Bio
+A young kid born in Argentina. Many of his family live has been kept scarce due to him not remembering much as a child. Due to his Electi Ability causing him to freak out and push a fellow peer down the stairs, paralyzing them for life, Gabriel was sentenced to an Electi Juvenile Detention Center until E.R.A. acquired him for rehabilitation. Since then, he has gotten into fights with multiple students and plots the demise of one of them. He is a cold individual with a lot of problems, but who isn''t nowadays?  
+
+# Electi Ability - Entopsychosis
+The user is able to understand arthropods, however he cannot communicate back to them, but only command certain groups with different telepathic signals similar to chemical scents used for differentiating insect tribes from one another. However, this means that any insect that senses the different chemical scent will instantly become hostile towards the ones he is controlling, and attack if provoked.
+
+Gabriel has been able to have a one-way communication with many arthropods, insects mostly as they are the ones he sees most of the time. The commands he is able to give are mostly only a few words since insect comprehension is much more simple than human understanding. However, despite this he much more connected to them in a sympathetic light. Though, it has made him much less sympathetic towards humans. 
+
+Gabriel''s Electi Ability allow him to be offensive in swarming enemies while also having capabilities to alter terrain, give status conditions, or gather information of the locations of others. Though, it does come with the issue of having multiple hives want to literally kill each other.'
+);
+
+WITH gabe_id AS (
+    SELECT id FROM characters WHERE slug='gabriel';
+)
+INSERT INTO ritual_info (
+    character_id,
+    power_name,
+    power_description
+)
+VALUES (
+    gabe_id,
+    'Entopsychosis',
+    'Can talk to bugs, but they can''t talk back to him.'
 );
