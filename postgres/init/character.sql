@@ -19,7 +19,7 @@ CREATE TABLE character (
 
     thumbnail text NOT NULL, -- Assumed to be a URL
 
-    infobox infobox_row[] NOT NULL DEFAULT ARRAY[],
+    infobox infobox_row[] NOT NULL DEFAULT ARRAY[]::infobox_row[],
     page_image text NOT NULL, -- Assumed to be a URL
     logo text, -- Assumed to be a URL
     overlay_css text, -- Everything here goes inside a <style>.overlay { }</style> 
@@ -36,8 +36,7 @@ CREATE TABLE ritual_info(
         ON DELETE CASCADE,
     power_name text NOT NULL,
     power_description text NOT NULL
-)
-
+);
 
 
 INSERT INTO character(is_hidden, creator, page_slug, 
@@ -117,16 +116,13 @@ Replication requires intimate knowledge of the object being replicated. Unfortun
 
 );
 
-WITH ridley_id AS (
-    SELECT id FROM characters WHERE slug='ridley';
-)
 INSERT INTO ritual_info (
     character_id,
     power_name,
     power_description
 )
 VALUES (
-    ridley_id,
+    (SELECT id FROM character WHERE page_slug = 'ridley'),
     'Dupe-licate',
     'Can create replicas of any item. The replicas depend on intimate knowledge of the item being replicated, and typically this results in an imperfect clone because he sucks at it.'
 );
@@ -162,16 +158,13 @@ Abigail is a former outlaw turned law enforcement in the technologically obsolet
 Abigail can achieve "Bullet Time", increasing her perception tenfold, to the point the world seems slow to her eyes for a few moments. Using this ability causes extreme cognitive strain, often leaving her in a drunken-like haze after a mere moment of use, and loss of consciousness entirely under further use.'
 );
 
-WITH abigail_id AS (
-    SELECT id FROM characters WHERE slug='abigail';
-)
 INSERT INTO ritual_info (
     character_id,
     power_name,
     power_description
 )
 VALUES (
-    abigail_id,
+    (SELECT id FROM character WHERE page_slug = 'abigail'),
     'Bullet Time',
     'Time seems to slow in her perception, allowing quicker reaction. Causes extreme cognitive strain.'
 );
@@ -211,16 +204,13 @@ Gabriel has been able to have a one-way communication with many arthropods, inse
 Gabriel''s Electi Ability allow him to be offensive in swarming enemies while also having capabilities to alter terrain, give status conditions, or gather information of the locations of others. Though, it does come with the issue of having multiple hives want to literally kill each other.'
 );
 
-WITH gabe_id AS (
-    SELECT id FROM characters WHERE slug='gabriel';
-)
 INSERT INTO ritual_info (
     character_id,
     power_name,
     power_description
 )
 VALUES (
-    gabe_id,
+    (SELECT id FROM character WHERE page_slug = 'gabriel'),
     'Entopsychosis',
     'Can talk to bugs, but they can''t talk back to him.'
 );
