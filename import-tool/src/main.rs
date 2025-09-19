@@ -1,4 +1,4 @@
-use import_tool::read_line;
+use import_tool::{select_import_type};
 use owo_colors::OwoColorize;
 
 fn main() {
@@ -11,25 +11,7 @@ This tool should be used regularly in testing and only {} on the final site.
 "once".red().bold().underline(), 
 "If there's any bugs, message Lucio over discord with screenshots.".yellow().italic());
     
-    println!(
-"\nWhat would you like to import?
-(1) Characters.
-(2) Art.
-(3) Stories.
-(9) Everything!
-(0) Close tool"
-    );
-    loop {
-        let chosen_option = read_line().unwrap();
+    // TODO: Get the location of where the files are.
 
-        let trimmed_option = chosen_option.trim();
-
-        match trimmed_option {
-            "0" => {
-                println!("Goodbye!");
-                break;
-            }
-            _ => println!("{}", "I didn't quite get that.".yellow())
-        }
-    }
+    select_import_type();
 }
