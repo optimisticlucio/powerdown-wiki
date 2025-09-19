@@ -1,0 +1,9 @@
+[package]
+name = "import-tool"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gray_matter = "0.3.2"
+indicatif = "0.18.0"
+owo-colors = "4.2.2"
