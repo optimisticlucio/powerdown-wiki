@@ -3,10 +3,11 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql, Type};
+use bon::Builder;
 
 // TODO: Get character ritual info
 
-#[derive(Clone)]
+#[derive(Clone, Builder)]
 pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     db_id: i32, // The internal ID. Shouldn't be shown to user.
     pub is_hidden: bool,
@@ -17,7 +18,7 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     pub thumbnail_url: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Builder)]
 pub struct PageCharacter { // Info relevant to character page
     pub base_character: BaseCharacter,
 

@@ -12,7 +12,7 @@ ammonia = "4.1.1"
 serde = "1.0.219"
 css-minify = "0.5.2"
 tokio = { version = "1.47.1", features = ["full"] }
-axum = "0.8.4"
+axum = {version = "0.8.4", features=["multipart"]}
 postgres = "0.19.10"
 tower = "0.5.2"
 askama = { version = "0.14.0" }
@@ -28,3 +28,4 @@ aws-sdk-dynamodb = "1.90.0"
 tower-layer = "0.3.3"
 deadpool = "0.12.2"
 postgres-types = { version= "0.2.9", features = ["derive"]}
+bon = "3.7.2"

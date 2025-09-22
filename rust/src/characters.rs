@@ -1,16 +1,18 @@
 use askama::Template;
-use axum::{response::Html, routing::get, extract::State, Router};
+use axum::{response::Html, routing::get, routing::post, extract::State, Router};
 use crate::{user::User, test_data, utils, ServerState};
 use chrono;
 use axum_extra::routing::RouterExt;
 
 mod page;
 pub mod structs;
+mod post;
 
 pub use structs::{BaseCharacter, PageCharacter};
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(character_index))
+        .route_with_tsr("/new", post(post::add_character))
         .route_with_tsr("/{character_slug}", get(page::character_page))
 }
 
