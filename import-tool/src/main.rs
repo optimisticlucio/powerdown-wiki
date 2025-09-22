@@ -1,7 +1,8 @@
-use import_tool::{select_import_type};
+use import_tool::{select_import_type, select_main_folder, select_server_url};
 use owo_colors::OwoColorize;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     println!(
 "{}
 This tool should be used regularly in testing and only {} on the final site.
@@ -11,7 +12,9 @@ This tool should be used regularly in testing and only {} on the final site.
 "once".red().bold().underline(), 
 "If there's any bugs, message Lucio over discord with screenshots.".yellow().italic());
     
-    // TODO: Get the location of where the files are.
+    let path_to_root = select_main_folder();
 
-    select_import_type();
+    let server_url = select_server_url();
+
+    select_import_type(&path_to_root, &server_url);
 }

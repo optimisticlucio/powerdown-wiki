@@ -1,8 +1,10 @@
-use std::io;
+use std::{io, path::{Path, PathBuf}};
 use owo_colors::OwoColorize;
+use reqwest::Url;
 
 mod art_archive;
 mod characters;
+mod stories;
 
 pub fn read_line() -> Result<String, io::Error>{
     let mut input_string = String::new();
@@ -13,9 +15,30 @@ pub fn read_line() -> Result<String, io::Error>{
     return Ok(input_string);
 }
 
+pub fn select_main_folder() -> PathBuf {
+    println!("Please input the path of the {} folder inside of unbridled-confidence:", 
+    "pd-archive".bold());
+
+    loop {
+        let chosen_option = read_line().unwrap();
+
+        let trimmed_option = chosen_option.trim();
+
+        // TODO: Ensure that it's a valid path, and that it does match the structure of pd-archive. If not, ask for another path.
+
+        return PathBuf::from(trimmed_option);
+    }
+}
+
+
+pub fn select_server_url() -> Url {
+    // TODO: Get the URL.
+
+    return Url::parse("").unwrap();
+}
 
 /// Selects what to import, and then runs the relevant piece of code.
-pub fn select_import_type() -> () {
+pub fn select_import_type(root_path: &Path, server_url: &Url) -> () {
     println!(
 "\nWhat would you like to import?
 (1) Characters.
@@ -30,6 +53,25 @@ pub fn select_import_type() -> () {
         let trimmed_option = chosen_option.trim();
 
         match trimmed_option {
+            "1" => {
+                characters::select_import_options(root_path, server_url);
+                break;
+            }
+
+            "2" => {
+                art_archive::select_import_options(root_path, server_url);
+                break;
+            }
+
+            "3" => {
+                stories::select_import_options(root_path, server_url);
+                break;
+            }
+
+            "9" => {
+                unimplemented!("Haven't implemented full import yet. You don't need it yet, calm down.");
+            }
+
             "0" => {
                 break;
             }

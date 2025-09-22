@@ -7,3 +7,5 @@ edition = "2024"
 gray_matter = "0.3.2"
 indicatif = "0.18.0"
 owo-colors = "4.2.2"
+reqwest = "0.12.23"
+tokio = { version= "1.47.1", features=["macros", "rt-multi-thread"] }
