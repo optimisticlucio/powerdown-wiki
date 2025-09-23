@@ -4,11 +4,24 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
+      AWS_URL: ${AWS_URL}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     ports:
       - 8080:8080
 
-  #localstack:
-  #  image: localstack/localstack
+  # This entire thing is for testing, so temp volume. Delete and connect wires to S3 once ready.
+  localstack:
+    container_name: localstack
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      SERVICES: "s3"
+    volumes:
+      - localstack-data:/var/lib/localstack
+  
   postgres:
     image: postgres
     shm_size: 256mb # Needs at least 128mb.
@@ -26,3 +39,5 @@ services:
 
   #ngnix:
   #  image: ngnix
+volumes:
+  localstack-data:

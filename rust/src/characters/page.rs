@@ -3,7 +3,7 @@ use askama::Template;
 use rand::seq::IndexedRandom;
 use crate::{characters::{BaseCharacter, PageCharacter, structs::{InfoboxRow}}, errs::RootErrors, user::User, ServerState};
 use crate::utils::template_to_response;
-use comrak::{create_formatter, markdown_to_html};
+use comrak::{ markdown_to_html};
 
 #[derive(Template)] 
 #[template(path = "characters/page.html")]

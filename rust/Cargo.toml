@@ -29,3 +29,4 @@ tower-layer = "0.3.3"
 deadpool = "0.12.2"
 postgres-types = { version= "0.2.9", features = ["derive"]}
 bon = "3.7.2"
+aws-sdk-s3 = "1.106.0"
