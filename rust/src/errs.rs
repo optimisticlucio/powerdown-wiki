@@ -9,7 +9,8 @@ use crate::user::User;
 pub enum RootErrors {
     NOT_FOUND,
     INTERNAL_SERVER_ERROR,
-    REQUEST_TIMEOUT
+    REQUEST_TIMEOUT,
+    BAD_REQUEST(String)
 }
 
 impl IntoResponse for RootErrors {
@@ -17,7 +18,8 @@ impl IntoResponse for RootErrors {
         match self {
             Self::NOT_FOUND => page_not_found().into_response(),
             Self::INTERNAL_SERVER_ERROR => INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone().into_response(),
-            Self::REQUEST_TIMEOUT => request_timeout().into_response()
+            Self::REQUEST_TIMEOUT => request_timeout().into_response(),
+            Self::BAD_REQUEST(elaboration) => bad_request(elaboration).into_response()
         }
     }
 }
@@ -47,4 +49,9 @@ fn page_not_found() -> (StatusCode, Html<String>) {
 fn request_timeout() -> impl IntoResponse{
     (StatusCode::REQUEST_TIMEOUT,
     "Request took too long".to_string())
+}
+
+fn bad_request(elaboration: String) -> impl IntoResponse {
+    (StatusCode::BAD_REQUEST,
+    format!("Bad request: {}", elaboration))
 }

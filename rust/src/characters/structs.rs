@@ -3,15 +3,19 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql, Type};
-use bon::Builder;
+use derive_builder::Builder;
 
 // TODO: Get character ritual info
 
 #[derive(Clone, Builder)]
 pub struct BaseCharacter { // Info relevant to absolute most uses of a character
+    #[builder(default)]
     db_id: i32, // The internal ID. Shouldn't be shown to user.
+    #[builder(default = false)]
     pub is_hidden: bool,
+    #[builder(default = false)] // In some cases relies on a diff value.
     pub is_archived: bool,
+    #[builder(default = false)]
     pub is_main_character: bool,
     pub slug: String,
     pub name: String,
@@ -22,17 +26,23 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
 pub struct PageCharacter { // Info relevant to character page
     pub base_character: BaseCharacter,
 
+    #[builder(default = None)]
     pub long_name: Option<String>,
     pub subtitles: Vec<String>,
     pub creator: String,
+    #[builder(default = None)]
     pub archival_reason: Option<String>,
-    pub tag: Option<String>,
+    #[builder(default = None)]
+    pub tag: Option<String>, // TODO: Should this be optional?
 
+    #[builder(default = None)]
     pub logo_url: Option<String>,
     pub page_img_url: String,
 
     pub infobox: Vec<InfoboxRow>,
+    #[builder(default = None)]
     pub overlay_css: Option<String>,
+    #[builder(default = None)]
     pub custom_css: Option<String>,
     pub page_contents: String
 }
@@ -50,6 +60,15 @@ pub struct RitualCharacter {
 pub struct InfoboxRow {
     pub title: String,
     pub description: String,
+}
+
+impl InfoboxRow {
+    pub fn new(title: String, description: String) -> Self {
+        Self {
+            title,
+            description
+        }
+    }
 }
 
 impl BaseCharacter {
