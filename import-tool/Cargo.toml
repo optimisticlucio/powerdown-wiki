@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-gray_matter = "0.3.2"
+gray_matter = {version="0.3.2", features=["yaml"]}
+indexmap = { version="2.11.4", features=["serde"]}
 indicatif = "0.18.0"
 owo-colors = "4.2.2"
-reqwest = "0.12.23"
+reqwest = {version = "0.12.23", features=["multipart"]}
+serde = "1.0.227"
+serde_json = {version="1.0.145", features=["indexmap"]}
 tokio = { version= "1.47.1", features=["macros", "rt-multi-thread"] }

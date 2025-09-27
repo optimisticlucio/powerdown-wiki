@@ -38,7 +38,7 @@ pub fn select_server_url() -> Url {
 }
 
 /// Selects what to import, and then runs the relevant piece of code.
-pub fn select_import_type(root_path: &Path, server_url: &Url) -> () {
+pub async fn select_import_type(root_path: &Path, server_url: &Url) -> () {
     println!(
 "\nWhat would you like to import?
 (1) Characters.
@@ -54,7 +54,7 @@ pub fn select_import_type(root_path: &Path, server_url: &Url) -> () {
 
         match trimmed_option {
             "1" => {
-                characters::select_import_options(root_path, server_url);
+                characters::select_import_options(root_path, server_url).await;
                 break;
             }
 
