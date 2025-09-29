@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+futures = "0.3.31"
 gray_matter = {version="0.3.2", features=["yaml"]}
 indexmap = { version="2.11.4", features=["serde"]}
 indicatif = "0.18.0"

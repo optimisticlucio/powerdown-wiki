@@ -1,12 +1,71 @@
-use std::{fs, path::Path};
+use std::{fs, path::{Path, PathBuf}, sync::Arc};
 use reqwest::{Url};
 use serde::{Deserialize, Serialize};
-use serde::de::{Deserializer, Error};
 use gray_matter::{Matter, engine::YAML};
 use indexmap::IndexMap;
+use owo_colors::OwoColorize;
+use futures::{stream, StreamExt};
+use tokio::sync::Mutex;
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
-    unimplemented!()
+    
+
+    // TODO: Find _characters folder, get all files within it.
+    let all_character_paths = Vec::<PathBuf>::new();
+
+    // TODO: Show user amount of characters in folder.
+
+    // TODO: Ask user whether to import all (1), import X randomly (2), or import specific file (3). (0 is cancel.)
+
+    loop {
+        let chosen_option = crate::read_line().unwrap();
+
+        let trimmed_option = chosen_option.trim();
+
+        match trimmed_option {
+            "1" => { // Import all
+                import_given_characters(&all_character_paths, server_url).await;
+                break;
+            }
+
+            "2" => { // TODO: Import X randomly
+                
+                break;
+            }
+
+            "3" => { // TODO: Import specific file
+                
+                break;
+            }
+
+            "0" => {
+                break;
+            }
+            _ => println!("{}", "I didn't quite get that.".yellow())
+        }
+    }
+
+    unimplemented!();
+}
+
+async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<(), Vec<String>> {
+    let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+
+    stream::iter(character_file_paths)
+                    .for_each_concurrent(4, |character_path| {
+                        async move {
+
+                        }
+                    }).await;
+    
+    let errors = Vec::new(); // TODO: Unwrap import_errors appropriately.
+
+    if errors.is_empty() {
+        Ok(())
+    }
+    else {
+        Err(errors)
+    }
 }
 
 async fn import_given_character(character_file_path: &Path, server_url: &Url) -> Result<(), String> {

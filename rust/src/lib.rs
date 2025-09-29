@@ -18,7 +18,6 @@ mod art;
 pub mod server_state;
 pub use server_state::ServerState;
 
-// TODO: Figure out how to pass around ServerState
 pub fn router(state: ServerState) -> Router<()> {
     Router::new()
         .merge(index::router())
