@@ -3,19 +3,22 @@ use reqwest::{Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
 use indexmap::IndexMap;
-use owo_colors::OwoColorize;
+use owo_colors::{ OwoColorize};
 use futures::{stream, StreamExt};
 use tokio::sync::Mutex;
+use indicatif::ProgressBar;
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
-    
-
     // TODO: Find _characters folder, get all files within it.
     let all_character_paths = Vec::<PathBuf>::new();
 
     // TODO: Show user amount of characters in folder.
 
-    // TODO: Ask user whether to import all (1), import X randomly (2), or import specific file (3). (0 is cancel.)
+    println!("Would you like to\n{}\n{}\nor {}?\n{}", 
+        "(1) Import all characters".yellow(), 
+        "(2) Import a random group of characters".blue(), 
+        "(3) Import a specific file".green(), 
+        "Press 0 to exit screen.".italic());
 
     loop {
         let chosen_option = crate::read_line().unwrap();
@@ -24,17 +27,22 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
         match trimmed_option {
             "1" => { // Import all
-                import_given_characters(&all_character_paths, server_url).await;
+                if let Err(import_errs) = import_given_characters(&all_character_paths, server_url).await {
+                    println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
+                }
+                else {
+                    println!("{}", "Import completed without problems!".green())
+                }
                 break;
             }
 
             "2" => { // TODO: Import X randomly
-                
+                unimplemented!();
                 break;
             }
 
             "3" => { // TODO: Import specific file
-                
+                unimplemented!();
                 break;
             }
 
@@ -49,16 +57,34 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 }
 
 async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<(), Vec<String>> {
+    let simultaneous_threads = 4;
     let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
-    stream::iter(character_file_paths)
-                    .for_each_concurrent(4, |character_path| {
-                        async move {
+    // TODO: If try_into doesn't work, use a spinner.
+    let progress_bar = Arc::new(ProgressBar::new(character_file_paths.len().try_into().unwrap()).with_finish(indicatif::ProgressFinish::AndClear));
 
+    stream::iter(character_file_paths)
+                    .for_each_concurrent(simultaneous_threads, |character_path| {
+                        let import_errors_clone = import_errors.clone();
+                        let progress_bar_clone = progress_bar.clone();
+
+                        async move {
+                            let import_result = import_given_character(character_path, server_url).await;
+
+                            if let Err(import_error) = import_result {
+                                let mut import_errors_unlocked = import_errors_clone.blocking_lock();
+                                import_errors_unlocked.push(import_error);
+                            }
+
+                            progress_bar_clone.inc(1);
                         }
                     }).await;
     
-    let errors = Vec::new(); // TODO: Unwrap import_errors appropriately.
+    let errors =  {
+        // TODO: Handle if somehow this mutex wasn't released.
+        let errors_mutex_lock = import_errors.blocking_lock();
+        errors_mutex_lock.clone()
+    };
 
     if errors.is_empty() {
         Ok(())
