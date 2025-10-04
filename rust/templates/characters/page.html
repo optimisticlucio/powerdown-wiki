@@ -58,9 +58,11 @@
             </div>
         </div>
 
-        <div class="character-bottom">
-                {{ content | safe }} 
-        </div>
+        {% if let Some(page_content) = content %}
+            <div class="character-bottom">
+                    {{ page_content | safe }} 
+            </div>
+        {% endif %}
     </div>
     
 </div>

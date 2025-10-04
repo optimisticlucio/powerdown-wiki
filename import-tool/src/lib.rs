@@ -32,9 +32,17 @@ pub fn select_main_folder() -> PathBuf {
 
 
 pub fn select_server_url() -> Url {
-    // TODO: Get the URL.
+    println!("Please input the URL of the server we're targeting:");
 
-    return Url::parse("").unwrap();
+    loop {
+        let chosen_option = read_line().unwrap();
+
+        let trimmed_option = chosen_option.trim();
+
+        // TODO: Ensure that it's a valid URL and that it matches what we're looking for.
+
+        return Url::parse(trimmed_option).unwrap(); // TODO: Handle parse error
+    }
 }
 
 /// Selects what to import, and then runs the relevant piece of code.

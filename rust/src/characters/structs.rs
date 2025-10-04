@@ -44,7 +44,7 @@ pub struct PageCharacter { // Info relevant to character page
     pub overlay_css: Option<String>,
     #[builder(default = None)]
     pub custom_css: Option<String>,
-    pub page_contents: String
+    pub page_contents: Option<String>
 }
 
 #[derive(Clone)]

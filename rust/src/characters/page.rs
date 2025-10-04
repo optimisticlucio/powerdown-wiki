@@ -24,7 +24,7 @@ struct CharacterPage<'a> {
     page_img: &'a str,
     character_logo: Option<&'a str>,
 
-    content: &'a str,
+    content: Option<&'a str>,
 }
 
 pub async fn character_page(
@@ -33,7 +33,7 @@ pub async fn character_page(
 ) -> impl IntoResponse {
     if let Some(chosen_char) = PageCharacter::get_by_slug(character_slug, state.db_pool.get().await.unwrap()).await {
 
-        let parsed_content = parse_character_page_contents(&chosen_char.page_contents).unwrap_or("PARSING FAILED!".to_owned());
+        let parsed_content = chosen_char.page_contents.map(|contents| parse_character_page_contents(&contents).unwrap_or("PARSING FAILED!".to_owned()));
         let retirement_reason = chosen_char.archival_reason.as_ref().map(|f| markdown_to_html(&f, &comrak::Options::default()));
 
         template_to_response(
@@ -52,7 +52,7 @@ pub async fn character_page(
                 infobox: chosen_char.infobox.clone(),
                 page_img: &chosen_char.page_img_url,
                 character_logo: chosen_char.logo_url.as_deref(),
-                content: &parsed_content 
+                content: parsed_content.as_deref()
             }
         )
     }

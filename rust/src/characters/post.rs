@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use axum::extract::multipart::Field;
 use axum::extract::{multipart, Multipart, State};
 use axum::response::{Html, IntoResponse};
@@ -32,7 +33,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                 page_character_builder.overlay_css(Some(text_or_internal_err(recieved_field).await?));
             }
             "page_contents" => {
-                page_character_builder.page_contents(text_or_internal_err(recieved_field).await?);
+                page_character_builder.page_contents(Some(text_or_internal_err(recieved_field).await?));
             }
             "archival_reason" => {
                 page_character_builder.archival_reason(Some(text_or_internal_err(recieved_field).await?));
@@ -58,7 +59,50 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     let page_character = page_character_builder.build()
         .map_err(|err| RootErrors::BAD_REQUEST(err.to_string()))?;
 
-    // TODO: Send character to DB.
+    // Now the character is ready to send to the DB.
+    let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+
+    // Let's build our query.
+    let mut columns: Vec<String> = Vec::new();
+    let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+    columns.push("page_slug".into());
+    values.push(&page_character.base_character.slug);
+
+    columns.push("short_name".into());
+    values.push(&page_character.base_character.name);
+
+    columns.push("subtitles".into());
+    values.push(&page_character.subtitles);
+
+    columns.push("creator".into());
+    values.push(&page_character.creator);
+
+    columns.push("thumbnail".into());
+    values.push(&page_character.base_character.thumbnail_url);
+
+    columns.push("page_image".into());
+    values.push(&page_character.page_img_url);
+
+    if let Some(overlay_css) = &page_character.overlay_css {
+        columns.push("overlay_css".into());
+        values.push(overlay_css);
+    }
+
+    if let Some(page_text) = &page_character.page_contents {
+        columns.push("page_text".into());
+        values.push(page_text);
+    }
+
+    let query = format!("INSERT INTO characters({}) VALUES ({})",
+            columns.join(", "),
+            columns.iter().enumerate().map(|(i, _)| format!("${}", i)).collect::<Vec<String>>().join(", "));
+
+    db_connection.execute(&query, &values).await.map_err(|err| {
+        println!("[CHARACTER POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
+        RootErrors::INTERNAL_SERVER_ERROR
+    })?;
+
     Ok(Html(format!("{} successfully recieved! Now start making code to put them in the DB.", &page_character.base_character.name)))
 }
 

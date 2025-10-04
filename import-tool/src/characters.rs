@@ -1,6 +1,7 @@
-use std::{fs, path::{Path, PathBuf}, sync::Arc};
+use std::{error::Error, fs, path::{Path, PathBuf}, sync::Arc};
 use reqwest::{Url};
 use serde::{Deserialize, Serialize};
+use serde::de::{self, Deserializer, Error as DeError};
 use gray_matter::{Matter, engine::YAML};
 use indexmap::IndexMap;
 use owo_colors::{ OwoColorize};
@@ -9,10 +10,22 @@ use tokio::sync::Mutex;
 use indicatif::ProgressBar;
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
-    // TODO: Find _characters folder, get all files within it.
-    let all_character_paths = Vec::<PathBuf>::new();
+    // Let's search for the _characters folder
+    let characters_path = root_path.join("src/_characters");
 
-    // TODO: Show user amount of characters in folder.
+    if !characters_path.is_dir() {
+        println!("{}", "Can't find src/_characters folder within the given path!");
+        return;
+    }
+
+    let all_character_paths: Vec<PathBuf> = fs::read_dir(characters_path)
+                .unwrap() // TODO: Instead of panicking, give user explanation of what happened.
+                .filter_map(|file| file.ok())
+                .map(|file| file.path())
+                .filter(|path| !path.file_name().unwrap().to_string_lossy().starts_with("_"))
+                .collect();    
+
+    println!("Character folder found! There are {} characters. {}", &all_character_paths.len(), "Any files starting with _ were ignored.".italic());
 
     println!("Would you like to\n{}\n{}\nor {}?\n{}", 
         "(1) Import all characters".yellow(), 
@@ -52,8 +65,6 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
             _ => println!("{}", "I didn't quite get that.".yellow())
         }
     }
-
-    unimplemented!();
 }
 
 async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<(), Vec<String>> {
@@ -71,8 +82,9 @@ async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url
                         async move {
                             let import_result = import_given_character(character_path, server_url).await;
 
-                            if let Err(import_error) = import_result {
-                                let mut import_errors_unlocked = import_errors_clone.blocking_lock();
+                            if let Err(mut import_error) = import_result {
+                                import_error.insert_str(0, &format!("{:?} ", character_path.file_name().unwrap()));
+                                let mut import_errors_unlocked = import_errors_clone.lock().await;
                                 import_errors_unlocked.push(import_error);
                             }
 
@@ -82,7 +94,7 @@ async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url
     
     let errors =  {
         // TODO: Handle if somehow this mutex wasn't released.
-        let errors_mutex_lock = import_errors.blocking_lock();
+        let errors_mutex_lock = import_errors.lock().await;
         errors_mutex_lock.clone()
     };
 
@@ -99,7 +111,8 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
     let file_contents = fs::read_to_string(character_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?;
 
     let parser = Matter::<YAML>::new();
-    let parsed_file = parser.parse(&file_contents).map_err(|err| format!("File Parse Err: {}", err.to_string()))?;
+    let parsed_file = parser.parse(&file_contents)
+            .map_err(|err| format!("File Parse Err: {:?}", err))?;
     
     let frontmatter: CharacterFrontmatter = parsed_file.data.ok_or("File Parse Err: No Frontmatter")?;
     let file_content = parsed_file.content;
@@ -139,13 +152,15 @@ struct CharacterFrontmatter {
     character_title: String,
     #[serde(rename = "inpage-character-title")]
     inpage_character_title: Option<String>, // Convert to long_name
+    #[serde(rename = "character-subtitle", deserialize_with = "string_or_vec")]
     character_subtitle: Vec<String>,
+    #[serde(rename = "character-author")]
     character_author: String,
     #[serde(rename = "logo-file")]
     logo_file: Option<String>,
     #[serde(rename = "character-img-file")]
     character_img_file: String, // The way it's written is relative to /assets/img/. Account for that.
-    birthday: String, // Written as MM-DD
+    birthday: Option<String>, // Written as MM-DD
     #[serde(rename = "infobox-data")]
     infobox_data: IndexMap<String, String>,
     // I'm dropping relationships, this feature sucks.
@@ -153,4 +168,21 @@ struct CharacterFrontmatter {
     overlay_css: Option<String>
 
     // TODO: Handle ritual stuff
+}
+
+fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+        Single(String),
+        Multiple(Vec<String>),
+    }
+
+    match StringOrVec::deserialize(deserializer)? {
+        StringOrVec::Single(s) => Ok(vec![s]),
+        StringOrVec::Multiple(v) => Ok(v),
+    }
 }

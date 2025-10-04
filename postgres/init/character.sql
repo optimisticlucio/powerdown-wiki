@@ -38,7 +38,7 @@ CREATE TABLE ritual_info(
     power_description text NOT NULL
 );
 
-
+/*
 INSERT INTO character(is_hidden, creator, page_slug, 
     thumbnail,
     short_name, subtitles,
@@ -213,4 +213,4 @@ VALUES (
     (SELECT id FROM character WHERE page_slug = 'gabriel'),
     'Entopsychosis',
     'Can talk to bugs, but they can''t talk back to him.'
-);
+);*/
