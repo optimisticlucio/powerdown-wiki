@@ -21,17 +21,26 @@ pub fn router() -> Router<ServerState> {
 struct CharacterIndex<'a> {
     user: Option<User>,
     random_subtitle: &'a str,
-    characters: &'a Vec<BaseCharacter>,
+    active_characters: &'a Vec<BaseCharacter>,
+    retired_characters: &'a Vec<BaseCharacter>,
     birthday_characters: &'a Vec<BaseCharacter>,
     birthday_character_names: &'a str,
     date_today_readable: &'a str,
 }
 
 async fn character_index(State(state): State<ServerState>) -> Html<String> {
-    let displayed_characters: Vec<BaseCharacter> = BaseCharacter::get_all_characters(state.db_pool.get().await.unwrap())
-                .await.into_iter()
+    let all_characters = BaseCharacter::get_all_characters(state.db_pool.get().await.unwrap())
+                .await;
+
+    let mut active_characters: Vec<BaseCharacter> = all_characters.clone().into_iter()
                 .filter(|base_character| !base_character.is_hidden && !base_character.is_archived)
                 .collect();
+    active_characters.sort();
+    
+    let mut retired_characters: Vec<BaseCharacter> = all_characters.into_iter()
+                .filter(|base_character| !base_character.is_hidden && base_character.is_archived)
+                .collect();
+    retired_characters.sort();
 
     let current_time = chrono::Utc::now();
     let date_today_readable = utils::format_date_to_human_readable(current_time);
@@ -58,7 +67,8 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
     CharacterIndex {
         user: None,
         random_subtitle: &random_subtitle,
-        characters: &displayed_characters,
+        active_characters: &active_characters,
+        retired_characters: &retired_characters,
         birthday_characters: &birthday_characters,
         date_today_readable: &date_today_readable,
         birthday_character_names: &birthday_character_names

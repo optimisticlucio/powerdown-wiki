@@ -31,7 +31,7 @@ pub struct PageCharacter { // Info relevant to character page
     pub subtitles: Vec<String>,
     pub creator: String,
     #[builder(default = None)]
-    pub archival_reason: Option<String>,
+    pub retirement_reason: Option<String>,
     #[builder(default = None)]
     pub tag: Option<String>, // TODO: Should this be optional?
 
@@ -44,6 +44,7 @@ pub struct PageCharacter { // Info relevant to character page
     pub overlay_css: Option<String>,
     #[builder(default = None)]
     pub custom_css: Option<String>,
+    #[builder(default = None)]
     pub page_contents: Option<String>
 }
 
@@ -108,6 +109,28 @@ impl BaseCharacter {
     }
 }
 
+impl PartialEq for BaseCharacter {
+    fn eq(&self, other: &Self) -> bool {
+        (self.db_id == other.db_id) && (self.slug == self.slug)
+    }
+}
+
+impl PartialOrd for BaseCharacter {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl Eq for BaseCharacter {
+
+}
+
+impl Ord for BaseCharacter {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
 impl PageCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
     pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<PageCharacter> {
@@ -120,14 +143,14 @@ impl PageCharacter {
 
     /// Converts a DB row with the relevant info to a PageCharacter struct.
     fn from_db_row(row: &Row) -> Self {
-        let archival_reason: Option<String> = row.get("retirement_reason");
+        let retirement_reason: Option<String> = row.get("retirement_reason");
 
         Self {
             base_character: BaseCharacter {
                 db_id: row.get("id"),
                 is_hidden: row.get("is_hidden"),
                 is_main_character: row.get("is_main_character"),
-                is_archived: archival_reason.is_some(),
+                is_archived: retirement_reason.is_some(),
                 name: row.get("short_name"),
                 thumbnail_url: row.get("thumbnail"),
                 slug: row.get("page_slug")
@@ -135,7 +158,7 @@ impl PageCharacter {
             long_name: row.get("long_name"),
             subtitles: row.get("subtitles"),
             creator: row.get("creator"),
-            archival_reason,
+            retirement_reason,
             logo_url: row.get("logo"),
             page_img_url: row.get("page_image"),
             infobox: row.get("infobox"),
@@ -144,6 +167,28 @@ impl PageCharacter {
             page_contents: row.get("page_text"),
             tag: row.get("relevant_tag")
         }
+    }
+}
+
+impl PartialEq for PageCharacter {
+    fn eq(&self, other: &Self) -> bool {
+        self.base_character.eq(&other.base_character)
+    }
+}
+
+impl PartialOrd for PageCharacter {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.base_character.partial_cmp(&other.base_character)
+    }
+}
+
+impl Eq for PageCharacter {
+    
+}
+
+impl Ord for PageCharacter {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.base_character.cmp(&other.base_character)
     }
 }
 

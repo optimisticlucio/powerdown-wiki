@@ -34,7 +34,7 @@ pub async fn character_page(
     if let Some(chosen_char) = PageCharacter::get_by_slug(character_slug, state.db_pool.get().await.unwrap()).await {
 
         let parsed_content = chosen_char.page_contents.map(|contents| parse_character_page_contents(&contents).unwrap_or("PARSING FAILED!".to_owned()));
-        let retirement_reason = chosen_char.archival_reason.as_ref().map(|f| markdown_to_html(&f, &comrak::Options::default()));
+        let retirement_reason = chosen_char.retirement_reason.as_ref().map(|f| markdown_to_html(&f, &comrak::Options::default()));
 
         template_to_response(
             CharacterPage {

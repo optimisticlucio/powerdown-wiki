@@ -20,12 +20,12 @@
     {% endif %}
 
     <div class="character-grid">
-        {% if characters.len() == 0 %}
-            <div>
+        {% if active_characters.len() == 0 %}
+            <div class="character-box">
                 Sorry, but your characters are in another castle!
             </div>
         {% endif %}
-        {% for character in characters %}
+        {% for character in active_characters %}
         <a href="/characters/{{ character.slug }}" class="character-box">
             <img class="character-icon" src="{{ character.thumbnail_url }}">
             <p>
@@ -34,6 +34,23 @@
         </a>
         {% endfor %}
     </div>
+
+    {% if retired_characters.len() > 0 %}
+        <details>
+            <summary>Retired Characters</summary>
+
+            <div class="character-grid">
+                {% for character in retired_characters %}
+                <a href="{{ character.slug }}" class="character-box">
+                    <img class="character-icon" src="{{ character.thumbnail_url }}">
+                    <p>
+                        {{character.name}}
+                    </p>
+                </a>
+                {% endfor %}
+            </div>
+        </details>
+    {% endif %}
 
 </div>
 {% endblock %}

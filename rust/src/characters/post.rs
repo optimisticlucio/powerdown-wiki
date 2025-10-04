@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
-use axum::extract::multipart::Field;
-use axum::extract::{multipart, Multipart, State};
+use std::collections::{HashMap};
+use axum::extract::multipart::{Field, InvalidBoundary};
+use axum::extract::{Multipart, State};
 use axum::response::{Html, IntoResponse};
 use crate::{ServerState, characters::structs::{PageCharacterBuilder, BaseCharacterBuilder, InfoboxRow}, errs::RootErrors};
 
@@ -13,20 +13,19 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         let field_name = recieved_field.name().unwrap().to_string();
         
         match field_name.as_str() {
-            // TODO: Missing values to recieve: Tag, long_name, logo_url, custom_css
             "name" => { base_character_builder.name(text_or_internal_err(recieved_field).await?); }
             "slug" => { base_character_builder.slug(text_or_internal_err(recieved_field).await?); }
             "thumbnail_url" => { base_character_builder.thumbnail_url(text_or_internal_err(recieved_field).await?); }
             "subtitles" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
-                let subtitle_array: Vec<String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(parse_err.to_string()))?;
+                let subtitle_array: Vec<String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, SUBTITLES, RECIEVED: {}",parse_err.to_string(), field_text)))?;
                 page_character_builder.subtitles(subtitle_array);
             }
             "creator" => { page_character_builder.creator(text_or_internal_err(recieved_field).await?); }
             "page_img_url" => { page_character_builder.page_img_url(text_or_internal_err(recieved_field).await?); }
             "infobox" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
-                let infobox_array: Vec<(String, String)> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(parse_err.to_string()))?;
+                let infobox_array: HashMap<String, String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, INFOBOX, RECIEVED: {}",parse_err.to_string(), field_text)))?;
                 page_character_builder.infobox(infobox_array.iter().map(|(title, desc)| InfoboxRow::new(title.to_owned(), desc.to_owned())).collect());
             }
             "overlay_css" => {
@@ -35,8 +34,8 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             "page_contents" => {
                 page_character_builder.page_contents(Some(text_or_internal_err(recieved_field).await?));
             }
-            "archival_reason" => {
-                page_character_builder.archival_reason(Some(text_or_internal_err(recieved_field).await?));
+            "retirement_reason" => {
+                page_character_builder.retirement_reason(Some(text_or_internal_err(recieved_field).await?));
                 base_character_builder.is_archived(true);
             }
             "is_main_character" => {
@@ -46,6 +45,15 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             "is_hidden" => {
                 // If this field is included at all, we assume it's true.
                 base_character_builder.is_hidden(true);
+            }
+            "relevant_tag" => {
+                page_character_builder.tag(Some(text_or_internal_err(recieved_field).await?));
+            }
+            "logo" => {
+                page_character_builder.logo_url(Some(text_or_internal_err(recieved_field).await?));
+            }
+            "long_name" => {
+                page_character_builder.long_name(Some(text_or_internal_err(recieved_field).await?));
             }
             
             _ => return Err(RootErrors::BAD_REQUEST(format!("Invalid Field Recieved: {}", field_name)))
@@ -84,6 +92,9 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     columns.push("page_image".into());
     values.push(&page_character.page_img_url);
 
+    columns.push("infobox".into());
+    values.push(&page_character.infobox);
+
     if let Some(overlay_css) = &page_character.overlay_css {
         columns.push("overlay_css".into());
         values.push(overlay_css);
@@ -94,9 +105,29 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         values.push(page_text);
     }
 
-    let query = format!("INSERT INTO characters({}) VALUES ({})",
+    if page_character.base_character.is_hidden {
+        columns.push("is_hidden".into());
+        values.push(&true);
+    }
+
+    if let Some(retirement_reason) = &page_character.retirement_reason {
+        columns.push("retirement_reason".into());
+        values.push(retirement_reason);
+    }
+
+    if let Some(long_name) = &page_character.long_name {
+        columns.push("long_name".into());
+        values.push(long_name);
+    }
+
+    if let Some(logo) = &page_character.logo_url {
+        columns.push("logo".into());
+        values.push(logo);
+    }
+
+    let query = format!("INSERT INTO character({}) VALUES ({})",
             columns.join(", "),
-            columns.iter().enumerate().map(|(i, _)| format!("${}", i)).collect::<Vec<String>>().join(", "));
+            columns.iter().enumerate().map(|(i, _)| format!("${}", i+1)).collect::<Vec<String>>().join(", "));
 
     db_connection.execute(&query, &values).await.map_err(|err| {
         println!("[CHARACTER POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);

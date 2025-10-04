@@ -1,5 +1,5 @@
 use std::{error::Error, fs, path::{Path, PathBuf}, sync::Arc};
-use reqwest::{Url};
+use reqwest::{Response, Url};
 use serde::{Deserialize, Serialize};
 use serde::de::{self, Deserializer, Error as DeError};
 use gray_matter::{Matter, engine::YAML};
@@ -10,6 +10,8 @@ use tokio::sync::Mutex;
 use indicatif::ProgressBar;
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
+    let post_url = server_url.join("characters/new").unwrap();
+    
     // Let's search for the _characters folder
     let characters_path = root_path.join("src/_characters");
 
@@ -40,12 +42,10 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
         match trimmed_option {
             "1" => { // Import all
-                if let Err(import_errs) = import_given_characters(&all_character_paths, server_url).await {
+                if let Err(import_errs) = import_given_characters(&all_character_paths, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
-                else {
-                    println!("{}", "Import completed without problems!".green())
-                }
+
                 break;
             }
 
@@ -67,9 +67,10 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     }
 }
 
-async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<(), Vec<String>> {
+async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
     let simultaneous_threads = 4;
     let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let import_successes: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
     // TODO: If try_into doesn't work, use a spinner.
     let progress_bar = Arc::new(ProgressBar::new(character_file_paths.len().try_into().unwrap()).with_finish(indicatif::ProgressFinish::AndClear));
@@ -77,36 +78,50 @@ async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url
     stream::iter(character_file_paths)
                     .for_each_concurrent(simultaneous_threads, |character_path| {
                         let import_errors_clone = import_errors.clone();
+                        let import_successes_clone = import_successes.clone();
                         let progress_bar_clone = progress_bar.clone();
 
                         async move {
-                            let import_result = import_given_character(character_path, server_url).await;
-
-                            if let Err(mut import_error) = import_result {
-                                import_error.insert_str(0, &format!("{:?} ", character_path.file_name().unwrap()));
-                                let mut import_errors_unlocked = import_errors_clone.lock().await;
-                                import_errors_unlocked.push(import_error);
+                            match import_given_character(character_path, server_url).await {
+                                Err(mut import_error) => {  
+                                    import_error.insert_str(0, &format!("{:?} ", character_path.file_name().unwrap()));
+                                    let mut import_errors_unlocked = import_errors_clone.lock().await;
+                                    import_errors_unlocked.push(import_error);
+                                },
+                                Ok(import_success) => {
+                                    let import_success_readable = format!("{:?} STATUS {}: {}", character_path.file_name().unwrap(), import_success.status(), import_success.text().await.unwrap_or_default());
+                                    let mut import_successes_unlocked = import_successes_clone.lock().await;
+                                    import_successes_unlocked.push(import_success_readable);
+                                }
                             }
 
                             progress_bar_clone.inc(1);
                         }
                     }).await;
     
-    let errors =  {
+    let mut errors =  {
         // TODO: Handle if somehow this mutex wasn't released.
         let errors_mutex_lock = import_errors.lock().await;
         errors_mutex_lock.clone()
     };
 
+    let successes =  {
+        // TODO: Handle if somehow this mutex wasn't released.
+        let successes_mutex_lock = import_successes.lock().await;
+        successes_mutex_lock.clone()
+    };
+
+    errors.extend(successes.iter().filter(|success| !success.contains("STATUS 200")).map(|x| x.to_owned()).collect::<Vec<String>>());
+
     if errors.is_empty() {
-        Ok(())
+        Ok(successes)
     }
     else {
         Err(errors)
     }
 }
 
-async fn import_given_character(character_file_path: &Path, server_url: &Url) -> Result<(), String> {
+async fn import_given_character(character_file_path: &Path, server_url: &Url) -> Result<Response, String> {
     // Read and parse file
     let file_contents = fs::read_to_string(character_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?;
 
@@ -116,29 +131,52 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
     
     let frontmatter: CharacterFrontmatter = parsed_file.data.ok_or("File Parse Err: No Frontmatter")?;
     let file_content = parsed_file.content;
-    let character_slug: String = character_file_path.file_name().unwrap().to_ascii_lowercase().to_str().unwrap().trim_end_matches(".md").to_owned();
+    let character_slug: String = character_file_path.file_name().unwrap().to_ascii_lowercase().to_str().unwrap().trim_end_matches(".md").to_owned().replace(" ", "-");
 
     // Set the required fields for the post request
-    let post_request = reqwest::multipart::Form::new()
+    let mut post_request = reqwest::multipart::Form::new()
         .text("name", frontmatter.character_title)
         .text("creator", frontmatter.character_author)
         .text("slug", character_slug.clone())
-        .text("thumbnail_url", format!("https://powerdown.wiki/assets/img/characters/thumbnails/{}", character_slug)) // TODO: Convert to file sending
+        .text("relevant_tag", character_slug.clone())
+        .text("thumbnail_url", format!("https://powerdown.wiki/assets/img/characters/thumbnails/{}.png", character_slug)) // TODO: Convert to file sending
         .text("page_img_url", format!("https://powerdown.wiki/assets/img/{}", frontmatter.character_img_file)) // TODO: Convert to file sending
         .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
         .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)
-        .text("page_contents", file_content)
         ;
 
-    // TODO: Implement optional fields
+    if let Some(overlay_css) = frontmatter.overlay_css {
+        post_request = post_request.text("overlay_css", overlay_css);
+    }
+
+    if !file_content.trim().is_empty() {
+        post_request = post_request.text("page_contents", file_content);
+    }
+
+    if frontmatter.hide_character {
+        post_request = post_request.text("is_hidden", "true");
+    }
+
+    if let Some(retirement_reason) = frontmatter.archival_reason {
+        post_request = post_request.text("retirement_reason", retirement_reason);
+    }
+
+    if let Some(logo) = frontmatter.logo_file {
+        post_request = post_request.text("logo", format!("https://powerdown.wiki/assets/img/characters/logos/{}", logo));
+    }
+    
+    if frontmatter.is_main_character {
+        post_request = post_request.text("is_main_character", "true");
+    }
+
+    if let Some(inpage_character_name) = frontmatter.inpage_character_title {
+        post_request = post_request.text("long_name", inpage_character_name);
+    }
 
     // Send the post request and hope for the best.
-    reqwest::Client::new().post(server_url.to_owned())
+    return reqwest::Client::new().post(server_url.to_owned())
         .multipart(post_request).send()
-        .await.map_err(|err| format!("Info Send Err: {}", err.to_string()))?
-        ;
-
-    Ok(())
+        .await.map_err(|err| format!("Info Send Err: {}", err.to_string()));
 }
 
 #[derive(Deserialize, Serialize)]
@@ -161,11 +199,15 @@ struct CharacterFrontmatter {
     #[serde(rename = "character-img-file")]
     character_img_file: String, // The way it's written is relative to /assets/img/. Account for that.
     birthday: Option<String>, // Written as MM-DD
-    #[serde(rename = "infobox-data")]
+    #[serde(rename = "infobox-data", deserialize_with = "deserialize_string_map")]
     infobox_data: IndexMap<String, String>,
     // I'm dropping relationships, this feature sucks.
     #[serde(rename = "css-code")]
-    overlay_css: Option<String>
+    overlay_css: Option<String>,
+
+    #[serde(default)]
+    #[serde(rename = "main-character")]
+    is_main_character: bool, // If missing, assume false.
 
     // TODO: Handle ritual stuff
 }
@@ -185,4 +227,31 @@ where
         StringOrVec::Single(s) => Ok(vec![s]),
         StringOrVec::Multiple(v) => Ok(v),
     }
+}
+
+fn deserialize_string_map<'de, D>(deserializer: D) -> Result<IndexMap<String, String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrOther {
+        String(String),
+        Number(serde_json::Number),
+        Bool(bool),
+    }
+    
+    let map: IndexMap<String, StringOrOther> = IndexMap::deserialize(deserializer)?;
+    
+    Ok(map
+        .into_iter()
+        .map(|(k, v)| {
+            let string_value = match v {
+                StringOrOther::String(s) => s,
+                StringOrOther::Number(n) => n.to_string(),
+                StringOrOther::Bool(b) => b.to_string(),
+            };
+            (k, string_value)
+        })
+        .collect())
 }
