@@ -45,9 +45,11 @@
                             <strong>{{item.title}}:</strong> {{item.description}} <br>
                         {% endfor %}
                     </p>
-                    <a class="text" href="/tags/{{ tag }}">
-                        ART OF {{ name }}
-                    </a>
+                    {% if let Some(tag) = tag %}
+                        <a class="text" href="/tags/{{ tag }}">
+                            ART OF {{ name }}
+                        </a>
+                    {% endif %}
                 </div>
             </div>
             <div class="right">

@@ -77,7 +77,7 @@ impl BaseCharacter {
     pub async fn get_all_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Limit this query to only what's necessary to speed it up.
         let character_rows = db_connection.query(
-            "SELECT * FROM character",
+            "SELECT * FROM character ORDER BY short_name",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()
@@ -87,7 +87,7 @@ impl BaseCharacter {
     pub async fn get_birthday_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Limit this query to only what's necessary to speed it up.
         let character_rows = db_connection.query(
-            "SELECT * FROM character WHERE EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE)",
+            "SELECT * FROM character WHERE EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()

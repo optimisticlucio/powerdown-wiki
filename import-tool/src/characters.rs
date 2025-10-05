@@ -53,13 +53,13 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
             }
 
             "2" => { 
-                let amount_of_characters: usize = {
+                let amount_of_characters = {
                     println!("How many characters would you like?");
 
                     loop {
                         let chosen_amount = crate::read_line().unwrap();
 
-                        if let Ok(parsed_amount) =  chosen_amount.parse::<usize>() {
+                        if let Ok(parsed_amount) =  chosen_amount.trim().parse::<usize>() {
                             match parsed_amount {
                                 x if x < 1 => println!("{}", "That's too little!".yellow()),
                                 x if x > total_character_amount => {
@@ -78,7 +78,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 };
 
                 let random_characters = all_character_paths
-                        .choose_multiple(&mut rand::rng(), 4)
+                        .choose_multiple(&mut rand::rng(), amount_of_characters)
                         .map(|x| x.to_path_buf()).collect();
                 if let Err(import_errs) = import_given_characters(&random_characters, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
@@ -96,7 +96,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                     let chosen_file = all_character_paths.iter().find(|path| path.file_name().unwrap_or_default().eq_ignore_ascii_case(trimmed_file));
 
                     if let Some(file_path) = chosen_file {
-                        if let Err(import_errs) = import_given_characters(&vec![file_path.to_owned()], server_url).await {
+                        if let Err(import_errs) = import_given_characters(&vec![file_path.to_owned()], &post_url).await {
                             println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"));
                         }
                         break;
@@ -192,6 +192,7 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
         .text("page_img_url", format!("https://powerdown.wiki/assets/img/{}", frontmatter.character_img_file)) // TODO: Convert to file sending
         .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
         .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)
+        .text("tag", character_slug.clone())
         ;
 
     if let Some(overlay_css) = frontmatter.overlay_css {

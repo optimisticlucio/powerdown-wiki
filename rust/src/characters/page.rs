@@ -15,7 +15,7 @@ struct CharacterPage<'a> {
     custom_css: Option<&'a str>,
 
     creator: &'a str,
-    tag: &'a str,
+    tag: Option<&'a str>,
     
     name: &'a str,
     subtitle: &'a str,
@@ -44,7 +44,7 @@ pub async fn character_page(
                 overlay_css: chosen_char.overlay_css.as_deref(), 
                 custom_css: chosen_char.custom_css.as_deref(),
                 creator: &chosen_char.creator,
-                tag: &chosen_char.tag.unwrap_or("".to_owned()),
+                tag: chosen_char.tag.as_deref(),
 
                 name: chosen_char.long_name.clone().unwrap_or(chosen_char.base_character.name.clone()).as_ref(),
 
