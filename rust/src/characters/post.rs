@@ -37,7 +37,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             }
             "subtitles" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
-                let subtitle_array: Vec<String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, SUBTITLES, RECIEVED: {}",parse_err.to_string(), field_text)))?;
+                let subtitle_array: Vec<String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, SUBTITLES",parse_err.to_string())))?;
                 page_character_builder.subtitles(subtitle_array);
             }
             "creator" => { 
@@ -48,7 +48,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             }
             "infobox" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
-                let infobox_array: HashMap<String, String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, INFOBOX, RECIEVED: {}",parse_err.to_string(), field_text)))?;
+                let infobox_array: HashMap<String, String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, INFOBOX",parse_err.to_string())))?;
                 page_character_builder.infobox(infobox_array.iter().map(|(title, desc)| InfoboxRow::new(title.to_owned(), desc.to_owned())).collect());
             }
             "overlay_css" => {
