@@ -2,27 +2,50 @@ use std::collections::{HashMap};
 use axum::extract::multipart::{Field, InvalidBoundary};
 use axum::extract::{Multipart, State};
 use axum::response::{Html, IntoResponse};
+use regex::Regex;
 use crate::{ServerState, characters::structs::{PageCharacterBuilder, BaseCharacterBuilder, InfoboxRow}, errs::RootErrors};
 
 pub async fn add_character(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
     let mut page_character_builder = PageCharacterBuilder::default();
     let mut base_character_builder = BaseCharacterBuilder::default();
 
-    // TODO: All the unwraps here are BAD. These will easily crash the server!!
-    while let Some(recieved_field) = multipart.next_field().await.unwrap() {
-        let field_name = recieved_field.name().unwrap().to_string();
+    while let Some(recieved_field) = multipart.next_field().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)? {
+        let field_name = match recieved_field.name() {
+            None => return Err(RootErrors::BAD_REQUEST("Recieved a field with no name.".to_owned())),
+            Some(x) => x
+        };
         
-        match field_name.as_str() {
-            "name" => { base_character_builder.name(text_or_internal_err(recieved_field).await?); }
-            "slug" => { base_character_builder.slug(text_or_internal_err(recieved_field).await?); }
-            "thumbnail_url" => { base_character_builder.thumbnail_url(text_or_internal_err(recieved_field).await?); }
+        match field_name {
+            "name" => { 
+                base_character_builder.name(text_or_internal_err(recieved_field).await?);
+            }
+            "slug" => { 
+                let recieved_slug = text_or_internal_err(recieved_field)
+                        .await?
+                        .trim().to_owned();
+
+                let check_slug_is_valid = Regex::new("^[a-z0-9]+(?:-[a-z0-9]+)*$").unwrap();
+
+                if !check_slug_is_valid.is_match(&recieved_slug) {
+                    return Err(RootErrors::BAD_REQUEST("Slug has invalid formatting. Expecting lowercase, numbers, and single dashes between words.".to_owned()));
+                }
+
+                base_character_builder.slug(recieved_slug);
+            }
+            "thumbnail_url" => { 
+                base_character_builder.thumbnail_url(text_or_internal_err(recieved_field).await?); 
+            }
             "subtitles" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
                 let subtitle_array: Vec<String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, SUBTITLES, RECIEVED: {}",parse_err.to_string(), field_text)))?;
                 page_character_builder.subtitles(subtitle_array);
             }
-            "creator" => { page_character_builder.creator(text_or_internal_err(recieved_field).await?); }
-            "page_img_url" => { page_character_builder.page_img_url(text_or_internal_err(recieved_field).await?); }
+            "creator" => { 
+                page_character_builder.creator(text_or_internal_err(recieved_field).await?); 
+            }
+            "page_img_url" => { 
+                page_character_builder.page_img_url(text_or_internal_err(recieved_field).await?); 
+            }
             "infobox" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
                 let infobox_array: HashMap<String, String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(format!("{}, INFOBOX, RECIEVED: {}",parse_err.to_string(), field_text)))?;
@@ -138,5 +161,9 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
 }
 
 async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
-    field.text().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)
+    field.text().await
+    .map_err(|err| match err {
+        // TODO: If the user sent something other than text, return a BAD REQUEST error
+        _ => RootErrors::INTERNAL_SERVER_ERROR
+    })
 }

@@ -28,6 +28,8 @@ CREATE TABLE character (
     birthday date,
 
     page_text text -- Assumed to be in Markdown format.
+
+    CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
 
 CREATE TABLE ritual_info(
