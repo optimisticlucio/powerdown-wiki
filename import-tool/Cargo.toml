@@ -9,6 +9,7 @@ gray_matter = {version="0.3.2", features=["yaml"]}
 indexmap = { version="2.11.4", features=["serde"]}
 indicatif = "0.18.0"
 owo-colors = "4.2.2"
+rand = "0.9.2"
 reqwest = {version = "0.12.23", features=["multipart"]}
 serde = "1.0.227"
 serde_json = {version="1.0.145", features=["indexmap"]}

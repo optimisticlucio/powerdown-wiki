@@ -8,6 +8,7 @@ use owo_colors::{ OwoColorize};
 use futures::{stream, StreamExt};
 use tokio::sync::Mutex;
 use indicatif::ProgressBar;
+use rand::seq::IndexedRandom;
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     let post_url = server_url.join("characters/new").unwrap();
@@ -27,7 +28,9 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 .filter(|path| !path.file_name().unwrap().to_string_lossy().starts_with("_"))
                 .collect();    
 
-    println!("Character folder found! There are {} characters. {}", &all_character_paths.len(), "Any files starting with _ were ignored.".italic());
+    let total_character_amount = all_character_paths.len();
+
+    println!("Character folder found! There are {} characters. {}", &total_character_amount, "Any files starting with _ were ignored.".italic());
 
     println!("Would you like to\n{}\n{}\nor {}?\n{}", 
         "(1) Import all characters".yellow(), 
@@ -49,13 +52,59 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 break;
             }
 
-            "2" => { // TODO: Import X randomly
-                unimplemented!();
+            "2" => { 
+                let amount_of_characters: usize = {
+                    println!("How many characters would you like?");
+
+                    loop {
+                        let chosen_amount = crate::read_line().unwrap();
+
+                        if let Ok(parsed_amount) =  chosen_amount.parse::<usize>() {
+                            match parsed_amount {
+                                x if x < 1 => println!("{}", "That's too little!".yellow()),
+                                x if x > total_character_amount => {
+                                    println!("{}", "That's too much! Clamping down to ".yellow());
+                                    break total_character_amount;
+                                }
+                                x => {
+                                    break x;
+                                }
+                            }
+                        }
+                        else {
+                            println!("{}", "I didn't quite get that.".yellow());
+                        }
+                    }
+                };
+
+                let random_characters = all_character_paths
+                        .choose_multiple(&mut rand::rng(), 4)
+                        .map(|x| x.to_path_buf()).collect();
+                if let Err(import_errs) = import_given_characters(&random_characters, &post_url).await {
+                    println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
+                }
                 break;
             }
 
-            "3" => { // TODO: Import specific file
-                unimplemented!();
+            "3" => { 
+                println!("What file would you like to import?");
+                loop {
+                    let chosen_file = crate::read_line().unwrap();
+
+                    let trimmed_file = chosen_file.trim();
+
+                    let chosen_file = all_character_paths.iter().find(|path| path.file_name().unwrap_or_default().eq_ignore_ascii_case(trimmed_file));
+
+                    if let Some(file_path) = chosen_file {
+                        if let Err(import_errs) = import_given_characters(&vec![file_path.to_owned()], server_url).await {
+                            println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"));
+                        }
+                        break;
+                    }
+                    else {
+                        println!("{}", "I didn't quite get that.".yellow());
+                    }
+                }
                 break;
             }
 
