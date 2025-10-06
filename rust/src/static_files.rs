@@ -1,5 +1,5 @@
 
-use axum::{routing::get_service, serve::Serve, Router};
+use axum::{routing::get_service, Router};
 use tower_http::services::ServeDir;
 use crate::ServerState;
 

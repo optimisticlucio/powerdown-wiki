@@ -9,5 +9,8 @@ pub struct BaseArt {
 }
 
 pub struct PageArt {
-    pub base_art: BaseArt
+    pub base_art: BaseArt,
+    pub description: String,
+    pub tags: Vec<String>,
+    pub art_urls: Vec<String>
 }

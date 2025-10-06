@@ -1,0 +1,32 @@
+
+<div class="wrapper wide art-selector-v2">
+    <h1>Art</h1>
+
+    <h2>{{ random-subtitle }}</h2>
+
+    <div class="option-bar">
+        <div class="searchbar">{% comment %}TODO{% endcomment %}</div>
+
+        <div class="pages">
+            {% include "components/page_number_scroller.html" %}
+        </div>
+
+        <div class="sex-button">{%- render "nsfw_toggle", tags: tags, target-link: target-nsfw-toggle-link -%}</div>
+    </div>
+
+    <div class="art-grid">
+        {%- for artpiece in art_pieces -%}
+        <a class="artpiece" href="/art/{{ artpiece.slug }}">
+            <div class="onhover{% if artpiece.has_video %} video{%- endif %}">
+            <div class="art-name">
+                {{ artpiece.title }}
+            </div>
+            <div class="artist-name">
+                {{ artpiece.artists | join(", and ") }}
+            </div>
+            </div>
+            <img src="{{artpiece.thumbnail_url}}">
+        </a>
+        {%- endfor -%}
+    </div>
+</div>
