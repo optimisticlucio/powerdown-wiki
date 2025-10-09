@@ -11,6 +11,7 @@ mod post;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
+        .route("/new", post(post::add_character))
 }
 
 #[derive(Template)] 

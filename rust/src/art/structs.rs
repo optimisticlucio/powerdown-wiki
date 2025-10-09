@@ -2,21 +2,29 @@ use postgres::Row;
 use postgres_types::{FromSql, ToSql, Type};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
+use derive_builder::Builder;
 
+#[derive(Clone, Builder)]
 pub struct BaseArt {
+    #[builder(default)]
     db_id: i32,
     pub title: String,
     pub creators: Vec<String>,
     pub thumbnail_url: String,
     pub slug: String,
-    pub has_video: bool
+    #[builder(default = false)]
+    pub has_video: bool,
+    #[builder(default = false)]
+    pub nsfw: bool
 }
 
+#[derive(Clone, Builder)]
 pub struct PageArt {
     pub base_art: BaseArt,
     pub description: String,
     pub tags: Vec<String>,
-    pub art_urls: Vec<String>
+    pub art_urls: Vec<String>,
+    pub creation_date: chrono::NaiveDate,
 }
 
 impl BaseArt {
@@ -37,7 +45,8 @@ impl BaseArt {
             creators: row.get("creators"),
             thumbnail_url: row.get("thumbnail"),
             slug: row.get("page_slug"),
-            has_video: false //TODO: Handle this somehow.
+            has_video: false, //TODO: Handle this somehow.
+            nsfw: row.get("nsfw"),
         }
     }
 }

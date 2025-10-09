@@ -157,7 +157,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         RootErrors::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Html(format!("{} successfully recieved! Now start making code to put them in the DB.", &page_character.base_character.name)))
+    Ok(Html(format!("{} successfully recieved!", &page_character.base_character.name)))
 }
 
 async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {

@@ -23,6 +23,7 @@ pub fn router(state: ServerState) -> Router<()> {
         .merge(index::router())
         .nest("/static", static_files::router())
         .nest("/characters", characters::router()) 
+        .nest("/art", art::router())
         // TODO: Redirect /art-archive to /art
         .layer(
             ServiceBuilder::new()
