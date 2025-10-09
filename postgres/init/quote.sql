@@ -1,4 +1,4 @@
-CREATE TYPE quote_association AS ENUM ('character_index', 'homepage', 'sex_joke');
+CREATE TYPE quote_association AS ENUM ('character_index', 'homepage', 'sex_joke', 'quote');
 
 CREATE TABLE quote (
     line text,
@@ -48,6 +48,23 @@ FROM unnest(ARRAY[
 
 INSERT INTO quote(line, association)
 SELECT joke, 'sex_joke'
+FROM unnest(ARRAY[
+    'Did you know nudism used to be a sign of heroism in ancient Greece? You''re being very brave right now.',
+    'Routine forearm exercises.',
+    'Time, Dr. Freeman? Is it really that time again?',
+    'In hindsight, it''s a good thing we set this in a college.',
+    'Boobs, Dicks, Ass. You want it? It''s yours, my friend!',
+    'No, you still can''t ask about the Cancer Healing Vagina.',
+    'Good thing we''re not keeping count.',
+    'Christian-friendly. But like, Ezekiel 23:20 christian-friendly.',
+    'Sex 2 couldn''t get any realer.',
+    'I have done nothing but draw tits for the past three days!',
+    'Now featuring quantum cup sizes!'
+    ]) AS joke;
+
+    
+INSERT INTO quote(line, association)
+SELECT joke, 'quote'
 FROM unnest(ARRAY[
     'Did you know nudism used to be a sign of heroism in ancient Greece? You''re being very brave right now.',
     'Routine forearm exercises.',

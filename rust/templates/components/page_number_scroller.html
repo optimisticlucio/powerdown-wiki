@@ -1,28 +1,39 @@
 
 <div class="pagination-nav">
-    {% if current_page_number != 1 %}
-        <a class="per-page-navigation left" href="{{paginator.previous_page_path}}"><img src="/assets/img/ui/prev_arrow_gray.png"></a>
-    {% endif %}
-
-    {% if 1 < current_page_number - 1 %}
-    ...
-        {% comment %}TODO: List the first page {% endcomment %}
-    {% endif %}
-
     {% if let Some(last_page_url) = last_page_url %}
-    <a href="{{ last_page_url }}">{{ current_page_number - 1 }}, </a>{% endif -%}
+        <a class="per-page-navigation left" href="{{last_page_url}}"><img src="/assets/img/ui/prev_arrow_gray.png"></a>
+    {% endif %}
+
+    {%- if let Some(first_page_url) = first_page_url -%}
+    <a href="{{ first_page_url }}">1 </a>{%- endif -%}
+
+    {%- if 3 < current_page_number -%}
+    ...
+    {% endif %}
+
+    {%- if 3 == current_page_number -%}
+    ,
+    {% endif %}
+
+    {%- if let Some(prev_page_url) = prev_page_url -%}
+    <a href="{{ prev_page_url }}">{{ current_page_number - 1 }}, </a>{% endif -%}
 
     <b>{{ current_page_number }}</b>
 
     {%- if let Some(next_page_url) = next_page_url -%}
     , <a href="{{ next_page_url }}">{{ current_page_number + 1 }} </a>{% endif -%}
 
-    {%- if current_page_number + 1 < total_page_number -%}
-    ...
-        {% comment %}TODO: List the last page {% endcomment %}
+    {%- if current_page_number + 2 == total_page_number -%}
+    ,
     {%- endif -%}
 
-    {% if current_page_number != total_page_number %} 
-        <a class="per-page-navigation right" href="{{paginator.next_page_path}}"><img src="/assets/img/ui/next_arrow_gray.png"></a>
-    {% endif %}
+    {%- if current_page_number + 2 < total_page_number -%}
+    ...{%- endif -%}
+
+    {%- if let Some(last_page_url) = last_page_url -%}
+    <a href="{{ last_page_url }}"> {{ total_page_number }}</a>{%- endif -%}
+
+    {%- if let Some(next_page_url) = next_page_url -%}
+        <a class="per-page-navigation right" href="{{next_page_url}}"><img src="/assets/img/ui/next_arrow_gray.png"></a>
+    {%- endif -%}
 </div>

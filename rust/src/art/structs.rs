@@ -1,3 +1,7 @@
+use postgres::Row;
+use postgres_types::{FromSql, ToSql, Type};
+use deadpool::managed::Object;
+use deadpool_postgres::Manager;
 
 pub struct BaseArt {
     db_id: i32,
@@ -13,4 +17,27 @@ pub struct PageArt {
     pub description: String,
     pub tags: Vec<String>,
     pub art_urls: Vec<String>
+}
+
+impl BaseArt {
+    /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
+    pub async fn get_art_from_index(db_connection: Object<Manager>, index: u32, amount_to_return: u32) -> Vec<Self>{
+        let requested_art_rows = db_connection.query(
+            "SELECT * FROM art ORDER BY creation_date LIMIT $1 OFFSET $2",
+            &[&amount_to_return, &index]).await.unwrap();
+
+        requested_art_rows.iter().map(Self::from_db_row).collect()
+    }
+
+    /// Converts a DB row with the relevant info to a BaseCharacter struct.
+    fn from_db_row(row: &Row) -> Self {
+        BaseArt {
+            db_id: row.get("id"),
+            title: row.get("title"),
+            creators: row.get("creators"),
+            thumbnail_url: row.get("thumbnail"),
+            slug: row.get("page_slug"),
+            has_video: false //TODO: Handle this somehow.
+        }
+    }
 }

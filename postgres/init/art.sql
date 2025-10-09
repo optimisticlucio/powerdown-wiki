@@ -1,6 +1,7 @@
 
 CREATE TABLE art (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
+    page_slug text NOT NULL UNIQUE,
 
     -- TODO: I used to have a "format" enum to say if this has a video or not. How to better handle that? Runtime check?
 
