@@ -1,0 +1,304 @@
+
+.art-page-v2 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 10em;
+    max-width: min(100vw, 1000px);
+    margin: auto;
+
+    .art-link {
+        border-width: 1em;
+        border-color: var(--dark-shade);
+        border-style: solid;
+        max-width: 100%;
+        max-height: 600px;
+        margin: 2em;
+
+        box-sizing: content-box; /* I hate chrome so much it's unreal. */
+
+        .art-display {
+            max-height: inherit; /* do NOT change this or box-sizing. Otherwise there's overflow on chrome.*/
+            max-width: 100%;
+            display: block;
+
+            > img, > video {
+                max-height: inherit; /* do NOT change this or box-sizing. Otherwise there's overflow on chrome.*/
+                max-width: 100%;
+                display: block;
+
+                opacity: 0;
+                pointer-events: none;
+
+                .active {
+                    opacity: 1;
+                    pointer-events: auto;
+                }
+            }
+
+            > input[type="radio"] {
+                display: none;
+            }
+        }
+    }
+
+    .controls {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+
+        label {
+            background-color: var(--dark-shade);
+            border: none;
+            padding: 1em;
+            cursor: pointer;
+            border-radius: 50%;
+            margin: .2em;
+
+            &:hover {
+                filter: brightness(1.1);
+            }
+
+            &.active {
+                background-color: var(--brightest-shade);
+            }
+        }
+    }   
+
+    .info-and-arrows { 
+        margin: 2em;
+        width: 100%;
+        display: flex;
+
+        .arrow {
+            display: flex;
+            img {
+                width: 70px;
+                margin: 2em;
+                object-fit: contain;
+            }
+        }
+
+        .info {
+            background-color: var(--dark-shade);
+            position: relative;
+            text-align: left;
+            padding: 1em 2em;
+            font-size: 0.8em;
+            flex-grow: 1;
+
+            h1 {
+                color: white;
+                margin: 0;
+                font-size: 2em;
+            }
+
+            .date {
+                color: var(--brightest-shade);
+                position: absolute;
+                text-align: right;
+                right: 2em;
+                top: 0.5em;
+            }
+
+            h2 {
+                color: var(--brightest-shade);
+                margin: 0;
+                margin-bottom: 1em;
+                font-size: 1.5em;
+
+                a {
+                    color: white;
+                    text-decoration: none;
+                }
+            }
+
+            .tags {
+                a {
+                    background-color: var(--brightest-shade);
+                    color: var(--dark-shade);
+                    padding: .2em 0.5em;
+                    margin: .3em;
+                    text-decoration: none;
+                    display: inline-block;
+                }
+            }
+        }
+    }
+}
+
+
+.art-selector-v2 {
+    .option-bar {
+        display: flex;
+        position: relative;
+        justify-content: space-between;
+
+        font-size: 1.5em;
+
+        background-color: var(--darkest-shade);
+        padding: .2ch;
+
+        > * {
+            display: flex;
+        }
+
+        .searchbar {
+            justify-content: left;
+        }
+
+        .pages {
+            position: absolute;
+            justify-content: center;
+            color: var(--brightest-shade);
+            transform: translate(-50%, -50%);
+            left: 50%;
+            top: 50%;
+
+            .per-page-navigation {
+                display: flex;
+                position: absolute;
+                top: 50%;
+            }
+
+            .left {
+                transform: translate(-100%, -50%);
+                left: 0;
+            }
+
+            .right {
+                transform: translate(100%, -50%);
+                right: 0;
+            }
+
+            a {
+                color: var(--brightest-shade);
+                text-decoration: none;
+            }
+
+            b {
+                color: white;
+            }
+
+            img {
+                height: 1.5em;
+                margin: auto 1ch;
+            }
+        }
+
+        .sex-button {
+            justify-content: right;
+        }
+    }
+
+    .art-grid {
+        --art-grid-width: 10em;
+        --art-grid-height: 8em;
+        --artbox-transition-time: 0.3s;
+
+        display: grid;
+        grid-template-columns: repeat(auto-fit, var(--art-grid-width));
+        grid-gap: 1em;
+        margin: 1em 0;
+        justify-content: space-between;
+
+        .artpiece {
+            width: var(--art-grid-width);
+            height: var(--art-grid-height);
+            position: relative;
+            overflow: hidden;
+
+            .onhover {
+                opacity: 0;
+                transition: var(--artbox-transition-time);
+                box-shadow: inset 0em -3em 2em -2em black;
+                height: 100%;
+                width: 100%;
+                padding: 1ch;
+                
+
+                position: absolute;
+                top: 0;
+                left: 0;
+
+                display: flex;
+                font-size: 0.7em;
+
+            --art-hover-img-size: calc(min(var(--art-grid-width), var(--art-grid-height)) / 2);
+                img {
+                    z-index: 1;
+                    position: absolute;
+                    transform: translate(-50%, -50%);
+                    top: 50%;
+                    left: 50%;
+
+                    height: var(--art-hover-img-size);
+                    width: var(--art-hover-img-size);
+                }
+
+                > div {
+                    z-index: 2;
+                    overflow-wrap: anywhere;
+                    display: flex; 
+                    align-items: flex-end;
+                }
+
+                .art-name {
+                    margin-right: 0.5ch;
+                    font-weight: bold;
+                    width: 60%;
+                }
+
+                .artist-name {
+                    width: 40%;
+                    text-align: right;
+                    justify-content: flex-end;
+                }
+
+                &.video::before {
+                    content: '';
+                    position: absolute;
+                    transform: translate(-50%, -50%);
+                    top: 50%;
+                    left: 50%;
+
+                    width: 30%;
+                    aspect-ratio: 1;
+
+                    mask-image: url(/static/img/ui/play_icon.svg);
+                    mask-size: contain;
+                    mask-repeat: no-repeat;
+                    mask-position: center;
+
+                    background-color: rgba(255, 255, 255, 0.7);
+                }
+            }
+
+            img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: -1;
+
+                transition: var(--artbox-transition-time);
+            }
+
+            &:hover {
+                img {
+                    transition: var(--artbox-transition-time);
+                    filter: blur(2px);
+                    opacity: 0.6;
+                }
+
+                .onhover {
+                    transition: var(--artbox-transition-time);
+                    opacity: 1;
+                }
+            }
+        }
+    }
+}

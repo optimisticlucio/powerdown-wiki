@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::{response::Html, routing::get, routing::post, extract::State, Router};
-use crate::{errs::RootErrors, ServerState};
+use crate::{errs::RootErrors, ServerState, user::User};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 
@@ -12,11 +12,14 @@ mod post;
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
         .route("/new", post(post::add_character))
+        .route("/{art_slug}", get(page::character_page))
 }
 
 #[derive(Template)] 
 #[template(path = "art/index.html")]
 struct ArtIndexPage {
+    user: Option<User>,
+
     random_quote: String,
 
     current_page_number: u32,
@@ -49,6 +52,8 @@ async fn art_index(State(state): State<ServerState>) -> Html<String> {
     let art_pieces = structs::BaseArt::get_art_from_index(state.db_pool.get().await.unwrap(), 0, amount_of_art_per_page).await;
 
     ArtIndexPage {
+        user: None, // TODO: Connect to user system.
+
         random_quote,
 
         current_page_number: 1,

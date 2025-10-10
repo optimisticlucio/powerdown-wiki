@@ -16,6 +16,8 @@ CREATE TABLE art (
 
     tags text[],
 
+    description text,
+
     nsfw boolean --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
 );
 

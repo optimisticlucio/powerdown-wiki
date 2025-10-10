@@ -1,0 +1,52 @@
+{% extends "base-template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block customhead %}<script src="/static/js/art-page.js" ></script>{% endblock %}
+
+{% block content %}
+<div class="art-page-v2">
+
+    <div class="art-display">
+        {# Every art piece gets its respective display, and an invisible radio button, so we can have convenient art switching using the labels below. #}
+        {% for art_url in art_urls %}
+            <input type="radio" name="art" id="art-{{ loop.index }}" {% if loop.first %}checked{% endif %}/>
+
+            {% if url_is_of_video(art_url) %}{# Url is a video #} 
+                <video src="{{ art_url }}" controls autoplay></video>
+            {% else %} {# Url is an image or gif #}
+                <img src="{{ art_url }}" />
+            {% endif %}
+        {% endfor %}
+    </div>
+    
+    {% if art_urls.len() > 1 -%}
+        <div class="controls">
+            {% for art_url in art_urls -%}
+                <label for="art{{ loop.index }}"/>
+            {% endfor -%}
+        </div>
+    {%- endif -%}
+
+    <div class="info-and-arrows">
+        {# TODO: Newer button, should remember previous filtering! #}
+
+        <div class="info">
+            <p class="date">{{ formatted_creation_date }}</p>
+            <h1>{{ title }}</h1>
+            <h2>By: 
+                {{ artists | join(", ") }}
+            </h2>
+            {% if let Some(description) = description -%}<div class="content">{{ description }}</div>{%- endif -%}
+            <div class="tags">
+                {%- for tag in tags -%}
+                    <a href="/tags/{{ tag }}">{{ tag }}</a> {# TODO: Change to correct href once I handle tags properly #}
+                {%- endfor -%}
+            </div>
+        </div>
+
+        {# TODO: Older button, should remember previous filtering! #}
+    </div>
+</div>
+
+{% endblock %}
