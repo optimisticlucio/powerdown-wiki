@@ -22,8 +22,8 @@ struct ArtIndexPage {
 
     random_quote: String,
 
-    current_page_number: u32,
-    total_page_number: u32,
+    current_page_number: i64,
+    total_page_number: i64,
 
     first_page_url: Option<String>,
     prev_page_url: Option<String>,
@@ -34,7 +34,7 @@ struct ArtIndexPage {
 }
 
 async fn art_index(State(state): State<ServerState>) -> Html<String> {
-    let amount_of_art_per_page: u32 = 24;
+    let amount_of_art_per_page: i64 = 24;
 
     let random_quote = {
         let statement = "SELECT * FROM quote WHERE association = 'quote' ORDER BY RANDOM() LIMIT 1;"; 
@@ -49,7 +49,7 @@ async fn art_index(State(state): State<ServerState>) -> Html<String> {
         }
     };
 
-    let art_pieces = structs::BaseArt::get_art_from_index(state.db_pool.get().await.unwrap(), 0, amount_of_art_per_page).await;
+    let art_pieces = structs::BaseArt::get_art_from_index(state.db_pool.get().await.unwrap(), 0, amount_of_art_per_page.into()).await;
 
     ArtIndexPage {
         user: None, // TODO: Connect to user system.
@@ -69,11 +69,11 @@ async fn art_index(State(state): State<ServerState>) -> Html<String> {
 }
 
 /// Returns the total amount of art currently in the db.
-pub async fn get_total_amount_of_art(db_connection: Object<Manager>) -> Result<u32, Box<dyn std::error::Error>> {
+pub async fn get_total_amount_of_art(db_connection: Object<Manager>) -> Result<i64, Box<dyn std::error::Error>> {
     let row = db_connection
         .query_one("SELECT COUNT(page_slug) FROM art", &[])
         .await?;
     
-    let count: u32 = row.get(0);
+    let count: i64 = row.get(0);
     Ok(count)
 }

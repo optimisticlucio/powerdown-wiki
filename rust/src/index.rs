@@ -21,7 +21,7 @@ lazy_static! {
     static ref FRONTPAGE_ITEMS: Vec<FrontpageItem> = vec![
         FrontpageItem {
             name: "Art",
-            url: "https://powerdown.wiki/art-archive",
+            url: "/art",
             image_url: "https://powerdown.wiki/assets/img/art.png"
         },
         FrontpageItem {

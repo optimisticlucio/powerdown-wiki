@@ -21,8 +21,9 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             "creation_date" => {
                 let sent_date = text_or_internal_err(recieved_field).await?;
 
-                // TODO: Convert sent date to rust date.
-                let date = chrono::NaiveDate::default();
+                // Expects date in ISO 8601 format (YYYY-MM-DD)
+                let date = chrono::NaiveDate::parse_from_str(&sent_date, "%F")
+                    .map_err(|_| RootErrors::BAD_REQUEST("Given invalid date. Please ensure your date was in the YYYY-MM-DD format.".to_owned()))?; 
                 page_art_builder.creation_date(date);
             }
             "title" => {
@@ -31,7 +32,8 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             "creators" => {
                 let sent_text = text_or_internal_err(recieved_field).await?;
 
-                let creators = sent_text.split(",").map(|x| x.to_owned()).collect();
+                let creators: Vec<String> = serde_json::from_str(&sent_text)
+                    .map_err(|_| RootErrors::BAD_REQUEST("Recieved invalid creator list.".to_owned()))?;
                 base_art_builder.creators(creators);
             }
             "thumbnail" => {
@@ -42,18 +44,23 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                 // TODO: Convert to file sending.
                 let sent_text = text_or_internal_err(recieved_field).await?;
 
-                let files = sent_text.split(",").map(|x| x.to_owned()).collect();
+                let files = serde_json::from_str(&sent_text)
+                    .map_err(|_| RootErrors::BAD_REQUEST("Recieved invalid file list.".to_owned()))?;
                 page_art_builder.art_urls(files);
             }
             "tags" => {
                 let sent_text = text_or_internal_err(recieved_field).await?;
 
-                let tags = sent_text.split(",").map(|x| x.to_owned()).collect();
+                let tags = serde_json::from_str(&sent_text)
+                    .map_err(|_| RootErrors::BAD_REQUEST("Recieved invalid tag list.".to_owned()))?;
                 page_art_builder.tags(tags);
             }
             "nsfw" => {
                 // If this was sent at all, assume it is true.
                 base_art_builder.nsfw(true);
+            }
+            "description" => {
+                page_art_builder.description(Some(text_or_internal_err(recieved_field).await?));
             }
             _ => return Err(RootErrors::BAD_REQUEST(format!("Invalid Field Recieved: {}", field_name)))
         }

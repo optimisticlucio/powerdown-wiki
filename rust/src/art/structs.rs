@@ -22,6 +22,7 @@ pub struct BaseArt {
 #[derive(Clone, Builder)]
 pub struct PageArt {
     pub base_art: BaseArt,
+    #[builder(default = None)]
     pub description: Option<String>,
     pub tags: Vec<String>,
     pub art_urls: Vec<String>,
@@ -30,7 +31,7 @@ pub struct PageArt {
 
 impl BaseArt {
     /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
-    pub async fn get_art_from_index(db_connection: Object<Manager>, index: u32, amount_to_return: u32) -> Vec<Self>{
+    pub async fn get_art_from_index(db_connection: Object<Manager>, index: i64, amount_to_return: i64) -> Vec<Self>{
         // TODO: Narrow down select so it runs faster.
         let requested_art_rows = db_connection.query(
             "SELECT * FROM art ORDER BY creation_date LIMIT $1 OFFSET $2",

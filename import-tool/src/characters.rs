@@ -1,7 +1,6 @@
 use std::{error::Error, fs, path::{Path, PathBuf}, sync::Arc};
 use reqwest::{Response, Url};
 use serde::{Deserialize, Serialize};
-use serde::de::{self, Deserializer, Error as DeError};
 use gray_matter::{Matter, engine::YAML};
 use indexmap::IndexMap;
 use owo_colors::{ OwoColorize};
@@ -9,6 +8,7 @@ use futures::{stream, StreamExt};
 use tokio::sync::Mutex;
 use indicatif::ProgressBar;
 use rand::seq::IndexedRandom;
+use crate::utils;
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     let post_url = server_url.join("characters/new").unwrap();
@@ -172,7 +172,8 @@ async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url
 
 async fn import_given_character(character_file_path: &Path, server_url: &Url) -> Result<Response, String> {
     // Read and parse file
-    let file_contents = fs::read_to_string(character_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?;
+    let file_contents = fs::read_to_string(character_file_path)
+            .map_err(|err| format!("File Read Err: {}", err.to_string()))?;
 
     let parser = Matter::<YAML>::new();
     let parsed_file = parser.parse(&file_contents)
@@ -240,7 +241,7 @@ struct CharacterFrontmatter {
     character_title: String,
     #[serde(rename = "inpage-character-title")]
     inpage_character_title: Option<String>, // Convert to long_name
-    #[serde(rename = "character-subtitle", deserialize_with = "string_or_vec")]
+    #[serde(rename = "character-subtitle", deserialize_with = "utils::string_or_vec")]
     character_subtitle: Vec<String>,
     #[serde(rename = "character-author")]
     character_author: String,
@@ -249,7 +250,7 @@ struct CharacterFrontmatter {
     #[serde(rename = "character-img-file")]
     character_img_file: String, // The way it's written is relative to /assets/img/. Account for that.
     birthday: Option<String>, // Written as MM-DD
-    #[serde(rename = "infobox-data", deserialize_with = "deserialize_string_map")]
+    #[serde(rename = "infobox-data", deserialize_with = "utils::deserialize_string_map")]
     infobox_data: IndexMap<String, String>,
     // I'm dropping relationships, this feature sucks.
     #[serde(rename = "css-code")]
@@ -262,46 +263,3 @@ struct CharacterFrontmatter {
     // TODO: Handle ritual stuff
 }
 
-fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrVec {
-        Single(String),
-        Multiple(Vec<String>),
-    }
-
-    match StringOrVec::deserialize(deserializer)? {
-        StringOrVec::Single(s) => Ok(vec![s]),
-        StringOrVec::Multiple(v) => Ok(v),
-    }
-}
-
-fn deserialize_string_map<'de, D>(deserializer: D) -> Result<IndexMap<String, String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrOther {
-        String(String),
-        Number(serde_json::Number),
-        Bool(bool),
-    }
-    
-    let map: IndexMap<String, StringOrOther> = IndexMap::deserialize(deserializer)?;
-    
-    Ok(map
-        .into_iter()
-        .map(|(k, v)| {
-            let string_value = match v {
-                StringOrOther::String(s) => s,
-                StringOrOther::Number(n) => n.to_string(),
-                StringOrOther::Bool(b) => b.to_string(),
-            };
-            (k, string_value)
-        })
-        .collect())
-}

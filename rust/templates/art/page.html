@@ -13,9 +13,9 @@
             <input type="radio" name="art" id="art-{{ loop.index }}" {% if loop.first %}checked{% endif %}/>
 
             {% if url_is_of_video(art_url) %}{# Url is a video #} 
-                <video src="{{ art_url }}" controls autoplay></video>
+                <video class="art-item" src="{{ art_url }}" controls autoplay></video>
             {% else %} {# Url is an image or gif #}
-                <img src="{{ art_url }}" />
+                <img class="art-item" src="{{ art_url }}" />
             {% endif %}
         {% endfor %}
     </div>
@@ -23,7 +23,7 @@
     {% if art_urls.len() > 1 -%}
         <div class="controls">
             {% for art_url in art_urls -%}
-                <label for="art{{ loop.index }}"/>
+                <label for="art-{{ loop.index }}"></label>
             {% endfor -%}
         </div>
     {%- endif -%}

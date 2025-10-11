@@ -5,6 +5,7 @@ use reqwest::Url;
 mod art_archive;
 mod characters;
 mod stories;
+pub mod utils;
 
 pub fn read_line() -> Result<String, io::Error>{
     let mut input_string = String::new();
@@ -67,7 +68,7 @@ pub async fn select_import_type(root_path: &Path, server_url: &Url) -> () {
             }
 
             "2" => {
-                art_archive::select_import_options(root_path, server_url);
+                art_archive::select_import_options(root_path, server_url).await;
                 break;
             }
 

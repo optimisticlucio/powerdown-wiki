@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const radios = document.querySelectorAll('input[name="art"]');
-    const artItems = document.querySelectorAll('.art-display video, .art-display img');
+    const artItems = document.querySelectorAll('.art-display .art-item');
     const labels = document.querySelectorAll('.controls label');
     const videos = document.querySelectorAll('video');
     

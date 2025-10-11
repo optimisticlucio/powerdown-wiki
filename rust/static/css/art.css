@@ -7,39 +7,35 @@
     max-width: min(100vw, 1000px);
     margin: auto;
 
-    .art-link {
+    .art-display {
         border-width: 1em;
         border-color: var(--dark-shade);
         border-style: solid;
         max-width: 100%;
         max-height: 600px;
         margin: 2em;
+        position: relative;
 
         box-sizing: content-box; /* I hate chrome so much it's unreal. */
 
-        .art-display {
+        .art-item {
             max-height: inherit; /* do NOT change this or box-sizing. Otherwise there's overflow on chrome.*/
             max-width: 100%;
             display: block;
+            
+            display: none;
+            pointer-events: none;
 
-            > img, > video {
-                max-height: inherit; /* do NOT change this or box-sizing. Otherwise there's overflow on chrome.*/
-                max-width: 100%;
-                display: block;
-
-                opacity: 0;
-                pointer-events: none;
-
-                .active {
-                    opacity: 1;
-                    pointer-events: auto;
-                }
-            }
-
-            > input[type="radio"] {
-                display: none;
+            &.active {
+                display: unset;
+                pointer-events: auto;
             }
         }
+
+        input[type="radio"] {
+            display: none;
+        }
+        
     }
 
     .controls {
