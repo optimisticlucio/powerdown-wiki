@@ -193,7 +193,7 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
         .text("page_img_url", format!("https://powerdown.wiki/assets/img/{}", frontmatter.character_img_file)) // TODO: Convert to file sending
         .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
         .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)
-        .text("tag", character_slug.clone())
+        .text("relevant_tag", character_slug.clone())
         ;
 
     if let Some(overlay_css) = frontmatter.overlay_css {
@@ -222,6 +222,10 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
 
     if let Some(inpage_character_name) = frontmatter.inpage_character_title {
         post_request = post_request.text("long_name", inpage_character_name);
+    }
+
+    if let Some(birthday) = frontmatter.birthday {
+        post_request = post_request.text("birthday", birthday);
     }
 
     // Send the post request and hope for the best.

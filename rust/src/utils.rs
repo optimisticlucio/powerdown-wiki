@@ -3,6 +3,25 @@ use axum::response::{Response, IntoResponse, Html};
 use axum::body::Body;
 use askama::Template;
 use crate::errs::RootErrors;
+use serde::{Deserialize};
+use serde::de::{Deserializer};
+
+pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+        Single(String),
+        Multiple(Vec<String>),
+    }
+
+    match StringOrVec::deserialize(deserializer)? {
+        StringOrVec::Single(s) => Ok(vec![s]),
+        StringOrVec::Multiple(v) => Ok(v),
+    }
+}
 
 pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
     let readable_day = match date.day() {

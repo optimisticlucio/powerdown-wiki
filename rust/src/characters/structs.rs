@@ -20,6 +20,8 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     pub slug: String,
     pub name: String,
     pub thumbnail_url: String,
+    #[builder(default = None)]
+    pub birthday: Option<chrono::NaiveDate>,
 }
 
 #[derive(Clone, Builder)]
@@ -104,7 +106,8 @@ impl BaseCharacter {
             is_archived: archival_reason.is_some(),
             name: row.get("short_name"),
             thumbnail_url: row.get("thumbnail"),
-            slug: row.get("page_slug")
+            slug: row.get("page_slug"),
+            birthday: row.get("birthday"),
         }
     }
 }
@@ -153,7 +156,8 @@ impl PageCharacter {
                 is_archived: retirement_reason.is_some(),
                 name: row.get("short_name"),
                 thumbnail_url: row.get("thumbnail"),
-                slug: row.get("page_slug")
+                slug: row.get("page_slug"),
+                birthday: row.get("birthday"),
             },
             long_name: row.get("long_name"),
             subtitles: row.get("subtitles"),

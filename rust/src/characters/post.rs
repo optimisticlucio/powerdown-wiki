@@ -78,6 +78,25 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             "long_name" => {
                 page_character_builder.long_name(Some(text_or_internal_err(recieved_field).await?));
             }
+
+            "birthday" => {
+                let recieved_birthday = text_or_internal_err(recieved_field).await?;
+
+                let birthday_components: Vec<&str> = recieved_birthday.split("-").collect();
+
+                if birthday_components.len() != 2 || birthday_components[0].len() != 2 || birthday_components[1].len() != 2 {
+                    return Err(RootErrors::BAD_REQUEST("Birthday not in the MM-DD format.".to_owned()))
+                }
+
+                let birthday_u32 = birthday_components.iter().map(|date| date.parse::<u32>())
+                    .collect::<Result<Vec<_>,_>>()
+                    .map_err(|err| RootErrors::BAD_REQUEST("Birthday not in the MM-DD format.".to_owned()))?;
+
+                let birthday = chrono::NaiveDate::from_ymd_opt(0, birthday_u32[0], birthday_u32[1])
+                        .ok_or(RootErrors::BAD_REQUEST("Given a nonexistent date as a birthday.".to_owned()))?;
+
+                base_character_builder.birthday(Some(birthday));
+            }
             
             _ => return Err(RootErrors::BAD_REQUEST(format!("Invalid Field Recieved: {}", field_name)))
         }
@@ -146,6 +165,11 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     if let Some(logo) = &page_character.logo_url {
         columns.push("logo".into());
         values.push(logo);
+    }
+
+    if let Some(birthday) = &page_character.base_character.birthday {
+        columns.push("birthday".into());
+        values.push(birthday);
     }
 
     let query = format!("INSERT INTO character({}) VALUES ({})",

@@ -29,7 +29,11 @@
     {%- endif -%}
 
     <div class="info-and-arrows">
-        {# TODO: Newer button, should remember previous filtering! #}
+        {% if let Some(newer_url) = newer_art_url %}
+        <a href="/art/{{ newer_url }}{{ user_search_params.to_uri_parameters(false) }}" class="arrow">
+            <img src="/static/img/ui/next_arrow_left.png">
+        </a>
+        {% endif %}
 
         <div class="info">
             <p class="date">{{ formatted_creation_date }}</p>
@@ -40,12 +44,16 @@
             {% if let Some(description) = description -%}<div class="content">{{ description }}</div>{%- endif -%}
             <div class="tags">
                 {%- for tag in tags -%}
-                    <a href="/tags/{{ tag }}">{{ tag }}</a> {# TODO: Change to correct href once I handle tags properly #}
+                    <a href="/art?tags={{ tag }}">{{ tag }}</a>
                 {%- endfor -%}
             </div>
         </div>
 
-        {# TODO: Older button, should remember previous filtering! #}
+        {% if let Some(older_url) = older_art_url %}
+        <a href="/art/{{ older_url }}{{ user_search_params.to_uri_parameters(false) }}" class="arrow">
+            <img src="/static/img/ui/prev_arrow_right.png">
+        </a>
+        {% endif %}
     </div>
 </div>
 

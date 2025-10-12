@@ -101,3 +101,45 @@ a {
         margin: 1em auto;
     }
 }
+
+#nsfw-toggle {
+    --width-of-nsfw-switch: 5ch;
+    background-color: var(--neutral-shade);
+    height: 1.4em;
+    position: relative;
+    width: var(--width-of-nsfw-switch) + 2ch;
+    display: block;
+    border: .1em solid var(--dark-shade);
+
+    span {
+        font-weight: bold;
+        text-align: center;
+        height: 100%;
+        width: var(--width-of-nsfw-switch);
+        position: absolute;
+        left: 0;
+
+        background-color: var(--bright-shade);
+        transition: .2s ease;
+
+        &:hover {
+                transition: .2s ease;
+                left: 0.5ch;
+            }
+    }
+
+    &.on {
+        span {
+            left: unset;
+            right: 0;
+
+            background-color: orange;
+            transition: .2s ease;
+
+            &:hover {
+                transition: .2s ease;
+                right: 0.5ch;
+            }
+        }
+    }
+}

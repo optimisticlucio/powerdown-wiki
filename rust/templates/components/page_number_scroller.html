@@ -1,19 +1,16 @@
 
 <div class="pagination-nav">
-    {% if let Some(last_page_url) = last_page_url %}
-        <a class="per-page-navigation left" href="{{last_page_url}}"><img src="/assets/img/ui/prev_arrow_gray.png"></a>
-    {% endif %}
+    {%- if let Some(prev_page_url) = prev_page_url %}
+        <a class="per-page-navigation left" href="{{prev_page_url}}"><img src="/static/img/ui/prev_arrow_gray.png"></a>
+    {%- endif -%}
 
     {%- if let Some(first_page_url) = first_page_url -%}
-    <a href="{{ first_page_url }}">1 </a>{%- endif -%}
+    <a href="{{ first_page_url }}">1</a>{%- endif -%}
 
-    {%- if 3 < current_page_number -%}
-    ...
-    {% endif %}
+    {%- if 3 < current_page_number -%} ... {%- endif -%}
 
     {%- if 3 == current_page_number -%}
-    ,
-    {% endif %}
+    , {% endif -%}
 
     {%- if let Some(prev_page_url) = prev_page_url -%}
     <a href="{{ prev_page_url }}">{{ current_page_number - 1 }}, </a>{% endif -%}
@@ -34,6 +31,6 @@
     <a href="{{ last_page_url }}"> {{ total_page_number }}</a>{%- endif -%}
 
     {%- if let Some(next_page_url) = next_page_url -%}
-        <a class="per-page-navigation right" href="{{next_page_url}}"><img src="/assets/img/ui/next_arrow_gray.png"></a>
+        <a class="per-page-navigation right" href="{{next_page_url}}"><img src="/static/img/ui/next_arrow_gray.png"></a>
     {%- endif -%}
 </div>
