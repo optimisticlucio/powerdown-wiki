@@ -2,6 +2,8 @@
 
 {% block title %}Art{% endblock %}
 
+{% block customhead %}<script src="/static/js/tag-search-box.js" defer></script>{% endblock %}
+
 {% block content %}
 <div class="wrapper wide art-selector-v2">
     <h1>Art</h1>
@@ -9,7 +11,14 @@
     <h2>"{{ random_quote }}"</h2>
 
     <div class="option-bar">
-        <div class="searchbar">{# TODO #}</div>
+        <div class="searchbar" id="tag-search" data-base-url="/art">
+            {%- for tag in user_search_params.tags -%}
+                <div class="tag">
+                    <span class="tag-name">{{tag}}</span><span class="tag-remove">×</span>
+                </div>
+            {%- endfor -%}
+            <input type="text" id="tag-input" autocomplete="off" />
+        </div>
 
         <div class="pages">
             {% include "components/page_number_scroller.html" %}

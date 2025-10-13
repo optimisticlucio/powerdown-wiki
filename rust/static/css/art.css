@@ -109,21 +109,9 @@
                     text-decoration: none;
                 }
             }
-
-            .tags {
-                a {
-                    background-color: var(--brightest-shade);
-                    color: var(--dark-shade);
-                    padding: .2em 0.5em;
-                    margin: .3em;
-                    text-decoration: none;
-                    display: inline-block;
-                }
-            }
         }
     }
 }
-
 
 .art-selector-v2 {
     .option-bar {
@@ -131,7 +119,7 @@
         position: relative;
         justify-content: space-between;
 
-        font-size: 1.5em;
+        font-size: 1.7em;
 
         background-color: var(--darkest-shade);
         padding: .2ch;
@@ -142,6 +130,7 @@
 
         .searchbar {
             justify-content: left;
+            width: 27%;
         }
 
         .pages {
@@ -212,7 +201,6 @@
                 height: 100%;
                 width: 100%;
                 padding: 1ch;
-                
 
                 position: absolute;
                 top: 0;
@@ -296,5 +284,53 @@
                 }
             }
         }
+    }
+}
+
+.tag {
+    background-color: var(--brightest-shade);
+    color: var(--dark-shade);
+    padding: .2em 0.5em;
+    margin: .3em;
+    text-decoration: none;
+    display: inline-block;
+}
+
+#tag-search {
+    border: .1em solid var(--dark-shade);
+    padding: .1em;
+    background-color: var(--bright-shade);
+    overflow-x: scroll;
+    scrollbar-width: thin;
+    font-size: 0.5em;
+    gap: 0.5ch;
+    
+    &::before {
+        content: '';
+        display: block;
+        height: 100%;
+        aspect-ratio: 1;
+        background-image: url('/static/img/ui/magnifying_glass.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+    }
+
+    #tag-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background-color: transparent;
+        font-family: unset;
+        color: unset;
+        min-width: 5ch;
+        max-width: 100%;
+        width: fit-content;
+    }
+    
+    .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 1ch;
+        margin: 0;
     }
 }

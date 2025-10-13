@@ -253,7 +253,7 @@ async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Resul
             } 
 
             // Well, fuck me.
-            format!("ERROR_THUMBNAIL_NOT_FOUND").to_owned()
+            format!("ERROR_[{}]_NOT_FOUND", art_thumbnail_folder_path.join(format!("{}.png", &file_name)).as_os_str().to_str().unwrap()).to_owned()
         });
 
 

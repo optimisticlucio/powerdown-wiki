@@ -44,7 +44,7 @@
             {% if let Some(description) = description -%}<div class="content">{{ description }}</div>{%- endif -%}
             <div class="tags">
                 {%- for tag in tags -%}
-                    <a href="/art?tags={{ tag }}">{{ tag }}</a>
+                    <a class="tag" href="/art?tags={{ tag }}">{{ tag }}</a>
                 {%- endfor -%}
             </div>
         </div>
