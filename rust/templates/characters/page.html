@@ -46,7 +46,7 @@
                         {% endfor %}
                     </p>
                     {% if let Some(tag) = tag %}
-                        <a class="text" href="/tags/{{ tag }}">
+                        <a class="text" href="/art?tags={{ tag }}">
                             ART OF {{ name }}
                         </a>
                     {% endif %}

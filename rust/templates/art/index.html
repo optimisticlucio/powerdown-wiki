@@ -14,10 +14,10 @@
         <div class="pages">
             {% include "components/page_number_scroller.html" %}
         </div>
-
-        <div class="sex-button">
-            <a id="nsfw-toggle" href="/art?nsfw={%if user_search_params.nsfw%}false{%else%}true{%endif%}{%if user_search_params.tags.len() > 0 %}&tags={{user_search_params.tags.join(",")}}{% endif %}"><span>Sex</span></a>
-        </div>
+        
+        <a class="sex-button" id="nsfw-toggle" href="/art?nsfw={%if user_search_params.nsfw%}false{%else%}true{%endif%}{%if user_search_params.tags.len() > 0 %}&tags={{user_search_params.tags.join(",")}}{% endif %}">
+            <span>Sex</span>
+        </a>
     </div>
 
     <div class="art-grid">

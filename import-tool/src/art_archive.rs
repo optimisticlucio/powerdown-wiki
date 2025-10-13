@@ -230,7 +230,17 @@ async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Resul
 
     let art_thumbnail_folder_path: PathBuf = art_archive_folder_path.join("thumbnails");
 
-    let thumbnail_path: String = frontmatter.thumbnail_file.unwrap_or_else(|| {
+    let thumbnail_path_attempt = if let Some(listed_thumbnail_path) = &frontmatter.thumbnail_file {
+        // Check if this path actually exists. If not, run the search.
+        if art_thumbnail_folder_path.join(listed_thumbnail_path).exists() {
+            Some(listed_thumbnail_path.to_owned())
+        }
+        else {
+            None
+        }
+    } else { None };
+
+    let thumbnail_path: String = thumbnail_path_attempt.unwrap_or_else(|| {
             let file_name = frontmatter.img_files[0].split(".").next().unwrap().to_owned();
 
             // Assuming the thumbnail has the same name as the img:

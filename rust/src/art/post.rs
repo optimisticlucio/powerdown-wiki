@@ -104,6 +104,11 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     columns.push("nsfw".into());
     values.push(&page_art.base_art.nsfw);
 
+    if let Some(description) = &page_art.description {
+        columns.push("description".into());
+        values.push(description);
+    }
+
     let query = format!("INSERT INTO art({}) VALUES ({})",
             columns.join(", "),
             columns.iter().enumerate().map(|(i, _)| format!("${}", i+1)).collect::<Vec<String>>().join(", "));

@@ -172,6 +172,11 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         values.push(birthday);
     }
 
+    if let Some(tag) = &page_character.tag {
+        columns.push("relevant_tag".into());
+        values.push(tag);
+    }
+
     let query = format!("INSERT INTO character({}) VALUES ({})",
             columns.join(", "),
             columns.iter().enumerate().map(|(i, _)| format!("${}", i+1)).collect::<Vec<String>>().join(", "));
