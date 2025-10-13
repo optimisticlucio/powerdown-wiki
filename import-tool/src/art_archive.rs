@@ -253,9 +253,14 @@ async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Resul
             } 
 
             // Well, fuck me.
-            format!("ERROR_[{}]_NOT_FOUND", art_thumbnail_folder_path.join(format!("{}.png", &file_name)).as_os_str().to_str().unwrap()).to_owned()
+            format!("ERROR_{}_NOT_FOUND", art_thumbnail_folder_path.join(format!("{}.png", &file_name)).as_os_str().to_str().unwrap()).to_owned()
         });
 
+    let mut modified_tags = frontmatter.tags.clone();
+    // This is for my own convenience to hunt for thumbnails I forgot to fill in. THIS TAG SHOULD NOT BE IN FINISHED SITE!!!
+    if thumbnail_path.starts_with("ERROR") {
+        modified_tags.push("thumbnail-miss".to_string()); 
+    }
 
     // Set the required fields for the post request
     let mut post_request = reqwest::multipart::Form::new()
@@ -266,7 +271,7 @@ async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Resul
         .text("thumbnail", format!("https://powerdown.wiki/assets/img/art-archive/thumbnails/{}",thumbnail_path)) //TODO: Convert to file sending
         .text("files", serde_json::to_string(&frontmatter.img_files.iter().map(|img_url| format!("https://powerdown.wiki/assets/img/art-archive/{}", img_url)).collect::<Vec<String>>())    
                 .map_err(|err| format!("Art File JSON Err: {}", err.to_string()))?) //TODO: Convert to file sending
-        .text("tags", serde_json::to_string(&frontmatter.tags.iter().filter(|tag| !["nsfw".to_owned(), "sfw".to_owned()].contains(tag)).collect::<Vec<&String>>())
+        .text("tags", serde_json::to_string(&modified_tags.iter().filter(|tag| !["nsfw".to_owned(), "sfw".to_owned()].contains(tag)).collect::<Vec<&String>>())
                 .map_err(|err| format!("Tag JSON Err: {}", err.to_string()))?)
         ;
 

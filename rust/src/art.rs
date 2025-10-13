@@ -34,6 +34,8 @@ struct ArtIndexPage<'a> {
 
     art_pieces: Vec<structs::BaseArt>,
 
+    all_tags: Vec<String>,
+
     user_search_params: &'a ArtSearchParameters
 }
 
@@ -96,6 +98,8 @@ async fn art_index(
             Some(get_search_url(ArtSearchParameters { page: total_pages_available_for_search , ..query_params.clone()}))
         }, 
 
+        all_tags: get_all_tags(state.db_pool.get().await.unwrap()).await,
+
         art_pieces
     }.render().unwrap().into()
 }
@@ -116,7 +120,17 @@ pub async fn get_total_amount_of_art(db_connection: Object<Manager>, search_para
     Ok(count)
 }
 
-// Given relevant query parameters, returns the relative URL of that art search.
+/// Given relevant query parameters, returns the relative URL of that art search.
 fn get_search_url(params: ArtSearchParameters) -> String {
     format!("/art{}", params.to_uri_parameters(true))
+}
+
+/// Returns all the unique tags in all art.
+// TODO: Should probably cache this. Not a frequently changing field, and even if it does, a short discrepancy is ok.
+pub async fn get_all_tags(db_connection: Object<Manager>) -> Vec<String> {
+    let answers = db_connection
+        .query("SELECT DISTINCT unnest(tags) AS tags FROM art;", &[]).await
+        .unwrap();
+
+    answers.iter().map(|row| row.get(0)).collect::<Vec<String>>()
 }

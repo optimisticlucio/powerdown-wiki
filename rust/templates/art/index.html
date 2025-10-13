@@ -17,14 +17,20 @@
                     <span class="tag-name">{{tag}}</span><span class="tag-remove">×</span>
                 </div>
             {%- endfor -%}
-            <input type="text" id="tag-input" autocomplete="off" />
+            <input type="text" id="tag-input" autocomplete="off" list="all-tags" />
+
+            <datalist id="all-tags">
+                {%- for tag in all_tags -%}
+                <option value="{{ tag }}"/>
+                {%- endfor -%}
+            </datalist>
         </div>
 
         <div class="pages">
             {% include "components/page_number_scroller.html" %}
         </div>
         
-        <a class="sex-button" id="nsfw-toggle" href="/art?nsfw={%if user_search_params.nsfw%}false{%else%}true{%endif%}{%if user_search_params.tags.len() > 0 %}&tags={{user_search_params.tags.join(",")}}{% endif %}">
+        <a class="sex-button" id="nsfw-toggle" href="/art{{ user_search_params.flipped_nsfw_uri_params() }}">
             <span>Sex</span>
         </a>
     </div>

@@ -152,6 +152,15 @@ impl ArtSearchParameters {
             format!("?{}", parameters.join("&"))
         }
     }
+
+    /// Returns the URI of said parameters, except the NSFW value is flipped, and page count is dropped.
+    /// Primarily for the "nsfw" toggle on the art index.
+    pub fn flipped_nsfw_uri_params(&self) -> String {
+        Self {
+            nsfw: !self.nsfw,
+            ..self.clone()
+        }.to_uri_parameters(false)
+    }
 }
 
 impl Default for ArtSearchParameters {

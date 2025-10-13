@@ -189,7 +189,7 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
         .text("creator", frontmatter.character_author)
         .text("slug", character_slug.clone())
         .text("relevant_tag", character_slug.clone())
-        .text("thumbnail_url", format!("https://powerdown.wiki/assets/img/characters/thumbnails/{}.png", character_slug)) // TODO: Convert to file sending
+        .text("thumbnail_url", format!("https://powerdown.wiki/assets/img/characters/thumbnails/{}.png", character_slug.replace("-", " "))) // TODO: Convert to file sending
         .text("page_img_url", format!("https://powerdown.wiki/assets/img/{}", frontmatter.character_img_file)) // TODO: Convert to file sending
         .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
         .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)

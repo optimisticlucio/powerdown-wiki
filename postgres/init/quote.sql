@@ -34,7 +34,7 @@ FROM unnest(ARRAY[
     'Because discord will not last forever, but random web forums from the 1980s will outlast us all.',
     'Discord? More like Pisscorp.',
     'The real Power Down was the HTML we cried over along the way.',
-    'What do you mean &lt;body&gt; has a 8 px margin around itself by default?? WHY??',
+    'What do you mean <body> has a 8 px margin around itself by default?? WHY??',
     'I built an entire website before I unboxed an Unusual hat.',
     'I want to believe.',
     'Do NOT ask about the cancer healing vagina.', 

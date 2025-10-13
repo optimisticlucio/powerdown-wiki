@@ -38,8 +38,6 @@ pub async fn character_page(
     if let Some(requested_art) = structs::PageArt::get_by_slug(state.db_pool.get().await.unwrap(), &art_slug).await {
         let (older_art_url, newer_art_url) = get_older_and_newer_art_slugs(&art_slug, &query_params, state.db_pool.get().await.unwrap()).await;
 
-        println!("ENTERED ART PAGE, RECIEVED THE FOLLOWING PARAMS: tags - {}, nsfw - {}, to uri params - {}", query_params.tags.join(","), query_params.nsfw.to_string(), query_params.to_uri_parameters(false));
-
         template_to_response(
             ArtPage {
                 user: None, // TODO: Connect this to user system.

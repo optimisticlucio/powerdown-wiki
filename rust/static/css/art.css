@@ -43,6 +43,7 @@
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
+        max-width: 40em;
 
         label {
             background-color: var(--dark-shade);
