@@ -244,6 +244,10 @@ async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Resul
             let file_name = frontmatter.img_files[0].split(".").next().unwrap().to_owned();
 
             // Assuming the thumbnail has the same name as the img:
+            if art_thumbnail_folder_path.join(&file_name).exists() {
+                return file_name;
+            }
+
             if art_thumbnail_folder_path.join(format!("{}.png", &file_name)).exists() {
                 return format!("{}.png", &file_name);
             } 
