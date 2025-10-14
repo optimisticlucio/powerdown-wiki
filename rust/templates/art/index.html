@@ -30,7 +30,7 @@
             {% include "components/page_number_scroller.html" %}
         </div>
         
-        <a class="sex-button" id="nsfw-toggle" href="/art{{ user_search_params.flipped_nsfw_uri_params() }}">
+        <a class="sex-button{% if user_search_params.nsfw %} on{% endif %}" id="nsfw-toggle" href="/art{{ user_search_params.flipped_nsfw_uri_params() }}">
             <span>Sex</span>
         </a>
     </div>
