@@ -9,21 +9,15 @@ services:
       AWS_URL: ${AWS_URL}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      DISCORD_OAUTH2_CLIENT_ID: ${DISCORD_OAUTH2_CLIENT_ID}
+      DISCORD_OAUTH2_CLIENT_SECRET: ${DISCORD_OAUTH2_CLIENT_SECRET}
+      S3_ART_BUCKET_NAME: ${S3_ART_BUCKET_NAME:-powerdown-art-storage}
+      S3_CHARACTER_BUCKET_NAME: ${S3_CHARACTER_BUCKET_NAME:-powerdown-character-storage}
+      S3_MISC_BUCKET_NAME: ${S3_MISC_BUCKET_NAME:-powerdown-miscellaneous-storange}
+      S3_SQL_BACKUP_BUCKET_NAME: ${S3_SQL_BACKUP_BUCKET_NAME:-powerdown-sql-backups-storage}
       RUST_LOG: debug
     ports:
       - 8080:8080
-
-  # This entire thing is for testing, so temp volume. Delete and connect wires to S3 once ready.
-  localstack:
-    container_name: localstack
-    image: localstack/localstack
-    ports:
-      - "127.0.0.1:4566:4566"            # LocalStack Gateway
-      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
-    environment:
-      SERVICES: "s3"
-    volumes:
-      - localstack-data:/var/lib/localstack
   
   postgres:
     image: postgres:16

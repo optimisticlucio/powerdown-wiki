@@ -13,7 +13,8 @@ mod post;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
-        .route("/new", post(post::add_character))
+        .route("/new", post(post::add_art))
+        .route("/new", get(post::art_posting_page))
         .route("/{art_slug}", get(page::character_page))
 }
 

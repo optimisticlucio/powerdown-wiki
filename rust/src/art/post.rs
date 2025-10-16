@@ -1,10 +1,15 @@
+use askama::Template;
 use axum::extract::multipart::{Field};
 use axum::extract::{Multipart, State};
-use axum::response::{Html, IntoResponse};
+use axum::http;
+use axum::response::{Html, IntoResponse, Redirect};
+use crate::user::User;
+use crate::utils::template_to_response;
 use crate::{ServerState, errs::RootErrors};
 use super::{structs::{BaseArtBuilder, PageArtBuilder}};
 
-pub async fn add_character(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
+/// Post Request Handler for art category.
+pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
     let mut base_art_builder = BaseArtBuilder::default();
     let mut page_art_builder= PageArtBuilder::default();
 
@@ -118,13 +123,30 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         RootErrors::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Html(format!("{} successfully recieved!", &page_art.base_art.title)))
+    Ok(Redirect::to(&format!("/art/{}", &page_art.base_art.slug)))
 }
 
 async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
     field.text().await
-    .map_err(|err| match err {
-        // TODO: If the user sent something other than text, return a BAD REQUEST error
+    .map_err(|err| match err.status() {
+        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(err.body_text()),
+        
         _ => RootErrors::INTERNAL_SERVER_ERROR
     })
+}
+
+#[derive(Template)] 
+#[template(path = "art/post.html")]
+struct ArtPostingPage {
+    user: Option<User>
+}
+
+pub async fn art_posting_page(State(state): State<ServerState>) -> Result<impl IntoResponse, RootErrors> {
+    Ok (
+        template_to_response(
+            ArtPostingPage {
+                user: None //TODO: Connect with user system.
+            }
+        )
+    )
 }

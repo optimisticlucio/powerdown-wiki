@@ -12,7 +12,7 @@ CREATE TABLE art (
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     thumbnail text NOT NULL, -- Assumed to be a link to the thumbnail file.
-    files text[] NOT NULL CONSTRAINT has_files CHECK (array_length(files, 1) > 0), -- Assumed to be links to the relevant img/video.
+    files text[] NOT NULL CONSTRAINT has_files CHECK (array_length(files, 1) > 0), --TODO: Change this to be a different array, like ais said, so it can handle reordering and such.
 
     tags text[],
 

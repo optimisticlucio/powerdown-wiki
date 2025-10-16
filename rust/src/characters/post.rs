@@ -1,7 +1,8 @@
 use std::collections::{HashMap};
 use axum::extract::multipart::{Field, InvalidBoundary};
 use axum::extract::{Multipart, State};
-use axum::response::{Html, IntoResponse};
+use axum::http;
+use axum::response::{Html, IntoResponse, Redirect};
 use regex::Regex;
 use crate::{ServerState, characters::structs::{PageCharacterBuilder, BaseCharacterBuilder, InfoboxRow}, errs::RootErrors};
 
@@ -186,13 +187,13 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         RootErrors::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Html(format!("{} successfully recieved!", &page_character.base_character.name)))
+    Ok(Redirect::to(&format!("/characters/{}", &page_character.base_character.slug)))
 }
 
 async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
     field.text().await
-    .map_err(|err| match err {
-        // TODO: If the user sent something other than text, return a BAD REQUEST error
+    .map_err(|err| match err.status() {
+        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(err.body_text()),
         _ => RootErrors::INTERNAL_SERVER_ERROR
     })
 }

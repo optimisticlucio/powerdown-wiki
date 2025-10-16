@@ -4,6 +4,7 @@ use axum::{
 use axum_extra::routing::RouterExt;
 use std::{sync::Arc, time};
 use tower::{ServiceBuilder, layer::Layer};
+use tower_cookies::{CookieManagerLayer};
 
 mod index;
 mod static_files;
@@ -25,6 +26,7 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/characters", characters::router()) 
         .nest("/art", art::router())
         // TODO: Redirect /art-archive to /art
+        .layer(CookieManagerLayer::new())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
