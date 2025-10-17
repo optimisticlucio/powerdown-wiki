@@ -11,9 +11,7 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       DISCORD_OAUTH2_CLIENT_ID: ${DISCORD_OAUTH2_CLIENT_ID}
       DISCORD_OAUTH2_CLIENT_SECRET: ${DISCORD_OAUTH2_CLIENT_SECRET}
-      S3_ART_BUCKET_NAME: ${S3_ART_BUCKET_NAME:-powerdown-art-storage}
-      S3_CHARACTER_BUCKET_NAME: ${S3_CHARACTER_BUCKET_NAME:-powerdown-character-storage}
-      S3_MISC_BUCKET_NAME: ${S3_MISC_BUCKET_NAME:-powerdown-miscellaneous-storange}
+      S3_PUBLIC_BUCKET_NAME: ${S3_PUBLIC_BUCKET_NAME:-powerdown-public-storage}
       S3_SQL_BACKUP_BUCKET_NAME: ${S3_SQL_BACKUP_BUCKET_NAME:-powerdown-sql-backups-storage}
       RUST_LOG: debug
     ports:

@@ -1,14 +1,19 @@
 use std::collections::{HashMap};
+use std::path::Path;
 use axum::extract::multipart::{Field, InvalidBoundary};
 use axum::extract::{Multipart, State};
 use axum::http;
 use axum::response::{Html, IntoResponse, Redirect};
 use regex::Regex;
+use crate::characters::BaseCharacter;
 use crate::{ServerState, characters::structs::{PageCharacterBuilder, BaseCharacterBuilder, InfoboxRow}, errs::RootErrors};
 
 pub async fn add_character(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
     let mut page_character_builder = PageCharacterBuilder::default();
     let mut base_character_builder = BaseCharacterBuilder::default();
+
+    // TODO: Need to clean the temp character up if the upload dropped.
+    let temp_character_id = BaseCharacter::get_unused_id(state.db_pool.get().await.unwrap()).await;
 
     while let Some(recieved_field) = multipart.next_field().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)? {
         let field_name = match recieved_field.name() {
@@ -45,7 +50,23 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                 page_character_builder.creator(text_or_internal_err(recieved_field).await?); 
             }
             "page_img_url" => { 
-                page_character_builder.page_img_url(text_or_internal_err(recieved_field).await?); 
+                let user_given_file_extension = Path::new(recieved_field.file_name()
+                    .ok_or(RootErrors::BAD_REQUEST("page_img_url lacked filename".to_string()))?).extension().unwrap().to_str().unwrap().to_string();
+
+                let s3_file_name = format!("characters/{}/thumbnail.{}", temp_character_id, user_given_file_extension);
+
+                let img_file = recieved_field.bytes().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+
+                let image_upload = state.s3_client.put_object()
+                        .bucket(&state.s3_public_bucket)
+                        .key(&s3_file_name)
+                        .body(img_file.into())
+                        .send().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?; 
+
+                // TODO: How tf do I get the permanent public-facing URL of the image we have now.
+                let public_facing_url = format!("{}/{}", std::env::var("AWS_URL").unwrap(), s3_file_name);
+
+                page_character_builder.page_img_url(public_facing_url);
             }
             "infobox" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
@@ -178,9 +199,11 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         values.push(tag);
     }
 
-    let query = format!("INSERT INTO character({}) VALUES ({})",
-            columns.join(", "),
-            columns.iter().enumerate().map(|(i, _)| format!("${}", i+1)).collect::<Vec<String>>().join(", "));
+    // Because we created a temp character, we'll update their values instead of creating a new one.
+    let query = format!("UPDATE character SET {} WHERE id={}",
+            columns.iter().enumerate().map(|(i, column_name)| format!("{}=${}",column_name, i+1)).collect::<Vec<String>>().join(", "),
+            temp_character_id
+        );
 
     db_connection.execute(&query, &values).await.map_err(|err| {
         println!("[CHARACTER POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);

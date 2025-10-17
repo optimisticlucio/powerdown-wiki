@@ -8,19 +8,29 @@ use tokio::join;
 #[derive(Clone)]
 pub struct ServerState {
     pub db_pool: Pool<Manager>,
-    pub s3_client: aws_sdk_s3::Client // Apparently cloning these doesn't cause race conditions. 
+    pub s3_client: aws_sdk_s3::Client, // Apparently cloning these doesn't cause race conditions. 
     // If this ^ ends up being a bottleneck, create a client pool with deadpool.
+
+    // You have to pass the bucket names around unless you want to make a wrapper struct for buckets,
+    // which, frankly, I don't want to do.
+    pub s3_public_bucket: String, // The name of the public bucket, passed from env.
+    pub s3_sql_backup_bucket: String, // The name of the sql backup bucket, passed from env.
 }
 
 impl ServerState {
     /// Returns a ServerState with default initializations.
+    /// Will panic if any ENV variables are missing to ensure there isn't buggy runtime behaviour.
     pub async fn initalize() -> Self {
         let (db_pool, s3_client) = join!(Self::initialize_db(), Self::initialize_s3_connection());
 
+        let s3_public_bucket = env::var("S3_PUBLIC_BUCKET_NAME").unwrap(); 
+        let s3_sql_backup_bucket = env::var("S3_SQL_BACKUP_BUCKET_NAME").unwrap();
 
         ServerState {
             db_pool,
-            s3_client
+            s3_client,
+            s3_public_bucket,
+            s3_sql_backup_bucket
         }
     }
 

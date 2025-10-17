@@ -4,6 +4,7 @@ use deadpool_postgres::Manager;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql, Type};
 use derive_builder::Builder;
+use rand::{distr::Alphanumeric, Rng};
 
 // TODO: Get character ritual info
 
@@ -110,6 +111,21 @@ impl BaseCharacter {
             birthday: row.get("birthday"),
         }
     }
+
+    /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
+    /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
+    pub async fn get_unused_id(db_connection: Object<Manager>) -> i64 {
+        let random_page_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
+
+        // There's a very slight chance this operation panics on correct behaviour
+        // bc it uses random strings. It should probably be fine, but I should fix this someday.
+        let insert_operation_result = db_connection.query_one(
+            "INSERT INTO character (is_hidden, page_slug, short_name, subtitles, creator, thumbnail, page_image)
+            VALUES (TRUE, $1, 'TEMP', ARRAY['Something you shouldn''t be seeing!'], 'RNJesus', '', '')
+            RETURNING id", &[&random_page_slug]).await.unwrap();
+
+        insert_operation_result.get(0) 
+    } 
 }
 
 impl PartialEq for BaseCharacter {

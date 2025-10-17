@@ -31,10 +31,6 @@ Each variable will have its default value listed in parantheses.
 
 The various bucket names in S3 for storing the PD-related data. Because every bucket name is unique, you will probably need to change some of these.
 
-- S3_ART_BUCKET_NAME (powerdown-art-storage): The bucket where all the art section data is stored, like thumbnails and images. Should be public access.
-
-- S3_CHARACTER_BUCKET_NAME (powerdown-character-storage): The bucket where the character-related art is stored. Should be public access.
-
-- S3_MISC_BUCKET_NAME (powerdown-miscellaneous-storange): The bucket where anything that doesn't fit either of the other two categories goes, like the actual misc category or images that go in stories and such. Should be public access.
+- S3_PUBLIC_BUCKET_NAME (powerdown-public-storage): The bucket where we store everything the average user may run into during regular browsing - art, character thumbnails, videos, user pfps, that sort of deal. As the name indicates, should be public access.
 
 - S3_SQL_BACKUP_BUCKET_NAME (powerdown-sql-backups-storage): The bucket with backups of the various SQL tables we have going, and it'll read from there to see if there's an existing backup to read from on startup. **Shouldn't be public access**, unless you fancy random people being able to access your OAuth2 secret keys.

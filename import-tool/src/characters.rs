@@ -1,5 +1,5 @@
 use std::{error::Error, fs, path::{Path, PathBuf}, sync::Arc};
-use reqwest::{Response, Url};
+use reqwest::{multipart, Response, Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
 use indexmap::IndexMap;
@@ -45,7 +45,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
         match trimmed_option {
             "1" => { // Import all
-                if let Err(import_errs) = import_given_characters(&all_character_paths, &post_url).await {
+                if let Err(import_errs) = import_given_characters(&root_path, &all_character_paths, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
 
@@ -80,7 +80,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 let random_characters = all_character_paths
                         .choose_multiple(&mut rand::rng(), amount_of_characters)
                         .map(|x| x.to_path_buf()).collect();
-                if let Err(import_errs) = import_given_characters(&random_characters, &post_url).await {
+                if let Err(import_errs) = import_given_characters(&root_path, &random_characters, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
                 break;
@@ -96,7 +96,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                     let chosen_file = all_character_paths.iter().find(|path| path.file_name().unwrap_or_default().eq_ignore_ascii_case(trimmed_file));
 
                     if let Some(file_path) = chosen_file {
-                        if let Err(import_errs) = import_given_characters(&vec![file_path.to_owned()], &post_url).await {
+                        if let Err(import_errs) = import_given_characters(&root_path, &vec![file_path.to_owned()], &post_url).await {
                             println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"));
                         }
                         break;
@@ -116,7 +116,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     }
 }
 
-async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
+async fn import_given_characters(root_path: &Path, character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
     let simultaneous_threads = 4;
     let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let import_successes: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -131,7 +131,7 @@ async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url
                         let progress_bar_clone = progress_bar.clone();
 
                         async move {
-                            match import_given_character(character_path, server_url).await {
+                            match import_given_character(root_path, character_path, server_url).await {
                                 Err(mut import_error) => {  
                                     import_error.insert_str(0, &format!("{:?} ", character_path.file_name().unwrap()));
                                     let mut import_errors_unlocked = import_errors_clone.lock().await;
@@ -170,7 +170,7 @@ async fn import_given_characters(character_file_paths: &Vec<PathBuf>, server_url
     }
 }
 
-async fn import_given_character(character_file_path: &Path, server_url: &Url) -> Result<Response, String> {
+async fn import_given_character(root_path: &Path, character_file_path: &Path, server_url: &Url) -> Result<Response, String> {
     // Read and parse file
     let file_contents = fs::read_to_string(character_file_path)
             .map_err(|err| format!("File Read Err: {}", err.to_string()))?;
@@ -183,13 +183,17 @@ async fn import_given_character(character_file_path: &Path, server_url: &Url) ->
     let file_content = parsed_file.content;
     let character_slug: String = character_file_path.file_name().unwrap().to_ascii_lowercase().to_str().unwrap().trim_end_matches(".md").to_owned().replace(" ", "-");
 
+    let thumbnail_img_filename = format!("{}.png", character_slug.replace("-", " "));
+    let thumbnail_img_bytes = fs::read(root_path.join("src/assets/img/characters/thumbnails").join(&thumbnail_img_filename))
+            .map_err(|err| format!("THUMBNAIL READ ERR: {}", err.to_string()))?;
+
     // Set the required fields for the post request
     let mut post_request = reqwest::multipart::Form::new()
         .text("name", frontmatter.character_title)
         .text("creator", frontmatter.character_author)
         .text("slug", character_slug.clone())
         .text("relevant_tag", character_slug.clone())
-        .text("thumbnail_url", format!("https://powerdown.wiki/assets/img/characters/thumbnails/{}.png", character_slug.replace("-", " "))) // TODO: Convert to file sending
+        .part("thumbnail_url", multipart::Part::bytes(thumbnail_img_bytes).file_name(thumbnail_img_filename).mime_str("image/png").unwrap())
         .text("page_img_url", format!("https://powerdown.wiki/assets/img/{}", frontmatter.character_img_file)) // TODO: Convert to file sending
         .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
         .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)
