@@ -32,7 +32,7 @@ pub fn select_main_folder() -> PathBuf {
 }
 
 
-pub fn select_server_url() -> Url {
+pub async fn select_server_url() -> Url {
     println!("Please input the URL of the server we're targeting:");
 
     loop {
@@ -40,9 +40,24 @@ pub fn select_server_url() -> Url {
 
         let trimmed_option = chosen_option.trim();
 
-        // TODO: Ensure that it's a valid URL and that it matches what we're looking for.
+        let target_url = Url::parse(trimmed_option).unwrap(); // TODO: Handle parse error
 
-        return Url::parse(trimmed_option).unwrap(); // TODO: Handle parse error
+        let health_check = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(5))
+                .build()
+                .unwrap()
+                .head(target_url.to_owned())
+                .send()
+                .await;
+
+        if let Err(error) = health_check {
+            println!("Invalid Url: {}", error.to_string());
+            panic!();
+        }
+
+        // TODO: Ensure that this URL is also of PD and not just a random alive site.
+
+        return target_url; 
     }
 }
 

@@ -1,7 +1,7 @@
 use std::cmp::{self, min};
 
 use askama::Template;
-use axum::{response::Html, routing::get, routing::post, extract::State, Router, extract::{Query}};
+use axum::{extract::{DefaultBodyLimit, Query, State}, response::Html, routing::{get, post}, Router};
 use crate::{errs::RootErrors, ServerState, user::User};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
@@ -13,7 +13,7 @@ mod post;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
-        .route("/new", post(post::add_art))
+        .route("/new", post(post::add_art)).layer(DefaultBodyLimit::max(30 * 1000 * 1000)) // Upload limit of 30MB
         .route("/new", get(post::art_posting_page))
         .route("/{art_slug}", get(page::character_page))
 }

@@ -14,7 +14,7 @@ This tool should be used regularly in testing and only {} on the final site.
     
     let path_to_root = select_main_folder();
 
-    let server_url = select_server_url();
+    let server_url = select_server_url().await;
 
     select_import_type(&path_to_root, &server_url).await;
 }

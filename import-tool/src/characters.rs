@@ -48,6 +48,9 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 if let Err(import_errs) = import_given_characters(&root_path, &all_character_paths, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
+                else {
+                    println!("---{}---", "Imports completed successfully!".green());
+                }
 
                 break;
             }
@@ -80,9 +83,13 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 let random_characters = all_character_paths
                         .choose_multiple(&mut rand::rng(), amount_of_characters)
                         .map(|x| x.to_path_buf()).collect();
+
                 if let Err(import_errs) = import_given_characters(&root_path, &random_characters, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
+                else {
+                            println!("---{}---", "Imports completed successfully!".green());
+                        }
                 break;
             }
 
@@ -98,6 +105,9 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                     if let Some(file_path) = chosen_file {
                         if let Err(import_errs) = import_given_characters(&root_path, &vec![file_path.to_owned()], &post_url).await {
                             println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"));
+                        }
+                        else {
+                            println!("---{}---", "Imports completed successfully!".green());
                         }
                         break;
                     }
@@ -131,13 +141,21 @@ async fn import_given_characters(root_path: &Path, character_file_paths: &Vec<Pa
                         let progress_bar_clone = progress_bar.clone();
 
                         async move {
-                            match import_given_character(root_path, character_path, server_url).await {
-                                Err(mut import_error) => {  
+                            match tokio::time::timeout(tokio::time::Duration::from_secs(10), import_given_character(root_path, character_path, server_url)).await {
+                                Err(_) => {
+                                    // Timeout
+                                    let import_error = format!("{:?} Timeout!", character_path.file_name().unwrap());
+                                    let mut import_errors_unlocked = import_errors_clone.lock().await;
+                                    import_errors_unlocked.push(import_error);
+                                }
+                                Ok(Err(mut import_error)) => {  
+                                    // Import fail.
                                     import_error.insert_str(0, &format!("{:?} ", character_path.file_name().unwrap()));
                                     let mut import_errors_unlocked = import_errors_clone.lock().await;
                                     import_errors_unlocked.push(import_error);
                                 },
-                                Ok(import_success) => {
+                                Ok(Ok(import_success)) => {
+                                    // Import success
                                     let import_success_readable = format!("{:?} STATUS {}: {}", character_path.file_name().unwrap(), import_success.status(), import_success.text().await.unwrap_or_default());
                                     let mut import_successes_unlocked = import_successes_clone.lock().await;
                                     import_successes_unlocked.push(import_success_readable);
@@ -187,17 +205,21 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
     let thumbnail_img_bytes = fs::read(root_path.join("src/assets/img/characters/thumbnails").join(&thumbnail_img_filename))
             .map_err(|err| format!("THUMBNAIL READ ERR: {}", err.to_string()))?;
 
+    let page_img_filename = PathBuf::from(&frontmatter.character_img_file).file_name().ok_or("CHARACTER IMG FILE DOESN'T HAVE FILENAME")?
+            .to_owned().to_str().unwrap().to_string();
+    let page_img_bytes = fs::read(root_path.join("src/assets/img").join(frontmatter.character_img_file.trim_start_matches("/")))
+            .map_err(|err| format!("PAGE IMG READ ERR: {}", err.to_string()))?;
+
     // Set the required fields for the post request
     let mut post_request = reqwest::multipart::Form::new()
-        .text("name", frontmatter.character_title)
+        .text("name", frontmatter.character_title.clone())
         .text("creator", frontmatter.character_author)
         .text("slug", character_slug.clone())
         .text("relevant_tag", character_slug.clone())
-        .part("thumbnail_url", multipart::Part::bytes(thumbnail_img_bytes).file_name(thumbnail_img_filename).mime_str("image/png").unwrap())
-        .text("page_img_url", format!("https://powerdown.wiki/assets/img/{}", frontmatter.character_img_file)) // TODO: Convert to file sending
+        .part("thumbnail", multipart::Part::bytes(thumbnail_img_bytes).file_name(thumbnail_img_filename).mime_str("image/png").unwrap())
+        .part("page_img", multipart::Part::bytes(page_img_bytes).file_name(page_img_filename))
         .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
         .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)
-        .text("relevant_tag", character_slug.clone())
         ;
 
     if let Some(overlay_css) = frontmatter.overlay_css {
@@ -232,10 +254,11 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
         post_request = post_request.text("birthday", birthday);
     }
 
+    let request = reqwest::Client::new().post(server_url.to_owned())
+        .multipart(post_request);
+
     // Send the post request and hope for the best.
-    return reqwest::Client::new().post(server_url.to_owned())
-        .multipart(post_request).send()
-        .await.map_err(|err| format!("Info Send Err: {}", err.to_string()));
+    return request.send().await.map_err(|err| format!("Info Send Err: {}", err.to_string()));
 }
 
 #[derive(Deserialize, Serialize)]

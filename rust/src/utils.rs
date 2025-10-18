@@ -6,6 +6,10 @@ use crate::errs::RootErrors;
 use serde::{Deserialize};
 use serde::de::{Deserializer};
 
+pub mod file_compression;
+
+pub use file_compression::compress_image_lossless;
+
 pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
@@ -52,4 +56,9 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
             RootErrors::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+/// Returns the public-facing URL for an S3 object, given its key and bucket.
+pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
+    format!("http://localhost:4566/{}/{}", bucket_name, file_key)
 }

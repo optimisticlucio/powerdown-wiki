@@ -1,12 +1,14 @@
 use std::collections::{HashMap};
+use std::error::Error;
 use std::path::Path;
-use axum::extract::multipart::{Field, InvalidBoundary};
+use axum::extract::multipart::{Field, InvalidBoundary, MultipartError};
 use axum::extract::{Multipart, State};
 use axum::http;
 use axum::response::{Html, IntoResponse, Redirect};
 use regex::Regex;
-use crate::characters::BaseCharacter;
+use crate::characters::{page, BaseCharacter};
 use crate::{ServerState, characters::structs::{PageCharacterBuilder, BaseCharacterBuilder, InfoboxRow}, errs::RootErrors};
+use crate::utils::{self, file_compression, get_s3_object_url};
 
 pub async fn add_character(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
     let mut page_character_builder = PageCharacterBuilder::default();
@@ -14,13 +16,14 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
 
     // TODO: Need to clean the temp character up if the upload dropped.
     let temp_character_id = BaseCharacter::get_unused_id(state.db_pool.get().await.unwrap()).await;
+    println!("[{}] Gotten temp character ID", temp_character_id);
 
     while let Some(recieved_field) = multipart.next_field().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)? {
         let field_name = match recieved_field.name() {
             None => return Err(RootErrors::BAD_REQUEST("Recieved a field with no name.".to_owned())),
             Some(x) => x
         };
-        
+
         match field_name {
             "name" => { 
                 base_character_builder.name(text_or_internal_err(recieved_field).await?);
@@ -38,8 +41,42 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
 
                 base_character_builder.slug(recieved_slug);
             }
-            "thumbnail_url" => { 
-                base_character_builder.thumbnail_url(text_or_internal_err(recieved_field).await?); 
+            "thumbnail" => { 
+                println!("[{}] - Starting Thumbnail Upload", &temp_character_id);
+                let user_given_file_extension = Path::new(recieved_field.file_name()
+                    .ok_or(RootErrors::BAD_REQUEST("thumbnail lacked filename".to_string()))?).extension().unwrap().to_str().unwrap().to_string();
+
+                let s3_file_name = format!("characters/{}/thumbnail.{}", temp_character_id, user_given_file_extension);
+
+                println!("[{}] - Recieving Bytes", &temp_character_id);
+                let img_file = recieved_field.bytes().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+
+                println!("[{}] - Compressing Image", &temp_character_id);
+
+                let compressed_img_file = utils::compress_image_lossless(img_file.to_vec(), Some(&user_given_file_extension))
+                    .unwrap_or(img_file.to_vec());
+
+                println!("[{}] - Uploading File", &temp_character_id);
+                let image_upload = state.s3_client.put_object()
+                        .bucket(&state.s3_public_bucket)
+                        .key(&s3_file_name)
+                        .body(compressed_img_file.into())
+                        .send().await.map_err(|err| {
+                            println!("INTERNAL ERROR! thumbnail upload for temp_id char {}", temp_character_id);
+                            println!("Error: {}", err);
+                            
+                            // Print the full error chain
+                            let mut source = err.source();
+                            while let Some(e) = source {
+                                println!("  Caused by: {}", e);
+                                source = e.source();
+                            }
+                            
+                            RootErrors::INTERNAL_SERVER_ERROR
+                        })?; 
+
+                println!("[{}] - Finished Thumbnail Import", &temp_character_id);
+                base_character_builder.thumbnail_url(get_s3_object_url(&state.s3_public_bucket, &s3_file_name));
             }
             "subtitles" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
@@ -49,24 +86,45 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
             "creator" => { 
                 page_character_builder.creator(text_or_internal_err(recieved_field).await?); 
             }
-            "page_img_url" => { 
+            "page_img" => { 
+                println!("[{}] - Starting Img Upload", &temp_character_id);
                 let user_given_file_extension = Path::new(recieved_field.file_name()
-                    .ok_or(RootErrors::BAD_REQUEST("page_img_url lacked filename".to_string()))?).extension().unwrap().to_str().unwrap().to_string();
+                    .ok_or(RootErrors::BAD_REQUEST("page_img lacked filename".to_string()))?).extension().unwrap().to_str().unwrap().to_string();
 
-                let s3_file_name = format!("characters/{}/thumbnail.{}", temp_character_id, user_given_file_extension);
+                let s3_file_name = format!("characters/{}/page_img.{}", temp_character_id, user_given_file_extension);
 
-                let img_file = recieved_field.bytes().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                let img_file = recieved_field.bytes().await.map_err(|err| {
+                    println!("[POST OF CHARACTER ID {}] - Failed to recieve page img: {}", &temp_character_id, &err.to_string());
+
+                    RootErrors::BAD_REQUEST(err.body_text())
+                })?;
+
+                println!("[{}] - Compressing Image", &temp_character_id);
+
+                let compressed_img_file = utils::compress_image_lossless(img_file.to_vec(), Some(&user_given_file_extension))
+                    .unwrap_or(img_file.to_vec());
 
                 let image_upload = state.s3_client.put_object()
                         .bucket(&state.s3_public_bucket)
                         .key(&s3_file_name)
-                        .body(img_file.into())
-                        .send().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?; 
+                        .body(compressed_img_file.into());
+                
+                image_upload.send().await.map_err(|err| {
+                    println!("INTERNAL ERROR! thumbnail upload for temp_id char {}", temp_character_id);
+                    println!("Error: {}", err);
+                    
+                    // Print the full error chain
+                    let mut source = err.source();
+                    while let Some(e) = source {
+                        println!("  Caused by: {}", e);
+                        source = e.source();
+                    }
+                    
+                    RootErrors::INTERNAL_SERVER_ERROR
+                })?; 
 
-                // TODO: How tf do I get the permanent public-facing URL of the image we have now.
-                let public_facing_url = format!("{}/{}", std::env::var("AWS_URL").unwrap(), s3_file_name);
-
-                page_character_builder.page_img_url(public_facing_url);
+                println!("[{}] - Finished Img Import", &temp_character_id);
+                page_character_builder.page_img_url(get_s3_object_url(&state.s3_public_bucket, &s3_file_name));
             }
             "infobox" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
@@ -132,7 +190,10 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         .map_err(|err| RootErrors::BAD_REQUEST(err.to_string()))?;
 
     // Now the character is ready to send to the DB.
-    let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+    let db_connection = state.db_pool.get().await.map_err(|_| {
+        println!("CHARACTER POST ERR - Couldn't get DB connection for {}", &page_character.base_character.name);
+        RootErrors::INTERNAL_SERVER_ERROR
+    })?;
 
     // Let's build our query.
     let mut columns: Vec<String> = Vec::new();
@@ -169,10 +230,8 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         values.push(page_text);
     }
 
-    if page_character.base_character.is_hidden {
-        columns.push("is_hidden".into());
-        values.push(&true);
-    }
+    columns.push("is_hidden".into());
+    values.push(&page_character.base_character.is_hidden);
 
     if let Some(retirement_reason) = &page_character.retirement_reason {
         columns.push("retirement_reason".into());
@@ -199,6 +258,8 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         values.push(tag);
     }
 
+    println!("Reached update-point for character named {}", &page_character.base_character.name);
+
     // Because we created a temp character, we'll update their values instead of creating a new one.
     let query = format!("UPDATE character SET {} WHERE id={}",
             columns.iter().enumerate().map(|(i, column_name)| format!("{}=${}",column_name, i+1)).collect::<Vec<String>>().join(", "),
@@ -209,6 +270,8 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
         println!("[CHARACTER POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
         RootErrors::INTERNAL_SERVER_ERROR
     })?;
+
+    println!("{} imported successfully!", &page_character.base_character.name);
 
     Ok(Redirect::to(&format!("/characters/{}", &page_character.base_character.slug)))
 }

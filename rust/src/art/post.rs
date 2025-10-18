@@ -1,12 +1,16 @@
+use std::i16;
+
 use askama::Template;
 use axum::extract::multipart::{Field};
 use axum::extract::{Multipart, State};
 use axum::http;
 use axum::response::{Html, IntoResponse, Redirect};
+use crate::art;
 use crate::user::User;
-use crate::utils::template_to_response;
+use crate::utils::{template_to_response, compress_image_lossless};
 use crate::{ServerState, errs::RootErrors};
 use super::{structs::{BaseArtBuilder, PageArtBuilder}};
+use rayon::prelude::*;
 
 /// Post Request Handler for art category.
 pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
@@ -100,9 +104,6 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
     columns.push("thumbnail".into());
     values.push(&page_art.base_art.thumbnail_url);
 
-    columns.push("files".into());
-    values.push(&page_art.art_urls);
-
     columns.push("tags".into());
     values.push(&page_art.tags);
 
@@ -114,14 +115,25 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
         values.push(description);
     }
 
-    let query = format!("INSERT INTO art({}) VALUES ({})",
+    let query = format!("INSERT INTO art({}) VALUES ({}) RETURNING id",
             columns.join(", "),
             columns.iter().enumerate().map(|(i, _)| format!("${}", i+1)).collect::<Vec<String>>().join(", "));
 
-    db_connection.execute(&query, &values).await.map_err(|err| {
+    let new_art_id: i32 = db_connection.query_one(&query, &values).await.map_err(|err| {
         println!("[ART POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
         RootErrors::INTERNAL_SERVER_ERROR
-    })?;
+    })?.get(0);
+
+    for (index, art_url) in page_art.art_urls.iter().enumerate() {
+        let query = format!("INSERT INTO art_file(belongs_to,file_url,internal_ordering) VALUES($1,$2,$3)");
+
+        // This cast is unsafe. However, if someone uploads an amount of art that can cause a 32bit stack overflow, I am personally
+        // going to their house and having a fun conversation with them.
+        db_connection.execute(&query, &[&new_art_id, &art_url, &(index as i32)]).await.map_err(|err| {
+            println!("[ART POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?;
+    }
 
     Ok(Redirect::to(&format!("/art/{}", &page_art.base_art.slug)))
 }

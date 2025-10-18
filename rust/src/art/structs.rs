@@ -5,6 +5,8 @@ use deadpool_postgres::Manager;
 use derive_builder::Builder;
 use serde::{Deserialize, Deserializer, de};
 
+use crate::art;
+
 #[derive(Clone, Builder)]
 pub struct BaseArt {
     #[builder(default)]
@@ -67,16 +69,32 @@ impl PageArt {
             &[&page_slug]).await
             .ok()?;
 
-        Some(Self::from_db_row(&requested_art))
+        Some(Self::from_db_row(db_connection, &requested_art).await)
     }
 
     /// Converts a DB row with the relevant info to a PageArt struct.
-    fn from_db_row(row: &Row) -> Self {
+    async fn from_db_row(db_connection: Object<Manager>, row: &Row) -> Self {
+        let art_id: i32 = row.get("id");
+
+        // Get the relevant art URLs from the art_file table.
+        let mut art_files = db_connection.query("SELECT * FROM art_file WHERE belongs_to=$1", &[&art_id])
+                .await.unwrap_or(Vec::new())
+                .iter().map(|row| {
+                    let index: i32 = row.get("internal_ordering");
+                    let url: String = row.get("file_url");
+
+                    (index, url)
+                }).collect::<Vec<_>>();
+        
+        art_files.sort();
+
+        let art_urls = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>(); 
+
         PageArt {
             base_art: BaseArt::from_db_row(row),
             description: row.get("description"),
             tags: row.try_get("tags").unwrap_or(Vec::new()),
-            art_urls: row.get("files"),
+            art_urls,
             creation_date: row.get("creation_date")
         }
     }

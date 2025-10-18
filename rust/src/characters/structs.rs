@@ -114,7 +114,7 @@ impl BaseCharacter {
 
     /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
     /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
-    pub async fn get_unused_id(db_connection: Object<Manager>) -> i64 {
+    pub async fn get_unused_id(db_connection: Object<Manager>) -> i32 {
         let random_page_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
 
         // There's a very slight chance this operation panics on correct behaviour
@@ -124,7 +124,7 @@ impl BaseCharacter {
             VALUES (TRUE, $1, 'TEMP', ARRAY['Something you shouldn''t be seeing!'], 'RNJesus', '', '')
             RETURNING id", &[&random_page_slug]).await.unwrap();
 
-        insert_operation_result.get(0) 
+        insert_operation_result.get(0) // id is int, which converts to i32.
     } 
 }
 

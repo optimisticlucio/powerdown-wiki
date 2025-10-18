@@ -12,7 +12,6 @@ CREATE TABLE art (
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     thumbnail text NOT NULL, -- Assumed to be a link to the thumbnail file.
-    files text[] NOT NULL CONSTRAINT has_files CHECK (array_length(files, 1) > 0), --TODO: Change this to be a different array, like ais said, so it can handle reordering and such.
 
     tags text[],
 
@@ -21,4 +20,12 @@ CREATE TABLE art (
     nsfw boolean --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
 );
 
--- TODO: Add some examples of art for testing purposes
+CREATE TABLE art_file (
+    id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
+    belongs_to int
+        REFERENCES art(id)
+        ON DELETE CASCADE,
+    
+    file_url text NOT NULL,
+    internal_ordering int NOT NULL -- Whether this image is the first, second, third, etc, in the given post.
+)

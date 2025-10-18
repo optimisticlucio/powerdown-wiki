@@ -17,7 +17,7 @@ If these are missing when you run docker compose is made, you *will* get a crash
 
 - POSTGRES_USER, POSTGRES_PASSWORD: The user and password used when creating the postgres DB. Given to both the rust app and the postgres container.
 
-- AWS_URL, AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY: Information regarding the location and login data for AWS services, so we can use S3 buckets to store images and video and somesuch. *During development, point this at a LocalStack instance.*
+- AWS_ENDPOINT_URL, AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_REGION: Information regarding the location and login data for AWS services, so we can use S3 buckets to store images and video and somesuch. *During development, point this at a LocalStack instance.*
 
 - DISCORD_OAUTH2_CLIENT_ID, DISCORD_OAUTH2_CLIENT_SECRET: Discord client authentication data for OAuth2. You can get those in the [Discord Developer Portal](https://discord.com/developers/applications). We're using OAuth2 because I do not want to deal with passwords.
 

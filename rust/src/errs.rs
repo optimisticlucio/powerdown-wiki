@@ -17,7 +17,7 @@ impl IntoResponse for RootErrors {
     fn into_response(self) -> Response {
         match self {
             Self::NOT_FOUND => page_not_found().into_response(),
-            Self::INTERNAL_SERVER_ERROR => INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone().into_response(),
+            Self::INTERNAL_SERVER_ERROR => (StatusCode::INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone()).into_response(),
             Self::REQUEST_TIMEOUT => request_timeout().into_response(),
             Self::BAD_REQUEST(elaboration) => bad_request(elaboration).into_response()
         }
