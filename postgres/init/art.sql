@@ -22,10 +22,27 @@ CREATE TABLE art (
 
 CREATE TABLE art_file (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
-    belongs_to int
+    belongs_to int NOT NULL
         REFERENCES art(id)
         ON DELETE CASCADE,
     
-    file_url text NOT NULL,
-    internal_ordering int NOT NULL -- Whether this image is the first, second, third, etc, in the given post.
+    file_url text NOT NULL, -- Points to the public bucket key
+    internal_order int NOT NULL, -- Whether this image is the first, second, third, etc, in the given post.
+
+    UNIQUE (belongs_to, internal_order)
+)
+
+CREATE TABLE art_comment (
+    id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
+    posting_time timestamp with time zone GENERATED ALWAYS AS NOW(),
+
+    under_post int NOT NULL-- The post this was commented on.
+        REFERENCES art(id)
+        ON DELETE CASCADE,
+    
+    poster int -- If NULL, points to "Unknown User", to handle deleted accounts and such.
+        REFERENCES character(id)
+        ON DELETE SET NULL,
+
+    contents text NOT NULL
 )

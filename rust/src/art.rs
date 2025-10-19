@@ -13,7 +13,7 @@ mod post;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
-        .route("/new", post(post::add_art)).layer(DefaultBodyLimit::max(30 * 1000 * 1000)) // Upload limit of 30MB
+        .route("/new", post(post::add_art)).layer(DefaultBodyLimit::max(50 * 1000 * 1000)) // Upload limit of 50MB
         .route("/new", get(post::art_posting_page))
         .route("/{art_slug}", get(page::character_page))
 }

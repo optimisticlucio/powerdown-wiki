@@ -1,5 +1,5 @@
 use std::{fs, path::{Path, PathBuf}, sync::Arc};
-use reqwest::{Response, Url};
+use reqwest::{multipart, Response, Url};
 use serde::{Deserialize, Serialize};
 use serde::de::{self, Deserializer, Error as DeError};
 use gray_matter::{Matter, engine::YAML};
@@ -46,7 +46,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
         match trimmed_option {
             "1" => { // Import all
-                if let Err(import_errs) = import_given_art(&all_art_paths, &post_url).await {
+                if let Err(import_errs) = import_given_art(&root_path, &all_art_paths, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
 
@@ -81,7 +81,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 let random_art = all_art_paths
                         .choose_multiple(&mut rand::rng(), amount_of_art)
                         .map(|x| x.to_path_buf()).collect();
-                if let Err(import_errs) = import_given_art(&random_art, &post_url).await {
+                if let Err(import_errs) = import_given_art(&root_path, &random_art, &post_url).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
                 break;
@@ -97,7 +97,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                     let chosen_file = all_art_paths.iter().find(|path| path.file_name().unwrap_or_default().eq_ignore_ascii_case(trimmed_file));
 
                     if let Some(file_path) = chosen_file {
-                        if let Err(import_errs) = import_given_art(&vec![file_path.to_owned()], &post_url).await {
+                        if let Err(import_errs) = import_given_art(&root_path, &vec![file_path.to_owned()], &post_url).await {
                             println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"));
                         }
                         break;
@@ -117,7 +117,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     }
 }
 
-async fn import_given_art(art_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
+async fn import_given_art(root_path: &Path, art_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
     let simultaneous_threads = 4;
     let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let import_successes: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -132,7 +132,7 @@ async fn import_given_art(art_file_paths: &Vec<PathBuf>, server_url: &Url) -> Re
                         let progress_bar_clone = progress_bar.clone();
 
                         async move {
-                            match import_given_art_piece(art_path, server_url).await {
+                            match import_given_art_piece(&root_path, art_path, server_url).await {
                                 Err(mut import_error) => {  
                                     import_error.insert_str(0, &format!("{:?} ", art_path.file_name().unwrap()));
                                     let mut import_errors_unlocked = import_errors_clone.lock().await;
@@ -171,7 +171,7 @@ async fn import_given_art(art_file_paths: &Vec<PathBuf>, server_url: &Url) -> Re
     }
 }
 
-async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Result<Response, String> {
+async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_url: &Url) -> Result<Response, String> {
     // Read and parse file
     let file_contents = fs::read_to_string(art_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?
                 .lines().map(|line| {
@@ -273,11 +273,19 @@ async fn import_given_art_piece(art_file_path: &Path, server_url: &Url) -> Resul
         .text("title", frontmatter.title)
         .text("creators", serde_json::to_string(&frontmatter.artists).map_err(|err| format!("Artist JSON Err: {}", err.to_string()))?)
         .text("thumbnail", format!("https://powerdown.wiki/assets/img/art-archive/thumbnails/{}",thumbnail_path)) //TODO: Convert to file sending
-        .text("files", serde_json::to_string(&frontmatter.img_files.iter().map(|img_url| format!("https://powerdown.wiki/assets/img/art-archive/{}", img_url)).collect::<Vec<String>>())    
-                .map_err(|err| format!("Art File JSON Err: {}", err.to_string()))?) //TODO: Convert to file sending
         .text("tags", serde_json::to_string(&modified_tags.iter().filter(|tag| !["nsfw".to_owned(), "sfw".to_owned()].contains(tag)).collect::<Vec<&String>>())
                 .map_err(|err| format!("Tag JSON Err: {}", err.to_string()))?)
         ;
+
+    for (index, img_file_relative_path) in frontmatter.img_files.iter().enumerate() {
+        let img_file_path = root_path.join("src/assets/img/art-archive").join(img_file_relative_path.trim_start_matches("/"));
+
+        let img_file_bytes = fs::read(&img_file_path).map_err(|err| format!("ERROR IN READING FILE WITH PATH {}, err: {}", &img_file_relative_path, err.to_string()))?;
+
+        let img_file_filename = img_file_path.file_name().ok_or(format!("FILE {} DOES NOT HAVE FILENAME", img_file_relative_path))?.to_str().unwrap().to_string();
+
+        post_request = post_request.part(format!("file_{}", index), multipart::Part::bytes(img_file_bytes).file_name(img_file_filename));
+    }
 
     if frontmatter.tags.contains(&"nsfw".to_owned()) {
         post_request = post_request.text("nsfw", "true");
