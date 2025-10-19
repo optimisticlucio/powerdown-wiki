@@ -12,22 +12,22 @@ CREATE TABLE character (
     is_main_character boolean NOT NULL DEFAULT FALSE, -- Each creator should have one main character, unrelated to story importance.
 
     short_name text NOT NULL,
-    long_name text,
+    long_name text CHECK (TRIM(long_name) != ''),
     subtitles text[] NOT NULL CONSTRAINT nonzero_subtitles CHECK (array_length(subtitles, 1) > 0),
-    relevant_tag text,
+    relevant_tag text CHECK (TRIM(relevant_tag) != ''),
     creator text NOT NULL,
 
-    thumbnail text NOT NULL, -- Assumed to be a URL
+    thumbnail text NOT NULL , -- Assumed to be a URL
 
     infobox infobox_row[] NOT NULL DEFAULT ARRAY[]::infobox_row[],
     page_image text NOT NULL, -- Assumed to be a URL
     logo text, -- Assumed to be a URL
-    overlay_css text, -- Everything here goes inside a <style>.overlay { }</style> 
-    custom_css text, -- If you wanna do something fancier than just edit overlay.
+    overlay_css text CHECK (TRIM(overlay_css) != ''), -- Everything here goes inside a <style>.overlay { }</style> 
+    custom_css text CHECK (TRIM(custom_css) != ''), -- If you wanna do something fancier than just edit overlay.
 
     birthday date,
 
-    page_text text -- Assumed to be in Markdown format.
+    page_text text CHECK (TRIM(page_text) != '') -- Assumed to be in Markdown format.
 
     CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
@@ -36,6 +36,6 @@ CREATE TABLE ritual_info(
     character_id int PRIMARY KEY
         REFERENCES character(id)
         ON DELETE CASCADE,
-    power_name text NOT NULL,
-    power_description text NOT NULL
+    power_name text NOT NULL CHECK (TRIM(value) != ''),
+    power_description text NOT NULL CHECK (TRIM(value) != '')
 );
