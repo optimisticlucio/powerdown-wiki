@@ -1,6 +1,7 @@
 use axum::{
-    extract::State, response::Html, routing::get, Router};
+    extract::{OriginalUri, State}, response::Html, routing::get, Router};
 use askama::{Template};
+use http::Uri;
 use rand::seq::IndexedRandom;
 use crate::{test_data, user::User, utils};
 use lazy_static::lazy_static;
@@ -36,6 +37,8 @@ lazy_static! {
 #[template(path = "index.html")]
 struct FrontpageTemplate<'a> {
     user: Option<User>,
+    original_uri: Uri,
+    
     buttons: &'static Vec<FrontpageItem>,
     random_quote: &'a str,
     random_ad: &'a str,
@@ -43,7 +46,10 @@ struct FrontpageTemplate<'a> {
     today_date: &'a str
 }
 
-async fn homepage(State(state): State<ServerState>) -> Html<String> {
+async fn homepage(
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    ) -> Html<String> {
     let random_subtitle = {
         let statement = "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;"; 
 
@@ -61,6 +67,8 @@ async fn homepage(State(state): State<ServerState>) -> Html<String> {
 
     FrontpageTemplate {
         user: None,
+        original_uri,
+
         buttons: &FRONTPAGE_ITEMS,
         random_quote: &random_subtitle,
         random_ad: &test_data::get_frontpage_ads().choose(&mut rand::rng()).unwrap(),

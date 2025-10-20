@@ -1,3 +1,4 @@
+{% let current_path = original_uri.path() %}
 <nav>
     <div class="left"> 
         <a href="/">
@@ -6,6 +7,17 @@
                 PD: Archive
             </div>
         </a>
+        {% for link in crate::askama::NAVBAR_URLS %}
+            {% if current_path.starts_with(link.1)%}
+                {% if current_path.len() == link.1.len()%}
+                    <p class="curr-item">{{ link.0 }}</p>
+                {% else %}
+                    <a class="curr-item" href="{{ link.1 }}">{{ link.0 }}</a>
+                {% endif %}
+            {% else %}
+            <a class="nav-item" href="{{ link.1 }}">{{ link.0 }}</a>
+            {% endif %}
+        {% endfor %}
     </div>
     <div class="right">
         {% if let Some(user) = user %}

@@ -51,7 +51,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                     .unwrap_or(img_file.to_vec());
 
                 let image_upload = state.s3_client.put_object()
-                        .bucket(&state.s3_public_bucket)
+                        .bucket(&state.config.s3_public_bucket)
                         .key(&s3_file_name)
                         .body(compressed_img_file.into())
                         .send().await.map_err(|err| {
@@ -67,7 +67,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                             
                             RootErrors::INTERNAL_SERVER_ERROR
                         })?; 
-                base_character_builder.thumbnail_url(get_s3_object_url(&state.s3_public_bucket, &s3_file_name));
+                base_character_builder.thumbnail_url(get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name));
             }
             "subtitles" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;
@@ -93,7 +93,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                     .unwrap_or(img_file.to_vec());
 
                 let image_upload = state.s3_client.put_object()
-                        .bucket(&state.s3_public_bucket)
+                        .bucket(&state.config.s3_public_bucket)
                         .key(&s3_file_name)
                         .body(compressed_img_file.into());
                 
@@ -111,7 +111,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
                     RootErrors::INTERNAL_SERVER_ERROR
                 })?; 
 
-                page_character_builder.page_img_url(get_s3_object_url(&state.s3_public_bucket, &s3_file_name));
+                page_character_builder.page_img_url(get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name));
             }
             "infobox" => { 
                 let field_text = text_or_internal_err(recieved_field).await?;

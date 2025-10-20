@@ -1,11 +1,12 @@
 use std::cmp::{self, min};
 
 use askama::Template;
-use axum::{extract::{DefaultBodyLimit, Query, State}, response::Html, routing::{get, post}, Router};
+use axum::{extract::{DefaultBodyLimit, Query, State, OriginalUri}, response::Html, routing::{get, post}, Router};
 use crate::{errs::RootErrors, ServerState, user::User};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use structs::ArtSearchParameters;
+use http::{Uri};
 
 mod page;
 mod structs;
@@ -22,6 +23,7 @@ pub fn router() -> Router<ServerState> {
 #[template(path = "art/index.html")]
 struct ArtIndexPage<'a> {
     user: Option<User>,
+    original_uri: Uri,
 
     random_quote: String,
 
@@ -42,13 +44,14 @@ struct ArtIndexPage<'a> {
 
 async fn art_index(
         State(state): State<ServerState>, 
-        Query(query_params): Query<ArtSearchParameters>
+        Query(query_params): Query<ArtSearchParameters>,
+        OriginalUri(original_uri): OriginalUri,
     ) -> Html<String> {
     // Static Values
     let amount_of_art_per_page: i64 = 24;
 
     let random_quote = {
-        let association = if query_params.nsfw { "sex_joke" } else { "quote" };
+        let association = if query_params.is_nsfw { "sex_joke" } else { "quote" };
 
         let statement = format!("SELECT * FROM quote WHERE association = '{}' ORDER BY RANDOM() LIMIT 1;", association); 
 
@@ -79,6 +82,7 @@ async fn art_index(
 
     ArtIndexPage {
         user: None, // TODO: Connect to user system.
+        original_uri,
         user_search_params: &query_params,
 
         random_quote,

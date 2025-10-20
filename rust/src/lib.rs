@@ -15,6 +15,7 @@ mod errs;
 mod stories;
 mod user;
 mod art;
+mod askama;
 
 pub mod server_state;
 pub use server_state::ServerState;

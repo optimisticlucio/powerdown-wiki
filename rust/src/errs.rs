@@ -1,6 +1,7 @@
 use axum::{
     http::{response, StatusCode}, response::{Html, IntoResponse, Response}
 };
+use http::Uri;
 use std::fs;
 use lazy_static::lazy_static;
 use askama::{Template};
@@ -33,14 +34,16 @@ lazy_static! {
 #[derive(Template)] 
 #[template(path = "404.html")]
 struct PageNotFound {
-    user: Option<User>
+    user: Option<User>,
+    original_uri: Uri,
 }
 
 fn page_not_found() -> (StatusCode, Html<String>) {
     (
         StatusCode::NOT_FOUND, 
         PageNotFound {
-            user: None
+            user: None,
+            original_uri: Uri::from_static("")
         }.render()
             .unwrap_or(String::from("404 PAGE CONTENT CRASHED ON COMPILATION. PAGE LUCIO, STAT.")).into()
     )

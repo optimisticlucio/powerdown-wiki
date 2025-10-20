@@ -1,4 +1,5 @@
-use axum::{extract::{Path, State, Query}, response::{ IntoResponse}};
+use axum::{extract::{OriginalUri, Path, Query, State}, response::IntoResponse};
+use http::Uri;
 use postgres_types::{FromSql, ToSql, Type};
 use askama::Template;
 use crate::{errs::RootErrors, user::User, ServerState, utils::template_to_response};
@@ -10,6 +11,7 @@ use deadpool_postgres::Manager;
 #[template(path = "art/page.html")]
 struct ArtPage<'a> {
     user: Option<User>,
+    original_uri: Uri,
     user_search_params: &'a structs::ArtSearchParameters,
 
     title: String,
@@ -33,7 +35,8 @@ impl<'a> ArtPage<'a> {
 pub async fn character_page(
     Path(art_slug): Path<String>,
     State(state): State<ServerState>,
-    Query(query_params): Query<structs::ArtSearchParameters>
+    Query(query_params): Query<structs::ArtSearchParameters>,
+    OriginalUri(original_uri): OriginalUri,
 ) -> impl IntoResponse {
     if let Some(requested_art) = structs::PageArt::get_by_slug(state.db_pool.get().await.unwrap(), &art_slug).await {
         let (older_art_url, newer_art_url) = get_older_and_newer_art_slugs(&art_slug, &query_params, state.db_pool.get().await.unwrap()).await;
@@ -41,6 +44,7 @@ pub async fn character_page(
         template_to_response(
             ArtPage {
                 user: None, // TODO: Connect this to user system.
+                original_uri,
                 user_search_params: &query_params,
 
                 title: requested_art.base_art.title,

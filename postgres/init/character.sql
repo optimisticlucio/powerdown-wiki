@@ -36,6 +36,6 @@ CREATE TABLE ritual_info(
     character_id int PRIMARY KEY
         REFERENCES character(id)
         ON DELETE CASCADE,
-    power_name text NOT NULL CHECK (TRIM(value) != ''),
-    power_description text NOT NULL CHECK (TRIM(value) != '')
+    power_name text NOT NULL CHECK (TRIM(power_name) != ''),
+    power_description text NOT NULL CHECK (TRIM(power_description) != '')
 );

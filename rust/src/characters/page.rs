@@ -1,5 +1,6 @@
-use axum::{extract::{Path, State}, response::{ IntoResponse}};
+use axum::{extract::{OriginalUri, Path, State}, response::IntoResponse};
 use askama::Template;
+use http::Uri;
 use rand::seq::IndexedRandom;
 use crate::{characters::{BaseCharacter, PageCharacter, structs::{InfoboxRow}}, errs::RootErrors, user::User, ServerState};
 use crate::utils::template_to_response;
@@ -9,6 +10,7 @@ use comrak::{ markdown_to_html};
 #[template(path = "characters/page.html")]
 struct CharacterPage<'a> {
     user: Option<User>,
+    original_uri: Uri,
 
     retirement_reason: Option<&'a str>,
     overlay_css: Option<&'a str>,
@@ -29,7 +31,8 @@ struct CharacterPage<'a> {
 
 pub async fn character_page(
     Path(character_slug): Path<String>,
-    State(state): State<ServerState>
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
 ) -> impl IntoResponse {
     if let Some(chosen_char) = PageCharacter::get_by_slug(character_slug, state.db_pool.get().await.unwrap()).await {
 
@@ -39,6 +42,7 @@ pub async fn character_page(
         template_to_response(
             CharacterPage {
                 user: None,
+                original_uri,
 
                 retirement_reason: retirement_reason.as_deref(),
                 overlay_css: chosen_char.overlay_css.as_deref(), 

@@ -1,6 +1,7 @@
 use askama::Template;
-use axum::{extract::{DefaultBodyLimit, State}, response::Html, routing::{get, post}, Router};
-use crate::{user::User, test_data, utils, ServerState};
+use axum::{extract::{DefaultBodyLimit, OriginalUri, State}, response::Html, routing::{get, post}, Router};
+use http::Uri;
+use crate::{user::User, utils, ServerState};
 use chrono;
 use axum_extra::routing::RouterExt;
 
@@ -20,6 +21,8 @@ pub fn router() -> Router<ServerState> {
 #[template(path = "characters/index.html")]
 struct CharacterIndex<'a> {
     user: Option<User>,
+    original_uri: Uri,
+
     random_subtitle: &'a str,
     active_characters: &'a Vec<BaseCharacter>,
     retired_characters: &'a Vec<BaseCharacter>,
@@ -28,7 +31,10 @@ struct CharacterIndex<'a> {
     date_today_readable: &'a str,
 }
 
-async fn character_index(State(state): State<ServerState>) -> Html<String> {
+async fn character_index(
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    ) -> Html<String> {
     let all_characters = BaseCharacter::get_all_characters(state.db_pool.get().await.unwrap())
                 .await;
 
@@ -66,6 +72,7 @@ async fn character_index(State(state): State<ServerState>) -> Html<String> {
 
     CharacterIndex {
         user: None,
+        original_uri, 
         random_subtitle: &random_subtitle,
         active_characters: &active_characters,
         retired_characters: &retired_characters,

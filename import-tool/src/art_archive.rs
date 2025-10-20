@@ -266,13 +266,18 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
         modified_tags.push("thumbnail-miss".to_string()); 
     }
 
+    let thumbnail_path = root_path.join("src/assets/img/art-archive/thumbnails").join(&thumbnail_path);
+    let thumbnail_img_bytes = fs::read(&thumbnail_path)
+            .map_err(|err| format!("THUMBNAIL READ ERR: {}", err.to_string()))?;
+    let thumbnail_filename = thumbnail_path.file_name().ok_or("THUMBNAIL DOES NOT HAVE FILENAME".to_owned())?.to_str().unwrap().to_string();
+
     // Set the required fields for the post request
     let mut post_request = reqwest::multipart::Form::new()
         .text("slug", art_slug)
         .text("creation_date", frontmatter.date.format("%F").to_string())
         .text("title", frontmatter.title)
         .text("creators", serde_json::to_string(&frontmatter.artists).map_err(|err| format!("Artist JSON Err: {}", err.to_string()))?)
-        .text("thumbnail", format!("https://powerdown.wiki/assets/img/art-archive/thumbnails/{}",thumbnail_path)) //TODO: Convert to file sending
+        .part("thumbnail", multipart::Part::bytes(thumbnail_img_bytes).file_name(thumbnail_filename)) 
         .text("tags", serde_json::to_string(&modified_tags.iter().filter(|tag| !["nsfw".to_owned(), "sfw".to_owned()].contains(tag)).collect::<Vec<&String>>())
                 .map_err(|err| format!("Tag JSON Err: {}", err.to_string()))?)
         ;
@@ -288,7 +293,7 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     }
 
     if frontmatter.tags.contains(&"nsfw".to_owned()) {
-        post_request = post_request.text("nsfw", "true");
+        post_request = post_request.text("is_nsfw", "true");
     }
 
     if !file_content.is_empty() {

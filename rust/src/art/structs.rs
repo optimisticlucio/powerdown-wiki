@@ -19,7 +19,7 @@ pub struct BaseArt {
     #[builder(default = false)]
     pub has_video: bool,
     #[builder(default = false)]
-    pub nsfw: bool
+    pub is_nsfw: bool
 }
 
 #[derive(Clone, Builder)]
@@ -58,7 +58,7 @@ impl BaseArt {
             thumbnail_url: row.get("thumbnail"),
             slug: row.get("page_slug"),
             has_video: false, //TODO: Handle this somehow.
-            nsfw: row.get("nsfw"),
+            is_nsfw: row.get("is_nsfw"),
         }
     }
 
@@ -126,7 +126,7 @@ pub struct ArtSearchParameters {
     pub tags: Vec<String>,
 
     #[serde(default)]
-    pub nsfw: bool // TODO: Ignored in search?
+    pub is_nsfw: bool // TODO: Ignored in search?
 
     // TODO: Handle Artist Name
 }
@@ -141,11 +141,11 @@ impl ArtSearchParameters {
     pub fn get_postgres_where<'a>(&'a self, params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>) -> String{
         let mut query_conditions: Vec<String> = Vec::new();
 
-        if self.nsfw {
-            query_conditions.push("nsfw".to_string());
+        if self.is_nsfw {
+            query_conditions.push("is_nsfw".to_string());
         }
         else {
-            query_conditions.push("NOT nsfw".to_string());
+            query_conditions.push("NOT is_nsfw".to_string());
         }
 
         if !self.tags.is_empty() {
@@ -170,8 +170,8 @@ impl ArtSearchParameters {
             parameters.push(format!("page={}", self.page));
         }
 
-        if self.nsfw {
-            parameters.push("nsfw=true".to_string());
+        if self.is_nsfw {
+            parameters.push("is_nsfw=true".to_string());
         }
 
         if !self.tags.is_empty() {
@@ -192,7 +192,7 @@ impl ArtSearchParameters {
     /// Primarily for the "nsfw" toggle on the art index.
     pub fn flipped_nsfw_uri_params(&self) -> String {
         Self {
-            nsfw: !self.nsfw,
+            is_nsfw: !self.is_nsfw,
             ..self.clone()
         }.to_uri_parameters(false)
     }
@@ -203,7 +203,8 @@ impl Default for ArtSearchParameters {
         ArtSearchParameters { 
             page: default_page_number(),
             tags: Vec::new(),
-            nsfw: false }
+            is_nsfw: false 
+        }
     }
 }
 

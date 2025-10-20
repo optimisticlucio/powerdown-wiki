@@ -2,9 +2,10 @@ use std::error::Error;
 use std::path::Path;
 use askama::Template;
 use axum::extract::multipart::{Field};
-use axum::extract::{Multipart, State};
+use axum::extract::{Multipart, OriginalUri, State};
 use axum::http;
 use axum::response::{Html, IntoResponse, Redirect};
+use http::Uri;
 use crate::user::User;
 use crate::utils::{template_to_response, compress_image_lossless, get_s3_object_url};
 use crate::{ServerState, errs::RootErrors};
@@ -56,8 +57,8 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
                         }
                 };
 
-                let image_upload = state.s3_client.put_object()
-                        .bucket(&state.s3_public_bucket)
+                state.s3_client.put_object()
+                        .bucket(&state.config.s3_public_bucket)
                         .key(&s3_file_name)
                         .body(compressed_given_file.into())
                         .send().await.map_err(|err| {
@@ -74,7 +75,7 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
                             RootErrors::INTERNAL_SERVER_ERROR
                         })?; 
                 
-                art_url_collector.push((file_index, get_s3_object_url(&state.s3_public_bucket, &s3_file_name)));
+                art_url_collector.push((file_index, get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name)));
             }
             "slug" => {
                 base_art_builder.slug(text_or_internal_err(recieved_field).await?);
@@ -98,8 +99,34 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
                 base_art_builder.creators(creators);
             }
             "thumbnail" => {
-                // TODO: Convert to file sending.
-                base_art_builder.thumbnail_url(text_or_internal_err(recieved_field).await?);
+                let user_given_file_extension = Path::new(recieved_field.file_name()
+                    .ok_or(RootErrors::BAD_REQUEST(format!("Thumbnail lacked filename")))?).extension().unwrap().to_str().unwrap().to_string();
+
+                let s3_file_name = format!("art/{}/thumbnail.{}", temp_art_id, &user_given_file_extension);
+                let given_file = recieved_field.bytes().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+
+                let compressed_given_file = compress_image_lossless(given_file.to_vec(), Some(&user_given_file_extension))
+                                .unwrap_or(given_file.to_vec());
+
+                state.s3_client.put_object()
+                        .bucket(&state.config.s3_public_bucket)
+                        .key(&s3_file_name)
+                        .body(compressed_given_file.into())
+                        .send().await.map_err(|err| {
+                            println!("INTERNAL ERROR! thumbnail upload for art temp_id {}", temp_art_id);
+                            println!("Error: {}", err);
+                            
+                            // Print the full error chain
+                            let mut source = err.source();
+                            while let Some(e) = source {
+                                println!("  Caused by: {}", e);
+                                source = e.source();
+                            }
+                            
+                            RootErrors::INTERNAL_SERVER_ERROR
+                        })?; 
+                
+                base_art_builder.thumbnail_url(get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name));
             }
             "tags" => {
                 let sent_text = text_or_internal_err(recieved_field).await?;
@@ -108,9 +135,9 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
                     .map_err(|_| RootErrors::BAD_REQUEST("Recieved invalid tag list.".to_owned()))?;
                 page_art_builder.tags(tags);
             }
-            "nsfw" => {
+            "is_nsfw" => {
                 // If this was sent at all, assume it is true.
-                base_art_builder.nsfw(true);
+                base_art_builder.is_nsfw(true);
             }
             "description" => {
                 page_art_builder.description(Some(text_or_internal_err(recieved_field).await?));
@@ -155,8 +182,8 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
     columns.push("tags".into());
     values.push(&page_art.tags);
 
-    columns.push("nsfw".into());
-    values.push(&page_art.base_art.nsfw);
+    columns.push("is_nsfw".into());
+    values.push(&page_art.base_art.is_nsfw);
 
     if let Some(description) = &page_art.description {
         columns.push("description".into());
@@ -199,14 +226,19 @@ async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
 #[derive(Template)] 
 #[template(path = "art/post.html")]
 struct ArtPostingPage {
-    user: Option<User>
+    user: Option<User>,
+    original_uri: Uri,
 }
 
-pub async fn art_posting_page(State(state): State<ServerState>) -> Result<impl IntoResponse, RootErrors> {
+pub async fn art_posting_page(
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    ) -> Result<impl IntoResponse, RootErrors> {
     Ok (
         template_to_response(
             ArtPostingPage {
-                user: None //TODO: Connect with user system.
+                user: None, //TODO: Connect with user system.
+                original_uri
             }
         )
     )
