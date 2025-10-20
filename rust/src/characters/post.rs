@@ -186,6 +186,10 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     let mut columns: Vec<String> = Vec::new();
     let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
+    // Un-hide the temp art 
+    columns.push("is_hidden".into());
+    values.push(&false);
+
     columns.push("page_slug".into());
     values.push(&page_character.base_character.slug);
 

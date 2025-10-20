@@ -34,10 +34,12 @@ nav {
         padding-right: 0.5em;
         display: flex;
         align-items: center;
+        justify-content: center;
+        gap: 1ch;
 
         * {
             display: inherit;
-            gap: 2ch;
+            gap: 1ch;
         }
     }
 }

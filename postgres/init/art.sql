@@ -17,7 +17,8 @@ CREATE TABLE art (
 
     description text CHECK (TRIM(description) != ''),
 
-    is_nsfw boolean NOT NULL DEFAULT FALSE --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
+    is_nsfw boolean NOT NULL DEFAULT FALSE, --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
+    is_hidden boolean NOT NULL DEFAULT FALSE -- SHOULD NOT BE SET FOR ANY ACTUAL ART EVER! ONLY USE FOR TEMP DATABASE ENTRIES AND THE LIKE.
 );
 
 CREATE TABLE art_file (

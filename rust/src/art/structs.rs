@@ -65,14 +65,13 @@ impl BaseArt {
     /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
     /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
     pub async fn get_unused_id(db_connection: Object<Manager>) -> i32 {
-        // TODO: As is, users can see the temp art while it's being created. Shouldn't be that big of an issue, but still bad UX.
         let random_page_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
 
         // There's a very slight chance this operation panics on correct behaviour
         // bc it uses random strings. It should probably be fine, but I should fix this someday.
         let insert_operation_result = db_connection.query_one(
-            "INSERT INTO art (page_slug, title, creators, thumbnail)
-            VALUES ($1, 'TEMP', ARRAY['RNJesus'], '')
+            "INSERT INTO art (is_hidden, page_slug, title, creators, thumbnail)
+            VALUES (true, $1, 'TEMP', ARRAY['RNJesus'], '')
             RETURNING id", &[&random_page_slug]).await.unwrap();
 
         insert_operation_result.get(0) // id is int, which converts to i32.
