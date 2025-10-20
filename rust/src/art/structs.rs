@@ -140,6 +140,11 @@ impl ArtSearchParameters {
     pub fn get_postgres_where<'a>(&'a self, params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>) -> String{
         let mut query_conditions: Vec<String> = Vec::new();
 
+        // Instead of putting "NOT is_hidden" everywhere and suffer the bug of "oops I forgot"
+        // I just shoved it here.
+        // If you ever don't need it... just manually remove it, don't make it easy to accidentally remove.
+        query_conditions.push("NOT is_hidden".to_string());
+
         if self.is_nsfw {
             query_conditions.push("is_nsfw".to_string());
         }

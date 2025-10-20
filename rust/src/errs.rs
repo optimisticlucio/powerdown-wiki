@@ -43,7 +43,7 @@ fn page_not_found() -> (StatusCode, Html<String>) {
         StatusCode::NOT_FOUND, 
         PageNotFound {
             user: None,
-            original_uri: Uri::from_static("")
+            original_uri: Uri::from_static("/")
         }.render()
             .unwrap_or(String::from("404 PAGE CONTENT CRASHED ON COMPILATION. PAGE LUCIO, STAT.")).into()
     )

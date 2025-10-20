@@ -1,7 +1,8 @@
 use axum::{
-    error_handling::HandleErrorLayer, http::StatusCode, response::{Html, IntoResponse}, BoxError, Router
+    error_handling::HandleErrorLayer, http::StatusCode, response::{Html, IntoResponse, Redirect}, routing::get, BoxError, Router
 };
 use axum_extra::routing::RouterExt;
+use http::Uri;
 use std::{sync::Arc, time};
 use tower::{ServiceBuilder, layer::Layer};
 use tower_cookies::{CookieManagerLayer};
@@ -26,12 +27,12 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/static", static_files::router())
         .nest("/characters", characters::router()) 
         .nest("/art", art::router())
-        // TODO: Redirect /art-archive to /art
+        .route_with_tsr("/art-archive", get(|uri: Uri| async move { Redirect::permanent(&format!("/art{}", uri.path()))}))
         .layer(CookieManagerLayer::new())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
-                .timeout(time::Duration::from_secs(10))
+                .timeout(time::Duration::from_secs(15))
         )
         .fallback(fallback)
         .with_state(state)
