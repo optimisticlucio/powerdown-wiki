@@ -1,12 +1,9 @@
 use postgres::Row;
-use postgres_types::{FromSql, ToSql, Type};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use derive_builder::Builder;
-use serde::{Deserialize, Deserializer, de};
+use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
-
-use crate::art;
 
 #[derive(Clone, Builder)]
 pub struct BaseArt {

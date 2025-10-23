@@ -7,7 +7,8 @@ CREATE TABLE story (
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     creation_date date NOT NULL,
-    -- TODO: Figure out how to do "last modification date"
+
+    last_updated timestamp with time zone DEFAULT NOW(),
 
     is_hidden boolean DEFAULT FALSE, -- Should this story be on the search and index page?
 
@@ -23,3 +24,15 @@ CREATE TABLE story (
 
     content text NOT NULL CHECK (TRIM(content) != '') -- Assumed to be either markdown or HTML. Should I limit it somehow?
 );
+
+CREATE OR REPLACE FUNCTION update_last_updated()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_updated = NOW(); 
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_row_value_last_updated AFTER UPDATE INSERT OR UPDATE ON story 
+    FOR EACH ROW  -- This apparently means every row *in the transaction.* Not like, every row. Gave me a heart attack.
+    EXECUTE FUNCTION update_last_updated();

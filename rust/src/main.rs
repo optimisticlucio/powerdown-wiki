@@ -5,6 +5,7 @@ use axum::{
     extract::Request,
 };
 use tower_http::normalize_path::NormalizePathLayer;
+use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
@@ -20,7 +21,7 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
-    axum::serve(listener, ServiceExt::<Request>::into_make_service(app_with_middleware))
+    axum::serve(listener, ServiceExt::<Request>::into_make_service_with_connect_info::<SocketAddr>(app_with_middleware))
         .await
         .unwrap();
 }

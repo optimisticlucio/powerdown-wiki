@@ -17,9 +17,10 @@ mod stories;
 mod user;
 mod art;
 mod askama;
+mod server_state;
 
-pub mod server_state;
 pub use server_state::ServerState;
+pub use errs::RootErrors;
 
 pub fn router(state: ServerState) -> Router<()> {
     Router::new()

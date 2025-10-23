@@ -1,6 +1,6 @@
 CREATE TABLE art_comment (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
-    posting_time timestamp with time zone NOT NULL DEFAULT NOW(),
+    posting_time timestamp with time zone NOT NULL DEFAULT NOW(), -- For the love of god don't set this manually.
 
     under_post int NOT NULL-- The post this was commented on.
         REFERENCES art(id)
