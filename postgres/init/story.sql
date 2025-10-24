@@ -35,6 +35,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_row_value_last_updated AFTER UPDATE INSERT OR UPDATE ON story 
+CREATE TRIGGER update_row_value_last_updated AFTER INSERT OR UPDATE ON story 
     FOR EACH ROW  -- This apparently means every row *in the transaction.* Not like, every row. Gave me a heart attack.
     EXECUTE FUNCTION update_last_updated();

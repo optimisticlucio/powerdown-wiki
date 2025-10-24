@@ -1,4 +1,4 @@
-use std::{error::Error, fs, path::{Path, PathBuf}, sync::Arc};
+use std::{fs, path::{Path, PathBuf}, sync::Arc};
 use reqwest::{multipart, Response, Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};

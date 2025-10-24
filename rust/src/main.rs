@@ -9,19 +9,11 @@ use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
-    // TODO: Move the middleware soldering outside of main.
     let app = powerdown_wiki::router(ServerState::initalize().await);
-
-    // this can be any `tower::Layer`
-    let middleware = NormalizePathLayer::trim_trailing_slash();
-
-    // apply the layer around the whole `Router`
-    // this way the middleware will run before `Router` receives the request
-    let app_with_middleware = middleware.layer(app);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
-    axum::serve(listener, ServiceExt::<Request>::into_make_service_with_connect_info::<SocketAddr>(app_with_middleware))
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
 }

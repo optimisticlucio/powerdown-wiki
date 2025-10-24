@@ -32,7 +32,7 @@ impl<'a> ArtPage<'a> {
     }
 }
 
-pub async fn character_page(
+pub async fn art_page(
     Path(art_slug): Path<String>,
     State(state): State<ServerState>,
     Query(query_params): Query<structs::ArtSearchParameters>,

@@ -128,6 +128,7 @@ pub struct ArtSearchParameters {
     #[serde(default)]
     pub is_nsfw: bool,
 
+    #[serde(default)]
     pub art_state: ArtState,
 
     // TODO: Handle Artist Name
@@ -237,4 +238,8 @@ pub enum ArtState {
     Public, // Publicly viewable, standard state.
     PendingApproval, // User-uploaded, pending admin review to be moved to public. Not visible.
     Processing // Currently mid-process by the server and/or database. Should not be viewable.
+}
+
+impl Default for ArtState {
+    fn default() -> Self { Self::Public }
 }

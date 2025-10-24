@@ -1,9 +1,7 @@
 use std::{fs, path::{Path, PathBuf}, sync::Arc};
 use reqwest::{multipart, Response, Url};
 use serde::{Deserialize, Serialize};
-use serde::de::{self, Deserializer, Error as DeError};
 use gray_matter::{Matter, engine::YAML};
-use indexmap::IndexMap;
 use owo_colors::{ OwoColorize};
 use futures::{stream, StreamExt};
 use tokio::sync::Mutex;

@@ -88,7 +88,7 @@ pub async fn select_import_type(root_path: &Path, server_url: &Url) -> () {
             }
 
             "3" => {
-                stories::select_import_options(root_path, server_url);
+                stories::select_import_options(root_path, server_url).await;
                 break;
             }
 

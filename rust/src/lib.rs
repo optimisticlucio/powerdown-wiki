@@ -26,14 +26,14 @@ pub fn router(state: ServerState) -> Router<()> {
     Router::new()
         .merge(index::router())
         .nest("/static", static_files::router())
-        .nest("/characters", characters::router()) 
-        .nest("/art", art::router())
+        .nest("/characters", characters::router())  
+        .nest("/art", art::router()) // OR HERE
         .route_with_tsr("/art-archive", get(|uri: Uri| async move { Redirect::permanent(&format!("/art{}", uri.path()))}))
-        .layer(CookieManagerLayer::new())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
                 .timeout(time::Duration::from_secs(15))
+                .layer(CookieManagerLayer::new())
         )
         .fallback(fallback)
         .with_state(state)
