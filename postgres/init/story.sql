@@ -14,11 +14,13 @@ CREATE TABLE story (
 
     custom_css text CHECK (TRIM(custom_css) != ''), -- Sanitize this on write and read!!!
 
-    /* TODO:
-    - previous chapter
-    - next chapter
-    - audio readings?
-    */
+    prev_story int DEFAULT NULL
+        REFERENCES story(id)
+        ON DELETE SET NULL,
+
+    next_story int DEFAULT NULL
+        REFERENCES story(id)
+        ON DELETE SET NULL,
 
     editors_note text CHECK (TRIM(editors_note) != ''),
 

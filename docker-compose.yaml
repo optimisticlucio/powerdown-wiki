@@ -32,8 +32,3 @@ services:
     # TODO: Delete the temporary volumes out once finished with development.
     tmpfs:
       - /var/lib/postgresql/data
-
-  #ngnix:
-  #  image: ngnix
-volumes:
-  localstack-data:

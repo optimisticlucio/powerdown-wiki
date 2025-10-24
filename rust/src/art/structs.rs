@@ -2,6 +2,7 @@ use postgres::Row;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use derive_builder::Builder;
+use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
 
@@ -16,7 +17,9 @@ pub struct BaseArt {
     #[builder(default = false)]
     pub has_video: bool,
     #[builder(default = false)]
-    pub is_nsfw: bool
+    pub is_nsfw: bool,
+    #[builder(default = ArtState::Public)]
+    pub art_state: ArtState,
 }
 
 #[derive(Clone, Builder)]
@@ -56,6 +59,7 @@ impl BaseArt {
             slug: row.get("page_slug"),
             has_video: false, //TODO: Handle this somehow.
             is_nsfw: row.get("is_nsfw"),
+            art_state: row.get("post_state")
         }
     }
 
@@ -67,8 +71,8 @@ impl BaseArt {
         // There's a very slight chance this operation panics on correct behaviour
         // bc it uses random strings. It should probably be fine, but I should fix this someday.
         let insert_operation_result = db_connection.query_one(
-            "INSERT INTO art (is_hidden, page_slug, title, creators, thumbnail)
-            VALUES (true, $1, 'TEMP', ARRAY['RNJesus'], '')
+            "INSERT INTO art (post_state, page_slug, title, creators, thumbnail)
+            VALUES ('pending', $1, 'TEMP', ARRAY['RNJesus'], '')
             RETURNING id", &[&random_page_slug]).await.unwrap();
 
         insert_operation_result.get(0) // id is int, which converts to i32.
@@ -122,7 +126,9 @@ pub struct ArtSearchParameters {
     pub tags: Vec<String>,
 
     #[serde(default)]
-    pub is_nsfw: bool // TODO: Ignored in search?
+    pub is_nsfw: bool,
+
+    pub art_state: ArtState,
 
     // TODO: Handle Artist Name
 }
@@ -137,10 +143,8 @@ impl ArtSearchParameters {
     pub fn get_postgres_where<'a>(&'a self, params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>) -> String{
         let mut query_conditions: Vec<String> = Vec::new();
 
-        // Instead of putting "NOT is_hidden" everywhere and suffer the bug of "oops I forgot"
-        // I just shoved it here.
-        // If you ever don't need it... just manually remove it, don't make it easy to accidentally remove.
-        query_conditions.push("NOT is_hidden".to_string());
+        query_conditions.push("post_state".to_string());
+        params.push(&self.art_state);
 
         if self.is_nsfw {
             query_conditions.push("is_nsfw".to_string());
@@ -204,7 +208,8 @@ impl Default for ArtSearchParameters {
         ArtSearchParameters { 
             page: default_page_number(),
             tags: Vec::new(),
-            is_nsfw: false 
+            is_nsfw: false,
+            art_state: ArtState::Public
         }
     }
 }
@@ -225,4 +230,11 @@ where
         .map(|item| item.trim().to_string())
         .filter(|item| !item.is_empty())
         .collect())
+}
+
+#[derive(Clone, FromSql, ToSql, Deserialize, Debug)]
+pub enum ArtState {
+    Public, // Publicly viewable, standard state.
+    PendingApproval, // User-uploaded, pending admin review to be moved to public. Not visible.
+    Processing // Currently mid-process by the server and/or database. Should not be viewable.
 }

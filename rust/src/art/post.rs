@@ -165,8 +165,8 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
     let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
     // Un-hide the temp art 
-    columns.push("is_hidden".into());
-    values.push(&false);
+    columns.push("post_state".into());
+    values.push(&page_art.base_art.art_state);
 
     columns.push("page_slug".into());
     values.push(&page_art.base_art.slug);

@@ -1,3 +1,8 @@
+CREATE TYPE art_post_state AS ENUM (
+    'public', -- Publicly viewable, standard state.
+    'pending_approval', -- User-uploaded, pending admin review to be moved to public. Not visible.
+    'processing' -- Currently mid-process by the server and/or database. Should not be viewable.
+    );
 
 CREATE TABLE art (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
@@ -18,7 +23,7 @@ CREATE TABLE art (
     description text CHECK (TRIM(description) != ''),
 
     is_nsfw boolean NOT NULL DEFAULT FALSE, --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
-    is_hidden boolean NOT NULL DEFAULT FALSE -- SHOULD NOT BE SET FOR ANY ACTUAL ART EVER! ONLY USE FOR TEMP DATABASE ENTRIES AND THE LIKE.
+    post_state art_post_state NOT NULL DEFAULT 'public'
 );
 
 CREATE TABLE art_file (
