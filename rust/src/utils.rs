@@ -5,6 +5,7 @@ use askama::Template;
 use crate::errs::RootErrors;
 use serde::{Deserialize};
 use serde::de::{Deserializer};
+use axum::extract::multipart::{Field};
 
 pub mod file_compression;
 
@@ -61,4 +62,12 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 /// Returns the public-facing URL for an S3 object, given its key and bucket.
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
     format!("http://localhost:4566/{}/{}", bucket_name, file_key)
+}
+
+pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
+    field.text().await
+    .map_err(|err| match err.status() {
+        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(err.body_text()),
+        _ => RootErrors::INTERNAL_SERVER_ERROR
+    })
 }

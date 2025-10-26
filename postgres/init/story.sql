@@ -1,14 +1,15 @@
 CREATE TABLE story (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
+    page_slug text NOT NULL UNIQUE CHECK (TRIM(page_slug) != ''),
 
     title text NOT NULL CHECK (TRIM(title) != ''),
     tagline text CHECK (TRIM(tagline) != ''),
-    description text CHECK (TRIM(description) != ''),
+    description text NOT NULL CHECK (TRIM(description) != ''),
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     creation_date date NOT NULL,
 
-    last_updated timestamp with time zone DEFAULT NOW(),
+    last_updated timestamp with time zone DEFAULT NOW(), -- Don't overwrite this for the love of god.
 
     is_hidden boolean DEFAULT FALSE, -- Should this story be on the search and index page?
 
@@ -25,6 +26,8 @@ CREATE TABLE story (
     editors_note text CHECK (TRIM(editors_note) != ''),
 
     content text NOT NULL CHECK (TRIM(content) != '') -- Assumed to be either markdown or HTML. Should I limit it somehow?
+
+    CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
 
 CREATE OR REPLACE FUNCTION update_last_updated()

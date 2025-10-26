@@ -7,7 +7,7 @@ use axum::http;
 use axum::response::{Html, IntoResponse, Redirect};
 use http::Uri;
 use crate::user::User;
-use crate::utils::{template_to_response, compress_image_lossless, get_s3_object_url};
+use crate::utils::{template_to_response, compress_image_lossless, get_s3_object_url, text_or_internal_err};
 use crate::{ServerState, errs::RootErrors};
 use super::{structs::{BaseArtBuilder, PageArtBuilder, BaseArt}};
 use rand::{distr::Alphanumeric, Rng};
@@ -190,6 +190,7 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
     values.push(&page_art.base_art.is_nsfw);
 
     if let Some(description) = &page_art.description {
+        // TODO: SANITIZE
         columns.push("description".into());
         values.push(description);
     }
@@ -216,15 +217,6 @@ pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart)
     }
 
     Ok(Redirect::to(&format!("/art/{}", &page_art.base_art.slug)))
-}
-
-async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
-    field.text().await
-    .map_err(|err| match err.status() {
-        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(err.body_text()),
-        
-        _ => RootErrors::INTERNAL_SERVER_ERROR
-    })
 }
 
 #[derive(Template)] 

@@ -27,8 +27,9 @@ pub fn router(state: ServerState) -> Router<()> {
         .merge(index::router())
         .nest("/static", static_files::router())
         .nest("/characters", characters::router())  
-        .nest("/art", art::router()) // OR HERE
+        .nest("/art", art::router()) 
         .route_with_tsr("/art-archive", get(|uri: Uri| async move { Redirect::permanent(&format!("/art{}", uri.path()))}))
+        .nest("/stories", stories::router())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))

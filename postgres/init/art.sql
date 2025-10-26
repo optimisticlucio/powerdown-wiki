@@ -24,6 +24,8 @@ CREATE TABLE art (
 
     is_nsfw boolean NOT NULL DEFAULT FALSE, --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
     post_state art_post_state NOT NULL DEFAULT 'public'
+
+    CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
 
 CREATE TABLE art_file (

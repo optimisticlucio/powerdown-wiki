@@ -8,7 +8,7 @@ use axum::response::{Html, IntoResponse, Redirect};
 use regex::Regex;
 use crate::characters::{page, BaseCharacter};
 use crate::{ServerState, characters::structs::{PageCharacterBuilder, BaseCharacterBuilder, InfoboxRow}, errs::RootErrors};
-use crate::utils::{self, get_s3_object_url};
+use crate::utils::{self, get_s3_object_url, text_or_internal_err};
 
 pub async fn add_character(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
     let mut page_character_builder = PageCharacterBuilder::default();
@@ -213,6 +213,7 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     }
 
     if let Some(page_text) = &page_character.page_contents {
+        // TODO: SANITIZE
         columns.push("page_text".into());
         values.push(page_text);
     }
@@ -257,12 +258,4 @@ pub async fn add_character(State(state): State<ServerState>, mut multipart: Mult
     })?;
 
     Ok(Redirect::to(&format!("/characters/{}", &page_character.base_character.slug)))
-}
-
-async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
-    field.text().await
-    .map_err(|err| match err.status() {
-        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(err.body_text()),
-        _ => RootErrors::INTERNAL_SERVER_ERROR
-    })
 }

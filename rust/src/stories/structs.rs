@@ -1,27 +1,61 @@
 use derive_builder::Builder;
+use postgres::Row;
+use deadpool::managed::Object;
+use deadpool_postgres::Manager;
 
 #[derive(Clone, Builder)]
-struct BaseStory {
-    title: String,
-    description: String,
-    creators: Vec<String>,
-    creation_date: chrono::NaiveDate,
+pub struct BaseStory {
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub creators: Vec<String>,
+    pub creation_date: chrono::NaiveDate,
+    pub slug: String,
     #[builder(default = false)]
-    is_hidden: bool
+    pub is_hidden: bool
 }
 
 #[derive(Clone, Builder)]
-struct PageStory {
-    base_story: BaseStory,
+pub struct PageStory {
+    pub base_story: BaseStory,
     #[builder(default = None)]
-    inpage_title: Option<String>,
+    pub inpage_title: Option<String>,
     #[builder(default = None)]
-    tagline: Option<String>,
-    tags: Vec<String>,
+    pub tagline: Option<String>,
+    pub tags: Vec<String>,
     #[builder(default = None)]
-    previous_story: Option<BaseStory>,
+    pub previous_story: Option<BaseStory>,
     #[builder(default = None)]
-    next_story: Option<BaseStory>,
+    pub next_story: Option<BaseStory>,
     #[builder(default = None)]
-    custom_css: Option<String>,
+    pub custom_css: Option<String>,
+    #[builder(default = None)]
+    pub editors_note: Option<String>,
+
+    pub content: String,
+}
+
+impl BaseStory {
+    /// Returns the base info of a single story, found by their page slug. If no such story exists, returns None.
+    pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<Self> {
+        // TODO: Limit search
+        let story_row = db_connection.query_one(
+            "SELECT * FROM story WHERE page_slug=$1", 
+            &[&slug]).await.ok()?;
+
+        Some(Self::from_db_row(&story_row))
+    }
+
+    /// Converts a DB row with the relevant info to a BaseStory struct.
+    pub fn from_db_row(row: &Row) -> Self {
+        Self {
+            id: row.get("id"),
+            title: row.get("title"),
+            description: row.get("description"),
+            creators: row.get("creators"),
+            creation_date: row.get("creation_date"),
+            slug: row.get("page_slug"),
+            is_hidden: row.get("is_hidden")
+        }
+    }
 }
