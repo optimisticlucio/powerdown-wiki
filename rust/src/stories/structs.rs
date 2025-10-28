@@ -59,3 +59,29 @@ impl BaseStory {
         }
     }
 }
+
+impl PageStory {
+    /// Returns the page info of a single story, found by their page slug. If no such story exists, returns None.
+    pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<Self> {
+        let story_row = db_connection.query_one(
+            "SELECT * FROM story WHERE page_slug=$1", 
+            &[&slug]).await.ok()?;
+
+        Some(Self::from_db_row(&story_row))
+    }
+
+    /// Converts a DB row with the relevant info to a PageStory struct.
+    pub fn from_db_row(row: &Row) -> Self {
+        Self {
+            base_story: BaseStory::from_db_row(row),
+            inpage_title: row.get("inpage_title"),
+            tagline: row.get("tagline"),
+            tags: row.get("tags"),
+            previous_story: None, // TODO
+            next_story: None, // TODO
+            custom_css: row.get("custom_css"),
+            editors_note: row.get("editors_note"),
+            content: row.get("content")
+        }
+    }
+}

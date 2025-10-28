@@ -3,8 +3,10 @@ CREATE TABLE story (
     page_slug text NOT NULL UNIQUE CHECK (TRIM(page_slug) != ''),
 
     title text NOT NULL CHECK (TRIM(title) != ''),
+    inpage_title text (TRIM(inpage_title) != ''),
     tagline text CHECK (TRIM(tagline) != ''),
     description text NOT NULL CHECK (TRIM(description) != ''),
+    
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     creation_date date NOT NULL,

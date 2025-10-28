@@ -8,4 +8,5 @@ mod post;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route_with_tsr("/new", post(post::add_story))
+            .route_with_tsr("/{story_slug}", post(post::update_story))
 }
