@@ -1,29 +1,15 @@
 use axum::extract::multipart::Field;
-use axum::extract::{Multipart, Path, State};
+use axum::extract::{Multipart, Path, State, Json};
 use axum::response::{IntoResponse, Redirect};
 use crate::{ServerState, RootErrors};
 use super::structs::{BaseStoryBuilder, PageStoryBuilder, PageStory};
 use crate::utils::text_or_internal_err;
 
-pub async fn add_story(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
-    let mut base_builder = BaseStoryBuilder::default();
-    let mut page_builder = PageStoryBuilder::default();
-
-    while let Some(recieved_field) = multipart.next_field().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)? {
-        insert_user_passed_value_into_builders(recieved_field, &mut page_builder, &mut base_builder).await?;
-    }
-
-    // All relevant data collected. Hopefully. Let's try and build.
-    let base_story = base_builder.build().map_err(|err| RootErrors::BAD_REQUEST(err.to_string()))?;
-
-    page_builder.base_story(base_story);
-    let page_story = page_builder.build().map_err(|err| RootErrors::BAD_REQUEST(err.to_string()))?;
-
-    // Now the story is ready to send to the DB.
+pub async fn add_story(State(state): State<ServerState>, Json(recieved_story): Json<PageStory>) -> Result<impl IntoResponse, RootErrors> {
     let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
 
     // Let's build our query.
-    let (columns, values) = set_columns_and_values_for_sql_query(&page_story, Vec::new(), Vec::new()).await;
+    let (columns, values) = set_columns_and_values_for_sql_query(&recieved_story, Vec::new(), Vec::new()).await;
 
     let query = format!("INSERT INTO story ({}) VALUES ({});",
             columns.join(","),
@@ -35,7 +21,7 @@ pub async fn add_story(State(state): State<ServerState>, mut multipart: Multipar
         RootErrors::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Redirect::to(&format!("/stories/{}", page_story.base_story.slug))) 
+    Ok(Redirect::to(&format!("/stories/{}", recieved_story.base_story.slug))) 
 }
 
 /// A post request targeting a specific story will modify that story's content with the post request's.
@@ -155,14 +141,16 @@ async fn set_columns_and_values_for_sql_query<'a>
         values.push(custom_css);
     }
 
-    if let Some(prev_story) = &page_story.previous_story {
+    if let Some(prev_story) = &page_story.previous_story_slug {
+        // TODO: CHECK IF SLUG EXISTS, IF NOT, POINT TO NOTHING. IF DOES, GET ID.
         columns.push("prev_story".to_string());
-        values.push(&prev_story.id);
+        values.push(prev_story);
     }
 
-    if let Some(next_story) = &page_story.next_story {
+    if let Some(next_story) = &page_story.next_story_slug {
+        // TODO: CHECK IF SLUG EXISTS, IF NOT, POINT TO NOTHING. IF DOES, GET ID.
         columns.push("next_story".to_string());
-        values.push(&next_story.id);
+        values.push(next_story);
     }
 
     if let Some(editors_note) = &page_story.editors_note {

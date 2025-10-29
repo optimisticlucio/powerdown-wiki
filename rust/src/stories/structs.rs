@@ -2,8 +2,9 @@ use derive_builder::Builder;
 use postgres::Row;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Builder)]
+#[derive(Clone, Builder, Serialize, Deserialize)]
 pub struct BaseStory {
     pub id: i32,
     pub title: String,
@@ -15,8 +16,9 @@ pub struct BaseStory {
     pub is_hidden: bool
 }
 
-#[derive(Clone, Builder)]
+#[derive(Clone, Builder, Serialize, Deserialize)]
 pub struct PageStory {
+    #[serde(flatten)]
     pub base_story: BaseStory,
     #[builder(default = None)]
     pub inpage_title: Option<String>,
@@ -24,9 +26,9 @@ pub struct PageStory {
     pub tagline: Option<String>,
     pub tags: Vec<String>,
     #[builder(default = None)]
-    pub previous_story: Option<BaseStory>,
+    pub previous_story_slug: Option<String>,
     #[builder(default = None)]
-    pub next_story: Option<BaseStory>,
+    pub next_story_slug: Option<String>,
     #[builder(default = None)]
     pub custom_css: Option<String>,
     #[builder(default = None)]
@@ -77,8 +79,8 @@ impl PageStory {
             inpage_title: row.get("inpage_title"),
             tagline: row.get("tagline"),
             tags: row.get("tags"),
-            previous_story: None, // TODO
-            next_story: None, // TODO
+            previous_story_slug: None, // TODO
+            next_story_slug: None, // TODO
             custom_css: row.get("custom_css"),
             editors_note: row.get("editors_note"),
             content: row.get("content")

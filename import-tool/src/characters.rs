@@ -45,7 +45,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
         match trimmed_option {
             "1" => { // Import all
-                if let Err(import_errs) = import_given_characters(&root_path, &all_character_paths, &post_url).await {
+                if let Err(import_errs) = utils::run_multiple_imports(&root_path, &all_character_paths, &post_url, &import_given_character).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
                 else {
@@ -84,7 +84,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                         .choose_multiple(&mut rand::rng(), amount_of_characters)
                         .map(|x| x.to_path_buf()).collect();
 
-                if let Err(import_errs) = import_given_characters(&root_path, &random_characters, &post_url).await {
+                if let Err(import_errs) = utils::run_multiple_imports(&root_path, &random_characters, &post_url, &import_given_character).await {
                     println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
                 }
                 else {
@@ -103,7 +103,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                     let chosen_file = all_character_paths.iter().find(|path| path.file_name().unwrap_or_default().eq_ignore_ascii_case(trimmed_file));
 
                     if let Some(file_path) = chosen_file {
-                        if let Err(import_errs) = import_given_characters(&root_path, &vec![file_path.to_owned()], &post_url).await {
+                        if let Err(import_errs) = utils::run_multiple_imports(&root_path, &vec![file_path.to_owned()], &post_url, &import_given_character).await {
                             println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"));
                         }
                         else {
@@ -123,68 +123,6 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
             }
             _ => println!("{}", "I didn't quite get that.".yellow())
         }
-    }
-}
-
-async fn import_given_characters(root_path: &Path, character_file_paths: &Vec<PathBuf>, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
-    let simultaneous_threads = 4;
-    let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
-    let import_successes: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
-
-    // TODO: If try_into doesn't work, use a spinner.
-    let progress_bar = Arc::new(ProgressBar::new(character_file_paths.len().try_into().unwrap()).with_finish(indicatif::ProgressFinish::AndClear));
-
-    stream::iter(character_file_paths)
-                    .for_each_concurrent(simultaneous_threads, |character_path| {
-                        let import_errors_clone = import_errors.clone();
-                        let import_successes_clone = import_successes.clone();
-                        let progress_bar_clone = progress_bar.clone();
-
-                        async move {
-                            match tokio::time::timeout(tokio::time::Duration::from_secs(10), import_given_character(root_path, character_path, server_url)).await {
-                                Err(_) => {
-                                    // Timeout
-                                    let import_error = format!("{:?} Timeout!", character_path.file_name().unwrap());
-                                    let mut import_errors_unlocked = import_errors_clone.lock().await;
-                                    import_errors_unlocked.push(import_error);
-                                }
-                                Ok(Err(mut import_error)) => {  
-                                    // Import fail.
-                                    import_error.insert_str(0, &format!("{:?} ", character_path.file_name().unwrap()));
-                                    let mut import_errors_unlocked = import_errors_clone.lock().await;
-                                    import_errors_unlocked.push(import_error);
-                                },
-                                Ok(Ok(import_success)) => {
-                                    // Import success
-                                    let import_success_readable = format!("{:?} STATUS {}: {}", character_path.file_name().unwrap(), import_success.status(), import_success.text().await.unwrap_or_default());
-                                    let mut import_successes_unlocked = import_successes_clone.lock().await;
-                                    import_successes_unlocked.push(import_success_readable);
-                                }
-                            }
-
-                            progress_bar_clone.inc(1);
-                        }
-                    }).await;
-    
-    let mut errors =  {
-        // TODO: Handle if somehow this mutex wasn't released.
-        let errors_mutex_lock = import_errors.lock().await;
-        errors_mutex_lock.clone()
-    };
-
-    let successes =  {
-        // TODO: Handle if somehow this mutex wasn't released.
-        let successes_mutex_lock = import_successes.lock().await;
-        successes_mutex_lock.clone()
-    };
-
-    errors.extend(successes.iter().filter(|success| !success.contains("STATUS 200")).map(|x| x.to_owned()).collect::<Vec<String>>());
-
-    if errors.is_empty() {
-        Ok(successes)
-    }
-    else {
-        Err(errors)
     }
 }
 

@@ -6,6 +6,7 @@ use http::Uri;
 use std::{sync::Arc, time};
 use tower::{ServiceBuilder, layer::Layer};
 use tower_cookies::{CookieManagerLayer};
+use tower_http::{compression::CompressionLayer};
 
 mod index;
 mod static_files;
@@ -35,6 +36,7 @@ pub fn router(state: ServerState) -> Router<()> {
                 .layer(HandleErrorLayer::new(root_error_handler))
                 .timeout(time::Duration::from_secs(15))
                 .layer(CookieManagerLayer::new())
+                .layer(CompressionLayer::new())
         )
         .fallback(fallback)
         .with_state(state)
