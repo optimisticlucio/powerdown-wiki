@@ -64,7 +64,7 @@ impl BaseStory {
 
 impl PageStory {
     /// Returns the page info of a single story, found by their page slug. If no such story exists, returns None.
-    pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<Self> {
+    pub async fn get_by_slug(slug: &str, db_connection: Object<Manager>) -> Option<Self> {
         let story_row = db_connection.query_one(
             "SELECT * FROM story WHERE page_slug=$1", 
             &[&slug]).await.ok()?;

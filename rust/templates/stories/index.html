@@ -1,0 +1,19 @@
+{% extends "base-template.html" %}
+
+{% block title %}Stories{% endblock %}
+
+{% block content %}
+<div class="wrapper story-selector">
+    <h1>Stories</h1>
+    <h2>Wow you actually came here to read?</h2>
+
+    {%- for story in stories %}
+        <a class="story-link" href="{{ story.slug }}">
+            <h3>{{ story.title }} <em>by {{ story.authors | join(", ") }}</em></h3>
+            <p>{{ story.description }}</p>
+        </a>
+    {% endfor -%}
+
+    {% include "components/page_number_scroller.html" %}
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@ use axum::{extract::{OriginalUri, Path, State}, response::IntoResponse};
 use askama::Template;
 use http::Uri;
 use rand::seq::IndexedRandom;
-use crate::{characters::{BaseCharacter, PageCharacter, structs::{InfoboxRow}}, errs::RootErrors, user::User, ServerState};
+use crate::{characters::{PageCharacter, structs::{InfoboxRow}}, errs::RootErrors, user::User, ServerState};
 use crate::utils::template_to_response;
 use comrak::{ markdown_to_html};
 

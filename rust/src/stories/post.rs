@@ -30,7 +30,7 @@ pub async fn update_story(
         State(state): State<ServerState>, 
         mut multipart: Multipart,
     ) -> Result<impl IntoResponse, RootErrors> {
-    let existing_story = PageStory::get_by_slug(story_slug, state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?)
+    let existing_story = PageStory::get_by_slug(&story_slug, state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?)
         .await.ok_or(RootErrors::NOT_FOUND)?;
 
     let mut base_builder = BaseStoryBuilder::default(); // TODO: How do I insert the existing story into these

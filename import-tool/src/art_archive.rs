@@ -1,11 +1,8 @@
-use std::{fs, path::{Path, PathBuf}, sync::Arc};
+use std::{fs, path::{Path, PathBuf}};
 use reqwest::{multipart, Response, Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
 use owo_colors::{ OwoColorize};
-use futures::{stream, StreamExt};
-use tokio::sync::Mutex;
-use indicatif::ProgressBar;
 use rand::seq::IndexedRandom;
 use crate::utils;
 

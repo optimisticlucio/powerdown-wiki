@@ -118,7 +118,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     }
 }
 
-async fn import_given_story(root_path: &Path, story_file_path: & Path, server_url: &Url) -> Result<Response, String> {
+async fn import_given_story(_: &Path, story_file_path: & Path, server_url: &Url) -> Result<Response, String> {
     // Read and parse file
     let file_contents = fs::read_to_string(story_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?
                 .lines().map(|line| {

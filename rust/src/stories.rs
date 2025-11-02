@@ -5,6 +5,7 @@ use axum::routing::{get, post};
 
 mod structs;
 mod post;
+mod page;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route_with_tsr("/new", post(post::add_story))
