@@ -48,7 +48,7 @@ async fn art_index(
         OriginalUri(original_uri): OriginalUri,
     ) -> Html<String> {
     // Static Values
-    let amount_of_art_per_page: i64 = 24;
+    const AMOUNT_OF_ART_PER_PAGE: i64 = 24;
 
     let random_quote = {
         let association = if query_params.is_nsfw { "sex_joke" } else { "quote" };
@@ -68,15 +68,15 @@ async fn art_index(
     let total_amount_of_art = get_total_amount_of_art(state.db_pool.get().await.unwrap(), &query_params).await.unwrap();
 
     // Total / per_page, rounded up. 
-    let total_pages_available_for_search =  (total_amount_of_art + amount_of_art_per_page - 1) / amount_of_art_per_page;
+    let total_pages_available_for_search =  (total_amount_of_art + AMOUNT_OF_ART_PER_PAGE - 1) / AMOUNT_OF_ART_PER_PAGE;
 
     // The requested page, with a minimal value of 1 and maximal value of the total pages available.
     let page_number_to_show = cmp::max(1, min(total_pages_available_for_search, query_params.page));
 
     let art_pieces = structs::BaseArt::get_art_from_index(
             state.db_pool.get().await.unwrap(), 
-            (page_number_to_show - 1) * amount_of_art_per_page,
-            amount_of_art_per_page.into(),
+            (page_number_to_show - 1) * AMOUNT_OF_ART_PER_PAGE,
+            AMOUNT_OF_ART_PER_PAGE.into(),
             &query_params
         ).await;
 

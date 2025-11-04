@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Builder, Serialize, Deserialize)]
 pub struct BaseStory {
+    #[serde(default)]
     pub id: i32,
     pub title: String,
     pub description: String,
@@ -38,6 +39,18 @@ pub struct PageStory {
 }
 
 impl BaseStory {
+    /// Gets [amount_to_return] amount of stories, starting from the [index] newest one.
+    pub async fn get_art_from_index(db_connection: Object<Manager>, index: i64, amount_to_return: i64) -> Vec<Self>{
+        // TODO: Narrow down select so it runs faster.
+        let query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&amount_to_return, &index];
+
+        let requested_story_rows = db_connection.query(
+            "SELECT * FROM story ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
+            &query_parameters).await.unwrap();
+
+        requested_story_rows.iter().map(Self::from_db_row).collect()
+    }
+
     /// Returns the base info of a single story, found by their page slug. If no such story exists, returns None.
     pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<Self> {
         // TODO: Limit search
@@ -86,4 +99,13 @@ impl PageStory {
             content: row.get("content")
         }
     }
+}
+
+#[derive(Deserialize, Clone)]
+pub struct StorySearchParameters {
+    #[serde(default = "default_page_number")]
+    pub page: i64,
+}
+fn default_page_number() -> i64 {
+    1
 }

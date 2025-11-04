@@ -3,7 +3,7 @@ CREATE TABLE story (
     page_slug text NOT NULL UNIQUE CHECK (TRIM(page_slug) != ''),
 
     title text NOT NULL CHECK (TRIM(title) != ''),
-    inpage_title text (TRIM(inpage_title) != ''),
+    inpage_title text CHECK (TRIM(inpage_title) != ''),
     tagline text CHECK (TRIM(tagline) != ''),
     description text NOT NULL CHECK (TRIM(description) != ''),
     

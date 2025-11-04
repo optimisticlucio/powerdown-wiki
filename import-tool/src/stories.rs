@@ -172,7 +172,7 @@ async fn import_given_story(_: &Path, story_file_path: & Path, server_url: &Url)
 
     // Send the post request and hope for the best.
     return reqwest::Client::new()
-                .post(server_url.join("stories/new").unwrap())
+                .post(server_url.clone())
                 .json(&frontmatter)
                 .send().await.map_err(|err| format!("Info Send Err: {}", err.to_string()));
 }
@@ -186,11 +186,13 @@ struct StoryFrontmatter {
 
     tagline: Option<String>,
 
+    #[serde(default = "default_description")]
     description: String,
 
     #[serde(rename(deserialize="author"), deserialize_with = "utils::string_or_vec")]
     creators: Vec<String>,
     
+    #[serde(rename(serialize="creation_date"))]
     date: chrono::NaiveDate,
 
     tags: Vec<String>,
@@ -213,3 +215,6 @@ struct StoryFrontmatter {
     content: Option<String>
 }
 
+fn default_description() -> String {
+    "MISSING DESCRIPTION".to_string()
+}

@@ -29,6 +29,11 @@ lazy_static! {
             name: "Characters",
             url: "/characters",
             image_url: "https://powerdown.wiki/assets/img/characters.png"
+        },
+        FrontpageItem {
+            name: "Stories",
+            url: "/stories",
+            image_url: "https://powerdown.wiki/assets/img/stories.png"
         }
     ];
 }

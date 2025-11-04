@@ -9,7 +9,7 @@
 
     {%- for story in stories %}
         <a class="story-link" href="{{ story.slug }}">
-            <h3>{{ story.title }} <em>by {{ story.authors | join(", ") }}</em></h3>
+            <h3>{{ story.title }} <em>by {{ story.creators | join(", ") }}</em></h3>
             <p>{{ story.description }}</p>
         </a>
     {% endfor -%}

@@ -112,6 +112,27 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     }
 }
 
+async fn import_all(root_path: &Path, server_url: &Url) -> Result<Vec<String>, Vec<String>> {
+    let post_url = server_url.join("art/new").unwrap();
+    
+    // Let's search for the _art-archive folder
+    let art_path = root_path.join("src/_art-archive");
+
+    if !art_path.is_dir() {
+        println!("{}", "Can't find src/_art-archive folder within the given path!");
+        return Err(vec!["Failed to Import Art".to_string()]);
+    }
+
+    let all_art_paths: Vec<PathBuf> = fs::read_dir(art_path)
+                .unwrap() 
+                .filter_map(|file| file.ok())
+                .map(|file| file.path())
+                .filter(|path| !path.file_name().unwrap().to_string_lossy().starts_with("_"))
+                .collect();    
+
+    utils::run_multiple_imports(&root_path, &all_art_paths, &post_url, &import_given_art_piece).await
+}
+
 async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_url: &Url) -> Result<Response, String> {
     // Read and parse file
     let file_contents = fs::read_to_string(art_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?
