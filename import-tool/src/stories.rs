@@ -169,6 +169,7 @@ async fn import_given_story(_: &Path, story_file_path: & Path, server_url: &Url)
     
     let mut frontmatter: StoryFrontmatter = parsed_file.data.ok_or("File Parse Err: No Frontmatter")?;
     frontmatter.content = Some(parsed_file.content);
+    frontmatter.slug = story_file_path.file_name().unwrap().to_ascii_lowercase().to_str().unwrap().trim_end_matches(".md").trim_end_matches(".liquid").to_owned().replace(" ", "-");
 
     // Send the post request and hope for the best.
     return reqwest::Client::new()
@@ -179,6 +180,9 @@ async fn import_given_story(_: &Path, story_file_path: & Path, server_url: &Url)
 
 #[derive(Deserialize, Serialize)]
 struct StoryFrontmatter {
+    #[serde(default)]
+    slug: String, 
+
     title: String,
 
     #[serde(rename(deserialize="in-page-title"))]
@@ -195,6 +199,7 @@ struct StoryFrontmatter {
     #[serde(rename(serialize="creation_date"))]
     date: chrono::NaiveDate,
 
+    #[serde(default)]
     tags: Vec<String>,
 
     #[serde(rename(deserialize="continuation-of"))]
@@ -212,7 +217,10 @@ struct StoryFrontmatter {
     // Dropping audio readings because I used it exactly *once*
 
     #[serde(default)]
-    content: Option<String>
+    content: Option<String>,
+
+    #[serde(rename(deserialize="exclude_from_pagination"), default)]
+    is_hidden: bool,
 }
 
 fn default_description() -> String {

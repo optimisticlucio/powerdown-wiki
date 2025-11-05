@@ -8,7 +8,7 @@
     <h2>Wow you actually came here to read?</h2>
 
     {%- for story in stories %}
-        <a class="story-link" href="{{ story.slug }}">
+        <a class="story-link" href="/stories/{{ story.slug }}">
             <h3>{{ story.title }} <em>by {{ story.creators | join(", ") }}</em></h3>
             <p>{{ story.description }}</p>
         </a>

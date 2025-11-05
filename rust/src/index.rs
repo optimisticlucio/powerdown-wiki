@@ -33,7 +33,7 @@ lazy_static! {
         FrontpageItem {
             name: "Stories",
             url: "/stories",
-            image_url: "https://powerdown.wiki/assets/img/stories.png"
+            image_url: "https://powerdown.wiki/assets/img/art-archive/thumbnails/master-tactics.png"
         }
     ];
 }

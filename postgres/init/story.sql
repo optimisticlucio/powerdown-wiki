@@ -6,6 +6,7 @@ CREATE TABLE story (
     inpage_title text CHECK (TRIM(inpage_title) != ''),
     tagline text CHECK (TRIM(tagline) != ''),
     description text NOT NULL CHECK (TRIM(description) != ''),
+    tags text[] NOT NULL DEFAULT ARRAY[]::text[],
     
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 

@@ -5,6 +5,7 @@ use rand::seq::IndexedRandom;
 use crate::{ServerState, errs::RootErrors, stories::structs::{self, BaseStory}, user::User};
 use crate::utils::template_to_response;
 use comrak::{ markdown_to_html};
+use ammonia::clean;
 
 #[derive(Template)] 
 #[template(path = "stories/page.html")]
@@ -31,7 +32,22 @@ pub async fn story_page(
     OriginalUri(original_uri): OriginalUri,
 ) -> impl IntoResponse {
     if let Some(requested_story) = structs::PageStory::get_by_slug(&story_slug, state.db_pool.get().await.unwrap()).await {
-        let converted_story = markdown_to_html(&requested_story.content, &comrak::Options::default());
+
+        // TODO: Sanitize custom_css.
+        // TODO: Properly clean style. Clean both using the same ammonia settings!
+
+        let converted_story = {
+            let mut parsing_options = comrak::Options::default();
+            parsing_options.render.unsafe_ = true; // Allow HTML in input.
+            
+            let unsafe_story = markdown_to_html(&requested_story.content, &parsing_options);
+
+            // Sanitize output.
+            let mut ammonia_settings = ammonia::Builder::default();
+            ammonia_settings.add_generic_attributes(&["style"]); // TODO: Properly clean Style. It's an attack vector!
+
+            ammonia_settings.clean(&unsafe_story).to_string()
+        };
 
         template_to_response(
             StoryPage {
