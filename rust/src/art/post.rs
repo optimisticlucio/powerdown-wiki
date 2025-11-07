@@ -3,220 +3,77 @@ use std::path::Path;
 use askama::Template;
 use axum::extract::multipart::{Field};
 use axum::extract::{Multipart, OriginalUri, State};
-use axum::http;
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::{Json, http};
+use axum::response::{Html, IntoResponse, Response, Redirect};
 use http::Uri;
+use crate::art::structs::PageArt;
 use crate::user::User;
 use crate::utils::{template_to_response, compress_image_lossless, get_s3_object_url, text_or_internal_err};
 use crate::{ServerState, errs::RootErrors};
-use super::{structs::{BaseArtBuilder, PageArtBuilder, BaseArt}};
+use super::{structs::{BaseArt}};
 use rand::{distr::Alphanumeric, Rng};
 use std::io::Cursor;
+use serde::{self, Deserialize, Serialize};
 
 /// Post Request Handler for art category.
-pub async fn add_art(State(state): State<ServerState>, mut multipart: Multipart) -> Result<impl IntoResponse, RootErrors> {
-    let mut base_art_builder = BaseArtBuilder::default();
-    let mut page_art_builder= PageArtBuilder::default();
-    let mut art_url_collector = Vec::<(i32, String)>::new(); // (index, url). May be unordered.
-
-    // TODO: Need to clean up temp art if the upload dropped.
-    let temp_art_id: i32 = BaseArt::get_unused_id(state.db_pool.get().await.unwrap()).await;
-
-    while let Some(recieved_field) = multipart.next_field().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)? {
-        let field_name = match recieved_field.name() {
-            None => return Err(RootErrors::BAD_REQUEST("Recieved a field with no name.".to_owned())),
-            Some(x) => x
-        };
-        
-        match field_name {
-            _ if field_name.starts_with("file_") => {
-                let file_index: i32 = field_name.strip_prefix("file_").unwrap()
-                        .parse().map_err(|_| RootErrors::BAD_REQUEST(format!("Given invalid index in {}", field_name)))?;
+#[axum::debug_handler]
+pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<ArtPostingSteps>) -> Result<Response, RootErrors> {
+    match posting_step {
+        ArtPostingSteps::RequestPresignedURLs { art_amount } => {
+            if art_amount < 1 {
+                Err(RootErrors::BAD_REQUEST("art post must have at least one art piece".to_string()))
+            } else if art_amount > 25 {
+                Err(RootErrors::BAD_REQUEST("for the good of mankind, don't put that many art pieces in one post. split them up".to_string()))
+            } else {
+                let amount_of_presigned_urls_needed = art_amount + 1; // The art, plus the thumbnail.
                 
-                // Max filesize is rn 50mb. We can collect the whole thing at once for now, but later we should prob multipart it into s3 if it's above some file size.
-                let user_given_file_extension = Path::new(recieved_field.file_name()
-                    .ok_or(RootErrors::BAD_REQUEST(format!("File number {} lacked filename", file_index)))?).extension().unwrap().to_str().unwrap().to_string();
+                // TODO: Make this a vec<> of [amount_needed] random strings of sufficient length to not make problems.
+                // TODO: Prefix "temp/art/" at the start of each string
+                let mut temp_keys_for_presigned: Vec<String> = Vec::new();
 
-                // Possible to cause overlaps, practically unlikely.
-                let random_art_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
+                for key in &temp_keys_for_presigned {
+                    // TODO: Open these keys as presigned in /temp/art/[key] in s3
+                }
 
-                let s3_file_name = format!("art/{}/{}.{}", temp_art_id, random_art_slug, &user_given_file_extension);
-                let given_file = recieved_field.bytes().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                // TODO: Prefix S3 URL on the start of amount_of_presigned_urls_needed
 
-                // Check if we can compress the file.
-                let compressed_given_file = {
-                        // If is image, compress it.
-                        if image::ImageReader::new(Cursor::new(&given_file))
-                                .with_guessed_format().is_ok() {
-                            compress_image_lossless(given_file.to_vec(), Some(&user_given_file_extension))
-                                .unwrap_or(given_file.to_vec())
-                        }   
-                        else {
-                            // In any other case, return self.
-                            given_file.to_vec()
-                        }
-                };
+                // Send back the urls as a json.
+                let response = serde_json::to_string(&PresignedUrlsResponse {
+                    thumbnail_presigned_url: temp_keys_for_presigned.pop().unwrap(),
+                    art_presigned_urls: temp_keys_for_presigned
+                }).unwrap();
 
-                state.s3_client.put_object()
-                        .bucket(&state.config.s3_public_bucket)
-                        .key(&s3_file_name)
-                        .body(compressed_given_file.into())
-                        .send().await.map_err(|err| {
-                            println!("INTERNAL ERROR! file upload for art temp_id {}", temp_art_id);
-                            println!("Error: {}", err);
-                            
-                            // Print the full error chain
-                            let mut source = err.source();
-                            while let Some(e) = source {
-                                println!("  Caused by: {}", e);
-                                source = e.source();
-                            }
-                            
-                            RootErrors::INTERNAL_SERVER_ERROR
-                        })?; 
-                
-                art_url_collector.push((file_index, get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name)));
+                Ok(response.into_response())
             }
-            "slug" => {
-                base_art_builder.slug(text_or_internal_err(recieved_field).await?);
-            }
-            "creation_date" => {
-                let sent_date = text_or_internal_err(recieved_field).await?;
+        },
+        ArtPostingSteps::UploadMetadata(page_art) => {
+            // TODO: Validate all of the given values make sense.
+            // TODO: Push to DB.
 
-                // Expects date in ISO 8601 format (YYYY-MM-DD)
-                let date = chrono::NaiveDate::parse_from_str(&sent_date, "%F")
-                    .map_err(|_| RootErrors::BAD_REQUEST("Given invalid date. Please ensure your date was in the YYYY-MM-DD format.".to_owned()))?; 
-                page_art_builder.creation_date(date);
-            }
-            "title" => {
-                base_art_builder.title(text_or_internal_err(recieved_field).await?);
-            }
-            "creators" => {
-                let sent_text = text_or_internal_err(recieved_field).await?;
-
-                let creators: Vec<String> = serde_json::from_str(&sent_text)
-                    .map_err(|_| RootErrors::BAD_REQUEST("Recieved invalid creator list.".to_owned()))?;
-                base_art_builder.creators(creators);
-            }
-            "thumbnail" => {
-                let user_given_file_extension = Path::new(recieved_field.file_name()
-                    .ok_or(RootErrors::BAD_REQUEST(format!("Thumbnail lacked filename")))?).extension().unwrap().to_str().unwrap().to_string();
-
-                let s3_file_name = format!("art/{}/thumbnail.{}", temp_art_id, &user_given_file_extension);
-                let given_file = recieved_field.bytes().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
-
-                let compressed_given_file = compress_image_lossless(given_file.to_vec(), Some(&user_given_file_extension))
-                                .unwrap_or(given_file.to_vec());
-
-                state.s3_client.put_object()
-                        .bucket(&state.config.s3_public_bucket)
-                        .key(&s3_file_name)
-                        .body(compressed_given_file.into())
-                        .send().await.map_err(|err| {
-                            println!("INTERNAL ERROR! thumbnail upload for art temp_id {}", temp_art_id);
-                            println!("Error: {}", err);
-                            
-                            // Print the full error chain
-                            let mut source = err.source();
-                            while let Some(e) = source {
-                                println!("  Caused by: {}", e);
-                                source = e.source();
-                            }
-                            
-                            RootErrors::INTERNAL_SERVER_ERROR
-                        })?; 
-                
-                base_art_builder.thumbnail_url(get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name));
-            }
-            "tags" => {
-                let sent_text = text_or_internal_err(recieved_field).await?;
-
-                let tags = serde_json::from_str(&sent_text)
-                    .map_err(|_| RootErrors::BAD_REQUEST("Recieved invalid tag list.".to_owned()))?;
-                page_art_builder.tags(tags);
-            }
-            "is_nsfw" => {
-                // If this was sent at all, assume it is true.
-                base_art_builder.is_nsfw(true);
-            }
-            "description" => {
-                page_art_builder.description(Some(text_or_internal_err(recieved_field).await?));
-            }
-            _ => return Err(RootErrors::BAD_REQUEST(format!("Invalid Field Recieved: {}", field_name)))
-        }
+            Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
+        },
+        _ => Err(RootErrors::BAD_REQUEST("invalid upload step".to_string()))
     }
+}
 
-    // Transaction complete, let's get all the art and organize it.
-    art_url_collector.sort();
-    page_art_builder.art_urls(art_url_collector.iter().map(|(_, url)| url.to_string()).collect::<Vec<_>>());
 
-    let base_art = base_art_builder.build()
-        .map_err(|err| RootErrors::BAD_REQUEST(err.to_string()))?;
-    page_art_builder.base_art(base_art);
+/// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload art to the site.
+#[derive(Deserialize)]
+#[serde(tag = "step")]
+pub enum ArtPostingSteps {
+    #[serde(rename = "1")]
+    RequestPresignedURLs {
+        art_amount: u8 // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
+    },
 
-    let page_art = page_art_builder.build()
-        .map_err(|err| RootErrors::BAD_REQUEST(err.to_string()))?;
+    #[serde(rename="2")] 
+    UploadMetadata(PageArt),
+}
 
-    // Now the art is ready to send to the DB.
-    let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
-
-    // Let's build our query.
-    let mut columns: Vec<String> = Vec::new();
-    let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
-
-    // Un-hide the temp art 
-    columns.push("post_state".into());
-    values.push(&page_art.base_art.art_state);
-
-    columns.push("page_slug".into());
-    values.push(&page_art.base_art.slug);
-
-    columns.push("creation_date".into());
-    values.push(&page_art.creation_date);
-
-    columns.push("title".into());
-    values.push(&page_art.base_art.title);
-
-    columns.push("creators".into());
-    values.push(&page_art.base_art.creators);
-
-    columns.push("thumbnail".into());
-    values.push(&page_art.base_art.thumbnail_url);
-
-    columns.push("tags".into());
-    values.push(&page_art.tags);
-
-    columns.push("is_nsfw".into());
-    values.push(&page_art.base_art.is_nsfw);
-
-    if let Some(description) = &page_art.description {
-        // TODO: SANITIZE
-        columns.push("description".into());
-        values.push(description);
-    }
-
-    let query = format!("UPDATE art SET {} WHERE id={}",
-            columns.iter().enumerate().map(|(i, column_name)| format!("{}=${}",column_name, i+1)).collect::<Vec<String>>().join(", "),
-            temp_art_id
-        );
-
-    db_connection.execute(&query, &values).await.map_err(|err| {
-        println!("[ART POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
-        RootErrors::INTERNAL_SERVER_ERROR
-    })?;
-
-    for (index, art_url) in page_art.art_urls.iter().enumerate() {
-        let query = format!("INSERT INTO art_file(belongs_to,file_url,internal_order) VALUES($1,$2,$3)");
-
-        // This cast is unsafe. However, if someone uploads an amount of art that can cause a 32bit stack overflow, I am personally
-        // going to their house and having a fun conversation with them.
-        db_connection.execute(&query, &[&temp_art_id, &art_url, &(index as i32)]).await.map_err(|err| {
-            println!("[ART POST] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?;
-    }
-
-    Ok(Redirect::to(&format!("/art/{}", &page_art.base_art.slug)))
+#[derive(Serialize)]
+struct PresignedUrlsResponse {
+    thumbnail_presigned_url: String,
+    art_presigned_urls: Vec<String>,
 }
 
 #[derive(Template)] 

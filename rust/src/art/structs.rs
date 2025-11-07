@@ -6,28 +6,34 @@ use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
 
-#[derive(Clone, Builder)]
+#[derive(Clone, Deserialize)]
 pub struct BaseArt {
-    #[builder(default)]
+    #[serde(default)]
     db_id: i32,
     pub title: String,
     pub creators: Vec<String>,
     pub thumbnail_url: String,
     pub slug: String,
-    #[builder(default = false)]
+    #[serde(default)]
     pub has_video: bool,
-    #[builder(default = false)]
+    #[serde(default)]
     pub is_nsfw: bool,
-    #[builder(default = ArtState::Public)]
+    #[serde(default = "default_art_state")]
     pub art_state: ArtState,
 }
 
-#[derive(Clone, Builder)]
+fn default_art_state() -> ArtState {
+    ArtState::Public
+}
+
+#[derive(Clone, Deserialize)]
 pub struct PageArt {
+    #[serde(flatten)]
     pub base_art: BaseArt,
-    #[builder(default = None)]
+    #[serde(default)]
     pub description: Option<String>,
     pub tags: Vec<String>,
+    #[serde(default)]
     pub art_urls: Vec<String>,
     pub creation_date: chrono::NaiveDate,
 }
@@ -144,8 +150,8 @@ impl ArtSearchParameters {
     pub fn get_postgres_where<'a>(&'a self, params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>) -> String{
         let mut query_conditions: Vec<String> = Vec::new();
 
-        query_conditions.push("post_state".to_string());
         params.push(&self.art_state);
+        query_conditions.push(format!("post_state = ${}", params.len()));
 
         if self.is_nsfw {
             query_conditions.push("is_nsfw".to_string());

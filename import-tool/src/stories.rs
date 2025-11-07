@@ -221,6 +221,9 @@ struct StoryFrontmatter {
 
     #[serde(rename(deserialize="exclude_from_pagination"), default)]
     is_hidden: bool,
+
+    #[serde(rename(deserialize="custom-css"), default)]
+    custom_css: Option<String>,
 }
 
 fn default_description() -> String {

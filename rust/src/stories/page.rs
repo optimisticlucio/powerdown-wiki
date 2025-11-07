@@ -44,7 +44,7 @@ pub async fn story_page(
 
             // Sanitize output.
             let mut ammonia_settings = ammonia::Builder::default();
-            ammonia_settings.add_generic_attributes(&["style"]); // TODO: Properly clean Style. It's an attack vector!
+            ammonia_settings.add_generic_attributes(&["style", "class"]); // TODO: Properly clean Style. It's an attack vector!
 
             ammonia_settings.clean(&unsafe_story).to_string()
         };
