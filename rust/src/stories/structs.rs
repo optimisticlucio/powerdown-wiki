@@ -96,7 +96,7 @@ impl BaseStory {
 
         let query_where = search_params.get_postgres_where(&mut query_params);
 
-        let query = format!("SELECT COUNT(page_slug) {} FROM story", query_where);
+        let query = format!("SELECT COUNT(page_slug) FROM story {}", query_where);
 
         let row = db_connection
             .query_one(&query, &query_params)
