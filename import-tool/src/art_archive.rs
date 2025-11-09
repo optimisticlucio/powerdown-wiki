@@ -231,42 +231,50 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     let thumbnail_path = root_path.join("src/assets/img/art-archive/thumbnails").join(&thumbnail_path);
     let thumbnail_img_bytes = fs::read(&thumbnail_path)
             .map_err(|err| format!("THUMBNAIL READ ERR: {}", err.to_string()))?;
-    let thumbnail_filename = thumbnail_path.file_name().ok_or("THUMBNAIL DOES NOT HAVE FILENAME".to_owned())?.to_str().unwrap().to_string();
 
-    // Set the required fields for the post request
-    let mut post_request = reqwest::multipart::Form::new()
-        .text("slug", art_slug)
-        .text("creation_date", frontmatter.date.format("%F").to_string())
-        .text("title", frontmatter.title)
-        .text("creators", serde_json::to_string(&frontmatter.artists).map_err(|err| format!("Artist JSON Err: {}", err.to_string()))?)
-        .part("thumbnail", multipart::Part::bytes(thumbnail_img_bytes).file_name(thumbnail_filename)) 
-        .text("tags", serde_json::to_string(&modified_tags.iter().filter(|tag| !["nsfw".to_owned(), "sfw".to_owned()].contains(tag)).collect::<Vec<&String>>())
-                .map_err(|err| format!("Tag JSON Err: {}", err.to_string()))?)
-        ;
+    let presigned_url_request = reqwest::Client::new().post(server_url.to_owned())
+        .json(&ArtPostingSteps::RequestPresignedURLs {
+            art_amount: frontmatter.img_files.len() as u8
+        })
+        .send().await
+        .map_err(|err| format!("Presigned Request Failed: {}", err.to_string()))?;
 
-    for (index, img_file_relative_path) in frontmatter.img_files.iter().enumerate() {
-        let img_file_path = root_path.join("src/assets/img/art-archive").join(img_file_relative_path.trim_start_matches("/"));
+    let presigned_url_response: PresignedUrlsResponse = presigned_url_request.json().await.map_err(|err| format!("Response mapping failed: {}", err.to_string()))?;
 
-        let img_file_bytes = fs::read(&img_file_path).map_err(|err| format!("ERROR IN READING FILE WITH PATH {}, err: {}", &img_file_relative_path, err.to_string()))?;
+    // Upload thumbnail.
+    utils::send_to_presigned_url(&presigned_url_response.thumbnail_presigned_url, thumbnail_img_bytes).await
+        .map_err(|err| format!("Thumbnail Upload Err: {}", err.to_string()))?;
 
-        let img_file_filename = img_file_path.file_name().ok_or(format!("FILE {} DOES NOT HAVE FILENAME", img_file_relative_path))?.to_str().unwrap().to_string();
+    for (index, target_url) in presigned_url_response.art_presigned_urls.iter().enumerate() {
+        let img_relative_path = frontmatter.img_files.get(index).unwrap();
 
-        post_request = post_request.part(format!("file_{}", index), multipart::Part::bytes(img_file_bytes).file_name(img_file_filename));
+        let img_file_path = root_path.join("src/assets/img/art-archive").join(img_relative_path.trim_start_matches("/"));
+
+        let img_file_bytes = fs::read(&img_file_path).map_err(|err| format!("ERROR IN READING FILE WITH PATH {}, err: {}", &img_relative_path, err.to_string()))?;
+
+        utils::send_to_presigned_url(target_url, img_file_bytes).await
+            .map_err(|err| format!("Img Upload Err: {}", err.to_string()))?;
     }
 
-    if frontmatter.tags.contains(&"nsfw".to_owned()) {
-        post_request = post_request.text("is_nsfw", "true");
-    }
+    let post_art = PostArt {
+        title: frontmatter.title,
+        creators: frontmatter.artists,
+        thumbnail_url: presigned_url_response.thumbnail_presigned_url,
+        art_urls: presigned_url_response.art_presigned_urls,
+        slug: art_slug,
+        is_nsfw: frontmatter.tags.contains(&"nsfw".to_owned()),
+        description: if file_content.is_empty() { None } else { Some(file_content) },
+        tags: frontmatter.tags,
+        creation_date: frontmatter.date
+    };
 
-    if !file_content.is_empty() {
-        post_request = post_request.text("description", file_content);
-    }
-
-    // Send the post request and hope for the best.
-    return reqwest::Client::new().post(server_url.to_owned())
-        .multipart(post_request).send()
-        .await.map_err(|err| format!("Info Send Err: {}", err.to_string()));
+    reqwest::Client::new().post(server_url.to_owned())
+        .json(&ArtPostingSteps::UploadMetadata(post_art))
+        .send().await
+        .map_err(|err| format!("Art Post Push Failed: {}", err.to_string()))
 }
+
+
 
 #[derive(Deserialize, Serialize)]
 struct ArtFrontmatter {
@@ -299,4 +307,36 @@ enum Format {
     Image,
     #[serde(rename = "video")]
     Video
+}
+
+/// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload art to the site.
+#[derive(Serialize)]
+#[serde(tag = "step")]
+enum ArtPostingSteps {
+    #[serde(rename = "1")]
+    RequestPresignedURLs {
+        art_amount: u8 // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
+    },
+
+    #[serde(rename="2")] 
+    UploadMetadata(PostArt),
+}
+
+#[derive(Deserialize)]
+struct PresignedUrlsResponse {
+    thumbnail_presigned_url: String,
+    art_presigned_urls: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct PostArt {
+    pub title: String,
+    pub creators: Vec<String>,
+    pub thumbnail_url: String,
+    pub slug: String,
+    pub is_nsfw: bool,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+    pub art_urls: Vec<String>,
+    pub creation_date: chrono::NaiveDate,
 }

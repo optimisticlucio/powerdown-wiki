@@ -114,3 +114,22 @@ pub async fn run_multiple_imports<'a, F, Fut>(
         Err(errors)
     }
 }
+
+pub async fn send_to_presigned_url(target_url: &str, file: Vec<u8>) -> Result<Response, reqwest::Error> {
+    let corrected_url = if target_url.starts_with("http://host.docker.internal:4566/") {
+        format!("http://localhost.localstack.cloud:4566/{}", target_url.trim_start_matches("http://host.docker.internal:4566/"))
+    } else { target_url.to_string() };
+
+    let content_type = if let Some(kind) = infer::get(&file) {
+        kind.mime_type()
+    } else {
+        "application/octet-stream" // fallback
+    };
+
+    reqwest::Client::new()
+        .put(&corrected_url)
+        .header("Content-Type", content_type)
+        .body(file)
+        .send()
+        .await
+}

@@ -1,11 +1,16 @@
 use std::error::Error;
 use std::path::Path;
+use std::time::Duration;
 use askama::Template;
+use aws_sdk_s3::presigning::PresigningConfig;
 use axum::extract::multipart::{Field};
 use axum::extract::{Multipart, OriginalUri, State};
 use axum::{Json, http};
 use axum::response::{Html, IntoResponse, Response, Redirect};
 use http::Uri;
+use rand::distr::SampleString;
+use rand::random;
+use tokio::sync::futures;
 use crate::art::structs::PageArt;
 use crate::user::User;
 use crate::utils::{template_to_response, compress_image_lossless, get_s3_object_url, text_or_internal_err};
@@ -27,15 +32,44 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             } else {
                 let amount_of_presigned_urls_needed = art_amount + 1; // The art, plus the thumbnail.
                 
-                // TODO: Make this a vec<> of [amount_needed] random strings of sufficient length to not make problems.
-                // TODO: Prefix "temp/art/" at the start of each string
-                let mut temp_keys_for_presigned: Vec<String> = Vec::new();
+                let temp_key_tasks: Vec<_> = (0..amount_of_presigned_urls_needed)
+                    .map(|_| {
+                        let s3_client = state.s3_client.clone();
+                        let public_bucket_key = state.config.s3_public_bucket.clone();
 
-                for key in &temp_keys_for_presigned {
-                    // TODO: Open these keys as presigned in /temp/art/[key] in s3
+                        tokio::spawn(async move {
+                            let random_key = Alphanumeric.sample_string(&mut rand::rng(), 64);
+                            let temp_art_key = format!("temp/art/{}", random_key);
+
+                            // get s3 to open a presigned URL for the temp key.
+                            s3_client.put_object()
+                                .bucket(public_bucket_key)
+                                .key(temp_art_key)
+                                .presigned(
+                                    PresigningConfig::expires_in(Duration::from_secs(300)).unwrap() // Five minutes to upload. May be too much?
+                                )
+                                .await
+                                .map(|x| x.uri().to_string())
+                        })
+                        
+                    })
+                    .collect();
+                    
+                let mut temp_keys_for_presigned = Vec::new();
+
+                for task in temp_key_tasks {
+                    let uri = task.await
+                        .map_err(|err| {
+                            eprintln!("[ART POST STAGE 1] Tokio Join Err! {}", err.to_string());
+                            RootErrors::INTERNAL_SERVER_ERROR
+                        })?
+                        .map_err(|err| {
+                            eprintln!("[ART POST STAGE 1] SDK presigned URL creation err! {}", err.to_string());
+                            RootErrors::INTERNAL_SERVER_ERROR
+                        })?;
+
+                    temp_keys_for_presigned.push(uri);
                 }
-
-                // TODO: Prefix S3 URL on the start of amount_of_presigned_urls_needed
 
                 // Send back the urls as a json.
                 let response = serde_json::to_string(&PresignedUrlsResponse {
@@ -48,7 +82,45 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
         },
         ArtPostingSteps::UploadMetadata(page_art) => {
             // TODO: Validate all of the given values make sense.
-            // TODO: Push to DB.
+            
+            let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+            // Let's build the query.
+
+            let mut columns: Vec<String> = Vec::new();
+            let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+            columns.push("post_state".into());
+            values.push(&super::structs::ArtState::Public);
+
+            columns.push("page_slug".into());
+            values.push(&page_art.base_art.slug);
+
+            columns.push("creation_date".into());
+            values.push(&page_art.creation_date);
+
+            columns.push("title".into());
+            values.push(&page_art.base_art.title);
+
+            columns.push("creators".into());
+            values.push(&page_art.base_art.creators);
+
+            columns.push("thumbnail".into());
+            values.push(&page_art.base_art.thumbnail_url); // TODO: CONVERT GIVEN URL TO KEY
+
+            columns.push("tags".into());
+            values.push(&page_art.tags);
+
+            columns.push("is_nsfw".into());
+            values.push(&page_art.base_art.is_nsfw);
+
+            if let Some(description) = &page_art.description {
+                // TODO: SANITIZE
+                columns.push("descrption".into());
+                values.push(description);
+            }
+
+            // TODO: Upload to DB
+            // TODO: Upload individual arts to art table
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         },
