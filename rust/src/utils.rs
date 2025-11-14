@@ -95,12 +95,22 @@ pub async fn move_temp_s3_file(
         .key(temp_file_key)
         .send()
         .await
-        .map_err(|_| MoveTempS3FileErrs::DownloadFailed)?;
+        .map_err(|err| {
+            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {}", err.to_string());
+            MoveTempS3FileErrs::DownloadFailed
+        })?;
 
-    let original_file_bytes = downloaded_file.body.bytes().ok_or(MoveTempS3FileErrs::ConversionFailed)?;
+    let content_type = downloaded_file.content_type().map(str::to_string);
 
-    let converted_file = file_compression::compress_image_lossless(original_file_bytes.to_vec(), None)
-        .map_err(|_| MoveTempS3FileErrs::ConversionFailed)?;
+    let original_file_bytes = downloaded_file.body
+        .collect().await.map_err(|err| {
+            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {}", err.to_string());
+            MoveTempS3FileErrs::ConversionFailed
+        })?
+        .into_bytes().to_vec();
+
+    let converted_file = file_compression::compress_image_lossless(original_file_bytes.to_vec(), content_type.as_deref())
+        .unwrap_or(original_file_bytes.to_vec()); // If can't compress it, just send back the original untouched.
 
     s3_client.put_object()
         .bucket(target_bucket_name)
@@ -108,7 +118,10 @@ pub async fn move_temp_s3_file(
         .body(converted_file.into())
         .send()
         .await
-        .map_err(|_| MoveTempS3FileErrs::UploadFailed)?;
+        .map_err(|err| {
+            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {}", err.to_string());
+            MoveTempS3FileErrs::UploadFailed
+        })?;
 
     Ok(())
 }

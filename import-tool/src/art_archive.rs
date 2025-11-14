@@ -260,11 +260,11 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
         title: frontmatter.title,
         creators: frontmatter.artists,
         thumbnail_key: presigned_url_response.thumbnail_presigned_url,
-        art_urls: presigned_url_response.art_presigned_urls,
+        art_keys: presigned_url_response.art_presigned_urls.clone(),
         slug: art_slug,
         is_nsfw: frontmatter.tags.contains(&"nsfw".to_owned()),
         description: if file_content.is_empty() { None } else { Some(file_content) },
-        tags: frontmatter.tags,
+        tags: frontmatter.tags.into_iter().filter(|tag| !["sfw", "nsfw"].contains(&tag.as_str())).collect(),
         creation_date: frontmatter.date
     };
 
@@ -335,6 +335,6 @@ struct PostArt {
     pub is_nsfw: bool,
     pub description: Option<String>,
     pub tags: Vec<String>,
-    pub art_urls: Vec<String>,
+    pub art_keys: Vec<String>,
     pub creation_date: chrono::NaiveDate,
 }

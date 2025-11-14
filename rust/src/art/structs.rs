@@ -34,7 +34,7 @@ pub struct PageArt {
     pub description: Option<String>,
     pub tags: Vec<String>,
     #[serde(default)]
-    pub art_urls: Vec<String>,
+    pub art_keys: Vec<String>,
     pub creation_date: chrono::NaiveDate,
 }
 
@@ -109,27 +109,27 @@ impl PageArt {
                 .await.unwrap_or(Vec::new())
                 .iter().map(|row| {
                     let index: i32 = row.get("internal_order");
-                    let url: String = row.get("file_url");
+                    let key: String = row.get("s3_key");
 
-                    (index, url)
+                    (index, key)
                 }).collect::<Vec<_>>();
         
         art_files.sort();
 
-        let art_urls = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>(); 
+        let art_keys = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>(); 
 
         PageArt {
             base_art: BaseArt::from_db_row(row),
             description: row.get("description"),
             tags: row.try_get("tags").unwrap_or(Vec::new()),
-            art_urls,
+            art_keys,
             creation_date: row.get("creation_date")
         }
     }
 
     /// Returns the proper urls for the art.
     pub fn get_art_urls(&self) -> Vec<String> {
-        self.art_urls.iter().map(|key| crate::utils::get_s3_public_object_url(key)).collect()
+        self.art_keys.iter().map(|key| crate::utils::get_s3_public_object_url(key)).collect()
     }
 }
 

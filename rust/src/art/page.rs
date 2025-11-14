@@ -40,6 +40,7 @@ pub async fn art_page(
 ) -> impl IntoResponse {
     if let Some(requested_art) = structs::PageArt::get_by_slug(state.db_pool.get().await.unwrap(), &art_slug).await {
         let (older_art_url, newer_art_url) = get_older_and_newer_art_slugs(&art_slug, &query_params, state.db_pool.get().await.unwrap()).await;
+        let art_urls = requested_art.get_art_urls();
 
         template_to_response(
             ArtPage {
@@ -50,7 +51,7 @@ pub async fn art_page(
                 title: requested_art.base_art.title,
                 artists: requested_art.base_art.creators,
                 formatted_creation_date: requested_art.creation_date.to_string(),
-                art_urls: requested_art.art_urls,
+                art_urls,
                 tags: requested_art.tags,
                 description: requested_art.description,
 

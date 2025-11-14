@@ -11,7 +11,7 @@ use crate::art::structs::PageArt;
 use crate::user::User;
 use crate::utils::{self, template_to_response};
 use crate::{ServerState, errs::RootErrors};
-use super::{structs::{BaseArt}};
+use super::{structs::{BaseArt, ArtState}};
 use rand::{distr::Alphanumeric, Rng};
 use tokio::task::JoinSet;
 use serde::{self, Deserialize, Serialize};
@@ -77,8 +77,14 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             }
         },
         ArtPostingSteps::UploadMetadata(page_art) => {
+            // First let's make sure what we were given is even logical
+            if page_art.art_keys.is_empty() {
+                return Err(RootErrors::BAD_REQUEST("No Art Keys Given".to_owned()));
+            }
+
             // TODO: Validate all of the given values make sense.
-            
+
+            // Makes sense? Good. Our job now.
             let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
 
             // Let's build the query.
@@ -86,7 +92,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
             columns.push("post_state".into());
-            values.push(&super::structs::ArtState::Public);
+            values.push(&ArtState::Processing);
 
             columns.push("page_slug".into());
             values.push(&page_art.base_art.slug);
@@ -100,17 +106,16 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             columns.push("creators".into());
             values.push(&page_art.base_art.creators);
 
-            // TODO: CONVERT GIVEN URL TO KEY
             // TODO: COMPRESS THUMBNAIL
             // TODO: RESIZE THUMBNAIL
             columns.push("thumbnail".into());
 
-            let thumbnail_key = Url::parse(&page_art.base_art.thumbnail_key)
+            let temp_thumbnail_key = Url::parse(&page_art.base_art.thumbnail_key)
                 .map_err(|_| RootErrors::BAD_REQUEST(format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key)))?
                 .path().trim_start_matches("/").trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
                 .to_owned();
 
-            values.push(&thumbnail_key); 
+            values.push(&temp_thumbnail_key); 
 
             columns.push("tags".into());
             values.push(&page_art.tags);
@@ -136,13 +141,31 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
                     RootErrors::INTERNAL_SERVER_ERROR
                 })?
                 .get(0);
+                
+
+            // ---- We have the ID? process the thumbnail and update. ----
+            let target_s3_folder = format!("art/{art_id}");
+
+            let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
+
+            utils::move_temp_s3_file(state.s3_client.clone(), &state.config, &temp_thumbnail_key, &state.config.s3_public_bucket, &target_thumbnail_key).await
+                            .map_err(|err|{
+                                eprintln!("[ART UPLOAD] Converting thumbnail of art {art_id} failed, {}", err.to_string());
+                                RootErrors::INTERNAL_SERVER_ERROR
+                            })?;
+
+            db_connection.execute("UPDATE art SET thumbnail=$1 WHERE id=$2", &[&target_thumbnail_key, &art_id])
+                .await.map_err(|err|{
+                    eprintln!("[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {}", err.to_string());
+                    RootErrors::INTERNAL_SERVER_ERROR
+                })?;
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
             let query = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
             
             let mut art_upload_tasks = JoinSet::new();
 
-            for (url, index) in page_art.art_urls.iter().zip(1i32..) {
+            for (url, index) in page_art.art_keys.iter().zip(1i32..) {
                 // Clone everything to move it into the async move.
                 let url = url.clone();
                 let index = index.clone();
@@ -151,6 +174,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
                 let public_bucket_key = state.config.s3_public_bucket.clone();
                 let config = state.config.clone();
                 let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                let target_s3_folder = target_s3_folder.clone();
 
                 // tokio::spawn lets all the tasks run simultaneously, which is nice.
                 art_upload_tasks.spawn(async move {
@@ -159,7 +183,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
                             .path().trim_start_matches("/").trim_start_matches(&config.s3_public_bucket).trim_start_matches("/")
                             .to_owned();
 
-                        let file_key = format!("art/{art_id}/{}", temp_file_key.trim_start_matches("temp/"));
+                        let file_key = format!("{target_s3_folder}/{}", temp_file_key.split_terminator("/").last().unwrap());
 
                         utils::move_temp_s3_file(s3_client, &config, &temp_file_key, &public_bucket_key, &file_key).await
                             .map_err(|err| err.to_string())?;
@@ -167,7 +191,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
                         let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
                         values.push(&art_id);
                         values.push(&index);
-                        values.push(&url); 
+                        values.push(&file_key); 
 
                         db_connection.execute(query, &values).await
                             .map_err(|err| err.to_string())
@@ -191,6 +215,14 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
 
                 return Err(RootErrors::INTERNAL_SERVER_ERROR)
             }
+
+            // ---- Now that we finished, set the appropriate art state. ----
+
+            db_connection.execute("UPDATE art SET post_state=$1 WHERE id=$2", &[&ArtState::Public, &art_id])
+                .await.map_err(|err|{
+                    eprintln!("[ART UPLOAD] Setting post state of id {art_id} to public failed?? {}", err.to_string());
+                    RootErrors::INTERNAL_SERVER_ERROR
+                })?;
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         },

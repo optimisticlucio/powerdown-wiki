@@ -9,7 +9,10 @@ pub fn compress_image_lossless(
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Try to determine format from extension first, then fall back to guessing
     let format = extension
-        .and_then(|ext| ImageFormat::from_extension(ext.trim_start_matches('.')))
+        .and_then(
+            |ext| ImageFormat::from_mime_type(ext)
+                .or(ImageFormat::from_extension(ext.trim_start_matches('.')))
+        )
         .or_else(|| {
             ImageReader::new(Cursor::new(&image_bytes))
                 .with_guessed_format()
