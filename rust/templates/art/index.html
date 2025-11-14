@@ -46,7 +46,7 @@
                 {{ artpiece.creators | join(", and ") }}
             </div>
             </div>
-            <img src="{{artpiece.thumbnail_url}}">
+            <img src="{{ artpiece.get_thumbnail_url() }}">
         </a>
         {% endfor -%}
     </div>

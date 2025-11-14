@@ -6,10 +6,10 @@ use axum::{Json, http};
 use axum::response::{IntoResponse, Response, Redirect};
 use http::Uri;
 use rand::distr::SampleString;
-use tokio::io::Join;
+use url::Url;
 use crate::art::structs::PageArt;
 use crate::user::User;
-use crate::utils::{self, compress_image_lossless, get_s3_object_url, template_to_response, text_or_internal_err};
+use crate::utils::{self, template_to_response};
 use crate::{ServerState, errs::RootErrors};
 use super::{structs::{BaseArt}};
 use rand::{distr::Alphanumeric, Rng};
@@ -104,7 +104,13 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             // TODO: COMPRESS THUMBNAIL
             // TODO: RESIZE THUMBNAIL
             columns.push("thumbnail".into());
-            values.push(&page_art.base_art.thumbnail_url); 
+
+            let thumbnail_key = Url::parse(&page_art.base_art.thumbnail_key)
+                .map_err(|_| RootErrors::BAD_REQUEST(format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key)))?
+                .path().trim_start_matches("/").trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
+                .to_owned();
+
+            values.push(&thumbnail_key); 
 
             columns.push("tags".into());
             values.push(&page_art.tags);
@@ -121,10 +127,10 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             let query = format!(
                 "INSERT INTO art ({}) VALUES ({}) RETURNING id;",
                 columns.join(","),
-                (1..values.len()).map(|i| format!("${i}")).collect::<Vec<_>>().join(",")
+                (1..values.len() + 1).map(|i| format!("${i}")).collect::<Vec<_>>().join(",")
             );
 
-            let art_id: u32 = db_connection.query_one(&query, &values).await
+            let art_id: i32 = db_connection.query_one(&query, &values).await
                 .map_err(|err| {
                     eprintln!("[ART UPLOAD] Initial DB upload failed! {}", err.to_string());
                     RootErrors::INTERNAL_SERVER_ERROR
@@ -136,22 +142,27 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             
             let mut art_upload_tasks = JoinSet::new();
 
-            for (url, index) in page_art.art_urls.iter().zip(1u32..) {
+            for (url, index) in page_art.art_urls.iter().zip(1i32..) {
                 // Clone everything to move it into the async move.
                 let url = url.clone();
                 let index = index.clone();
                 let art_id = art_id.clone();
                 let s3_client = state.s3_client.clone();
                 let public_bucket_key = state.config.s3_public_bucket.clone();
+                let config = state.config.clone();
                 let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
 
                 // tokio::spawn lets all the tasks run simultaneously, which is nice.
                 art_upload_tasks.spawn(async move {
-                        let temp_file_key = "TODO: GET TEMP FILE KEY FROM THE TEMP URL";
-                        let file_key = "TODO: GET FILE KEY FROM THE TEMP URL";
+                        let temp_file_key = Url::parse(&url)
+                            .map_err(|_| format!("Invalid Thumbnail Url: {}", &url))?
+                            .path().trim_start_matches("/").trim_start_matches(&config.s3_public_bucket).trim_start_matches("/")
+                            .to_owned();
 
-                        // TODO: HANDLE ERR HERE
-                        let _ = utils::move_temp_s3_file(s3_client, temp_file_key, &public_bucket_key, file_key).await;
+                        let file_key = format!("art/{art_id}/{}", temp_file_key.trim_start_matches("temp/"));
+
+                        utils::move_temp_s3_file(s3_client, &config, &temp_file_key, &public_bucket_key, &file_key).await
+                            .map_err(|err| err.to_string())?;
 
                         let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
                         values.push(&art_id);
@@ -159,6 +170,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
                         values.push(&url); 
 
                         db_connection.execute(query, &values).await
+                            .map_err(|err| err.to_string())
                     });
             }
 
@@ -174,8 +186,8 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
                 
-                eprintln!("[ART POST] Failed to move files from temp to permanent location! {:?}",
-                        failed_uploads);
+                eprintln!("[ART POST] Failed to move files from temp to permanent location! [{}]",
+                        failed_uploads.join(", "));
 
                 return Err(RootErrors::INTERNAL_SERVER_ERROR)
             }

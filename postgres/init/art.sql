@@ -16,7 +16,7 @@ CREATE TABLE art (
     title text NOT NULL CHECK (TRIM(title) != ''),
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
-    thumbnail text NOT NULL, -- Assumed to be a link to the thumbnail file.
+    thumbnail text NOT NULL, -- Assumed to be the key of the thumbnail in the public bucket.
 
     tags text[] NOT NULL DEFAULT ARRAY[]::text[],
 

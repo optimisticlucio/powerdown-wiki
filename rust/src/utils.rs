@@ -1,3 +1,6 @@
+use std::error::Error;
+use std::{env, fmt};
+
 use chrono::{DateTime, Datelike, Utc};
 use axum::response::{Response, IntoResponse, Html};
 use axum::body::Body;
@@ -64,6 +67,11 @@ pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
     format!("http://localhost:4566/{}/{}", bucket_name, file_key)
 }
 
+/// Returns the public-facing URL for an S3 object in the public bucket.
+pub fn get_s3_public_object_url(file_key: &str) -> String {
+    get_s3_object_url(&env::var("S3_PUBLIC_BUCKET_NAME").unwrap(), file_key)
+}
+
 pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
     field.text().await
     .map_err(|err| match err.status() {
@@ -74,15 +82,54 @@ pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors
 
 /// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key.
 /// Mainly for usage with temp images uploaded by users.
-pub async fn move_temp_s3_file(s3_client: aws_sdk_s3::Client, temp_file_key: &str, target_bucket_name: &str, target_file_key: &str) -> Result<(), MoveTempS3FileErrs> {
+pub async fn move_temp_s3_file(
+        s3_client: aws_sdk_s3::Client,
+        server_config: &crate::server_state::config::Config,
+        temp_file_key: &str, 
+        target_bucket_name: &str,
+        target_file_key: &str
+    ) -> Result<(), MoveTempS3FileErrs> {
 
-    todo!("Didn't implement file moving and optimization yet.");
+    let downloaded_file = s3_client.get_object()
+        .bucket(&server_config.s3_public_bucket)
+        .key(temp_file_key)
+        .send()
+        .await
+        .map_err(|_| MoveTempS3FileErrs::DownloadFailed)?;
+
+    let original_file_bytes = downloaded_file.body.bytes().ok_or(MoveTempS3FileErrs::ConversionFailed)?;
+
+    let converted_file = file_compression::compress_image_lossless(original_file_bytes.to_vec(), None)
+        .map_err(|_| MoveTempS3FileErrs::ConversionFailed)?;
+
+    s3_client.put_object()
+        .bucket(target_bucket_name)
+        .key(target_file_key)
+        .body(converted_file.into())
+        .send()
+        .await
+        .map_err(|_| MoveTempS3FileErrs::UploadFailed)?;
 
     Ok(())
 }
 
+#[derive(Debug)]
 pub enum MoveTempS3FileErrs {
     DownloadFailed,
     ConversionFailed,
     UploadFailed
+}
+
+impl fmt::Display for MoveTempS3FileErrs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DownloadFailed => write!(f, "Download Failed"),
+            Self::ConversionFailed => write!(f, "Conversion Failed"),
+            Self::UploadFailed => write!(f, "Upload Failed")
+        }
+    }
+}
+
+impl Error for MoveTempS3FileErrs {
+
 }

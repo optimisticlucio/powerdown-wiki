@@ -259,7 +259,7 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     let post_art = PostArt {
         title: frontmatter.title,
         creators: frontmatter.artists,
-        thumbnail_url: presigned_url_response.thumbnail_presigned_url,
+        thumbnail_key: presigned_url_response.thumbnail_presigned_url,
         art_urls: presigned_url_response.art_presigned_urls,
         slug: art_slug,
         is_nsfw: frontmatter.tags.contains(&"nsfw".to_owned()),
@@ -330,7 +330,7 @@ struct PresignedUrlsResponse {
 struct PostArt {
     pub title: String,
     pub creators: Vec<String>,
-    pub thumbnail_url: String,
+    pub thumbnail_key: String,
     pub slug: String,
     pub is_nsfw: bool,
     pub description: Option<String>,

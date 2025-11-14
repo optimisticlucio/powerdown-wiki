@@ -12,7 +12,7 @@ pub struct BaseArt {
     db_id: i32,
     pub title: String,
     pub creators: Vec<String>,
-    pub thumbnail_url: String,
+    pub thumbnail_key: String,
     pub slug: String,
     #[serde(default)]
     pub has_video: bool,
@@ -61,7 +61,7 @@ impl BaseArt {
             db_id: row.get("id"),
             title: row.get("title"),
             creators: row.get("creators"),
-            thumbnail_url: row.get("thumbnail"),
+            thumbnail_key: row.get("thumbnail"),
             slug: row.get("page_slug"),
             has_video: false, //TODO: Handle this somehow.
             is_nsfw: row.get("is_nsfw"),
@@ -83,6 +83,11 @@ impl BaseArt {
 
         insert_operation_result.get(0) // id is int, which converts to i32.
     } 
+
+    /// Returns the proper URL for the thumbnail.
+    pub fn get_thumbnail_url(&self) -> String {
+        crate::utils::get_s3_public_object_url(&self.thumbnail_key)
+    }
 }
 
 impl PageArt {
@@ -120,6 +125,11 @@ impl PageArt {
             art_urls,
             creation_date: row.get("creation_date")
         }
+    }
+
+    /// Returns the proper urls for the art.
+    pub fn get_art_urls(&self) -> Vec<String> {
+        self.art_urls.iter().map(|key| crate::utils::get_s3_public_object_url(key)).collect()
     }
 }
 
@@ -240,6 +250,7 @@ where
 }
 
 #[derive(Clone, FromSql, ToSql, Deserialize, Debug)]
+#[postgres(name = "art_post_state", rename_all = "snake_case")]
 pub enum ArtState {
     Public, // Publicly viewable, standard state.
     PendingApproval, // User-uploaded, pending admin review to be moved to public. Not visible.

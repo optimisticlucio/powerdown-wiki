@@ -3,7 +3,7 @@ use std::cmp::{self, min};
 use askama::Template;
 use axum::{extract::{DefaultBodyLimit, Query, State, OriginalUri}, response::Html, routing::{get, post}, Router};
 use axum_extra::routing::RouterExt;
-use crate::{errs::RootErrors, ServerState, user::User};
+use crate::{ServerState, user::User};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use structs::ArtSearchParameters;
