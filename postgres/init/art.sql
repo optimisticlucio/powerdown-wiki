@@ -34,7 +34,7 @@ CREATE TABLE art_file (
         REFERENCES art(id)
         ON DELETE CASCADE,
     
-    file_url text NOT NULL, -- Points to the public bucket key
+    s3_key text NOT NULL, -- Points to the public bucket key
     internal_order int NOT NULL, -- Whether this image is the first, second, third, etc, in the given post.
 
     UNIQUE (belongs_to, internal_order)

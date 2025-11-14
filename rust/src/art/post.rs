@@ -1,23 +1,19 @@
-use std::error::Error;
-use std::path::Path;
 use std::time::Duration;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
-use axum::extract::multipart::{Field};
-use axum::extract::{Multipart, OriginalUri, State};
+use axum::extract::{OriginalUri, State};
 use axum::{Json, http};
-use axum::response::{Html, IntoResponse, Response, Redirect};
+use axum::response::{IntoResponse, Response, Redirect};
 use http::Uri;
 use rand::distr::SampleString;
-use rand::random;
-use tokio::sync::futures;
+use tokio::io::Join;
 use crate::art::structs::PageArt;
 use crate::user::User;
-use crate::utils::{template_to_response, compress_image_lossless, get_s3_object_url, text_or_internal_err};
+use crate::utils::{self, compress_image_lossless, get_s3_object_url, template_to_response, text_or_internal_err};
 use crate::{ServerState, errs::RootErrors};
 use super::{structs::{BaseArt}};
 use rand::{distr::Alphanumeric, Rng};
-use std::io::Cursor;
+use tokio::task::JoinSet;
 use serde::{self, Deserialize, Serialize};
 
 /// Post Request Handler for art category.
@@ -84,8 +80,8 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             // TODO: Validate all of the given values make sense.
             
             let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
-            // Let's build the query.
 
+            // Let's build the query.
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
@@ -104,8 +100,11 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             columns.push("creators".into());
             values.push(&page_art.base_art.creators);
 
+            // TODO: CONVERT GIVEN URL TO KEY
+            // TODO: COMPRESS THUMBNAIL
+            // TODO: RESIZE THUMBNAIL
             columns.push("thumbnail".into());
-            values.push(&page_art.base_art.thumbnail_url); // TODO: CONVERT GIVEN URL TO KEY
+            values.push(&page_art.base_art.thumbnail_url); 
 
             columns.push("tags".into());
             values.push(&page_art.tags);
@@ -115,12 +114,71 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
 
             if let Some(description) = &page_art.description {
                 // TODO: SANITIZE
-                columns.push("descrption".into());
+                columns.push("description".into());
                 values.push(description);
             }
 
-            // TODO: Upload to DB
-            // TODO: Upload individual arts to art table
+            let query = format!(
+                "INSERT INTO art ({}) VALUES ({}) RETURNING id;",
+                columns.join(","),
+                (1..values.len()).map(|i| format!("${i}")).collect::<Vec<_>>().join(",")
+            );
+
+            let art_id: u32 = db_connection.query_one(&query, &values).await
+                .map_err(|err| {
+                    eprintln!("[ART UPLOAD] Initial DB upload failed! {}", err.to_string());
+                    RootErrors::INTERNAL_SERVER_ERROR
+                })?
+                .get(0);
+
+            // ---- Now that the main art file is up, upload the individual art pieces. ----
+            let query = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
+            
+            let mut art_upload_tasks = JoinSet::new();
+
+            for (url, index) in page_art.art_urls.iter().zip(1u32..) {
+                // Clone everything to move it into the async move.
+                let url = url.clone();
+                let index = index.clone();
+                let art_id = art_id.clone();
+                let s3_client = state.s3_client.clone();
+                let public_bucket_key = state.config.s3_public_bucket.clone();
+                let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+
+                // tokio::spawn lets all the tasks run simultaneously, which is nice.
+                art_upload_tasks.spawn(async move {
+                        let temp_file_key = "TODO: GET TEMP FILE KEY FROM THE TEMP URL";
+                        let file_key = "TODO: GET FILE KEY FROM THE TEMP URL";
+
+                        // TODO: HANDLE ERR HERE
+                        let _ = utils::move_temp_s3_file(s3_client, temp_file_key, &public_bucket_key, file_key).await;
+
+                        let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+                        values.push(&art_id);
+                        values.push(&index);
+                        values.push(&url); 
+
+                        db_connection.execute(query, &values).await
+                    });
+            }
+
+            // Now collect everything that ran async, make sure nothing fucked up.
+            let art_upload_results = art_upload_tasks.join_all().await;
+
+            let failed_uploads: Vec<_> = art_upload_results.into_iter()
+                .filter_map(|result| result.err())
+                .collect();
+
+            if !failed_uploads.is_empty() {
+                // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES.
+
+                let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                
+                eprintln!("[ART POST] Failed to move files from temp to permanent location! {:?}",
+                        failed_uploads);
+
+                return Err(RootErrors::INTERNAL_SERVER_ERROR)
+            }
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         },

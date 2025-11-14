@@ -71,3 +71,18 @@ pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors
         _ => RootErrors::INTERNAL_SERVER_ERROR
     })
 }
+
+/// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key.
+/// Mainly for usage with temp images uploaded by users.
+pub async fn move_temp_s3_file(s3_client: aws_sdk_s3::Client, temp_file_key: &str, target_bucket_name: &str, target_file_key: &str) -> Result<(), MoveTempS3FileErrs> {
+
+    todo!("Didn't implement file moving and optimization yet.");
+
+    Ok(())
+}
+
+pub enum MoveTempS3FileErrs {
+    DownloadFailed,
+    ConversionFailed,
+    UploadFailed
+}

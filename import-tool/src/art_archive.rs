@@ -274,8 +274,6 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
         .map_err(|err| format!("Art Post Push Failed: {}", err.to_string()))
 }
 
-
-
 #[derive(Deserialize, Serialize)]
 struct ArtFrontmatter {
     title: String,
