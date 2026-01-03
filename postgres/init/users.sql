@@ -29,10 +29,11 @@ CREATE TABLE user_oauth (
     
     provider oauth_provider NOT NULL,
 
-    provider_user_id TEXT NOT NULL,
+    access_token text NOT NULL,
+    refresh_token text NOT NULL,
 
-    UNIQUE(oauth_provider, provider_user_id),
-    UNIQUE(oauth_provider, user_id)
+    UNIQUE(oauth_provider, user_id),
+    UNIQUE(oauth_provider, access_token)
 );
 
 CREATE TABLE user_session (

@@ -5,7 +5,7 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres_types::{FromSql, ToSql, Type};
 use std::env;
-use tower_cookies::Cookies;
+use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 
 use crate::{RootErrors, ServerState};
 
@@ -28,14 +28,14 @@ pub struct UserSession {
 pub struct UserOauth2 {
     // TODO: Fill this in
     /// Part of the OAuth2 protocol; the token used to communicate with the resource owner.
-    access_token: String,
+    pub access_token: String,
     /// Part of the OAuth2 protocol; the token used to get new access tokens.
-    refresh_token: String,
+    pub refresh_token: String,
     pub provider: Oauth2Provider,
 
 }
 
-#[derive(FromSql)]
+#[derive(FromSql, ToSql, Debug)]
 pub enum Oauth2Provider {
     Discord,
     Google,
@@ -121,14 +121,24 @@ impl UserSession {
     }
 
     /// Starts a new user session for the given user, returns the session.
-    pub async fn create_new_session(db_connection: &Object<Manager>, user: User) -> Self {
+    pub async fn create_new_session(db_connection: &Object<Manager>, user: &User) -> Self {
         todo!("Didn't implement create_new_session")
+    }
+
+    /// Creates a cookie of the given session to pass to the user.
+    pub fn to_cookie(&self) -> Cookie<'static> {
+        let mut cookie = Cookie::new("USER_SESSION_ID", self.session_id.clone()); 
+        
+        cookie.set_same_site(SameSite::Strict);
+        cookie.set_http_only(true);
+        
+        cookie
     }
 }
 
 impl UserOauth2 {
     /// Creates DB associations between the given OAuth2 data and the given user.
-    pub async fn associate_with_user(&self, db_connection: Object<Manager>, user: User) -> Self {
+    pub async fn associate_with_user(&self, db_connection: &Object<Manager>, user: &User) -> () {
         todo!("Didn't implement associate_with_user")
     }
 }
@@ -166,7 +176,15 @@ impl Oauth2Provider {
     }
 
     /// Given an access token, attempts to get a relevant user.
-    pub fn get_user_from_access_token(&self, db_connection: &Object<Manager>, access_token: &str) -> Option<User> {
-        todo!("Didn't implement getting user from access token")
+    pub async fn get_user_from_access_token(&self, db_connection: &Object<Manager>, access_token: &str) -> Option<User> {
+        let query = "SELECT * FROM site_user INNER JOIN user_oauth ON site_user.id = user_oauth.user_id WHERE provider=$1 AND access_token=$2";
+
+        let resulted_row = db_connection.query_opt(query, &[&self, &access_token])
+                .await.unwrap(); // Can unwrap here because access token uniqueness enforced by DB.
+        
+        match resulted_row {
+            None => None,
+            Some(row) => Some(User::from_row(row).await)
+        }
     }
 }

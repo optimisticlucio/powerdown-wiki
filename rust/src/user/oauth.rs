@@ -1,6 +1,6 @@
-use crate::{RootErrors, ServerState, user::{User, structs::{Oauth2Provider, UserSession}}};
+use crate::{RootErrors, ServerState, user::{User, structs::{Oauth2Provider, UserOauth2, UserSession}}};
 use axum::{Router, extract::{OriginalUri, Query, State}, response::{IntoResponse, Redirect, Response}, routing::get};
-use tower_cookies::{Cookie, Cookies};
+use tower_cookies::{Cookies};
 use axum_extra::routing::RouterExt;
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +37,7 @@ pub async fn discord(
     // Did this discord user create an account already?
     let access_token_user = Oauth2Provider::Discord.get_user_from_access_token(
         &db_connection,
-        &discord_tokens.access_token);
+        &discord_tokens.access_token).await;
 
     if let Some(existing_user_with_connection) = access_token_user {
         // This connection exists in the DB.
@@ -53,11 +53,16 @@ pub async fn discord(
             User::create_in_db(&db_connection, &display_name).await
         };
 
-        // TODO: Connect the connection method to the given user.
+        // Connect the OAuth method to the relevant user.
+        UserOauth2 {
+            provider: Oauth2Provider::Discord,
+            access_token: discord_tokens.access_token,
+            refresh_token: discord_tokens.refresh_token,
+        }.associate_with_user(&db_connection, &account_to_connect_to).await;
 
-        let user_session = UserSession::create_new_session(&db_connection, account_to_connect_to).await;
+        let user_session = UserSession::create_new_session(&db_connection, &account_to_connect_to).await;
 
-        cookie_jar.add(Cookie::new("USER_SESSION_ID", user_session.session_id));
+        cookie_jar.add(user_session.to_cookie());
 
         Ok(Redirect::to("/user").into_response())
     }
@@ -77,5 +82,5 @@ pub struct OAuthTokens {
     access_token: String,
     token_type: String,
     expires_in: Option<u64>,
-    refresh_token: Option<String>,
+    refresh_token: String,
 }
