@@ -1,27 +1,71 @@
-use axum::{response::IntoResponse, routing::get, Router};
+use axum::{
+    Router, extract::{OriginalUri, State}, response::{Html, IntoResponse, Redirect, Response}, routing::get};
 use axum_extra::routing::RouterExt;
 use crate::{ServerState, RootErrors};
+use askama::{Template};
+use http::Uri;
+use tower_cookies::Cookies;
 
-mod oauth_callback_handling;
+mod oauth;
 mod structs;
 
 pub use structs::User;
 
+use structs::Oauth2Provider;
+
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(user_page))
+        .route_with_tsr("/login", get(login_page))
+        .nest("oauth2", oauth::router())
 }
 
-/// Returns the user page. If the user is not logged in, shows login page.
-pub async fn user_page() -> Result<impl IntoResponse, RootErrors> {
-    Ok("TODO: Implement user page") // TODO
+/// Returns the user page. If the user is not logged in, redirects to login page.
+pub async fn user_page(
+        State(state): State<ServerState>,
+        OriginalUri(original_uri): OriginalUri,
+        cookie_jar: Cookies
+    ) -> Result<Response, RootErrors> {
+
+    let session_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
+
+    // If they aren't logged in, we have no user data to show em. Toss towards the login page!
+    if session_user.is_none() {
+        return Ok(Redirect::to("/user/login").into_response());
+    }
+
+    let session_user = session_user.unwrap();
+
+    Ok("TODO: Implement user page".into_response()) // TODO
 }
 
-/// Returns page allowing user to login using oauth methods.
-pub async fn login_page() -> Result<impl IntoResponse, RootErrors> {
-    Ok("TODO: Implement login page") // TODO
+#[derive(Template)] 
+#[template(path = "user/user_page.html")]
+struct UserPageTemplate<'a> {
+    user: Option<User>,
+    original_uri: Uri,
+    
+    discord_oauth_url: &'a str,
 }
 
-/// Returns page letting user view their own account.
-pub async fn logged_user_page() -> Result<impl IntoResponse, RootErrors> {
-    Ok("TODO: Implement user page") // TODO
+/// Returns page allowing user to login/create an account/connect an existing account using oauth methods.
+pub async fn login_page(
+        State(state): State<ServerState>,
+        OriginalUri(original_uri): OriginalUri,
+        cookie_jar: Cookies,
+    ) -> Html<String> {
+    LoginTemplate {
+        user: None, // TODO: Check if user is logged in, and if so, connect more accounts!
+        original_uri,
+
+        discord_oauth_url: &Oauth2Provider::Discord.get_user_login_url()
+    }.render().unwrap().into()
+}
+
+#[derive(Template)] 
+#[template(path = "user/login.html")]
+struct LoginTemplate<'a> {
+    user: Option<User>,
+    original_uri: Uri,
+    
+    discord_oauth_url: &'a str,
 }

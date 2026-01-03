@@ -1,0 +1,19 @@
+{% extends "base-template.html" %}
+
+{% block title %}User{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    {% if let Some(user) = user %}
+    <h1>Logged Into Wiki</h1>
+
+    <p>Hello, {{user.display_name}}! You have successfully logged in!</p>
+    {% else %}
+    <h1>...Huh</h1>
+        
+        <p>Hello! If you're seeing this text, it means you managed to access the user page without being logged in. This should not have happened, so I'm impressed.</p>
+
+    <p><b>Please message Lucio</b> with an explanation of how you managed to get here, as detailed as you can reasonably make it. Thanks!</p>
+    {% endif %}
+</div>
+{% endblock %}

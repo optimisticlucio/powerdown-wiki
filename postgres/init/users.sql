@@ -13,7 +13,7 @@ CREATE TYPE oauth_provider AS ENUM (
 CREATE TABLE site_user (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- TODO: Should this be random IDs? Identity is sequential.
 
-    username text NOT NULL CHECK (TRIM(username) != ''),
+    display_name text NOT NULL CHECK (TRIM(username) != ''),
     user_type user_type NOT NULL DEFAULT 'normal'
     -- TODO: Add pfp.
 

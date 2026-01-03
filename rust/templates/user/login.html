@@ -1,0 +1,15 @@
+{% extends "base-template.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <h1>Login to Wiki</h1>
+
+    <p>If you're seeing this page, the website can't recognize you. This means you either need to create an account or log in.</p>
+
+    <a href="{{discord_oauth_url}}">Login using Discord</a>
+
+    <p>Yes, you do have to log in using a different account. No, I will not make accounts only for the wiki. Trust me, you do not want me to have your emails.</p>
+</div>
+{% endblock %}
