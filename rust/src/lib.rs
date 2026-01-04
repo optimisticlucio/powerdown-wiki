@@ -1,5 +1,5 @@
 use axum::{
-    error_handling::HandleErrorLayer, http::StatusCode, response::{Html, IntoResponse, Redirect}, routing::get, BoxError, Router
+    BoxError, Router, error_handling::HandleErrorLayer, extract::OriginalUri, http::StatusCode, response::{Html, IntoResponse, Redirect}, routing::get
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;
@@ -51,6 +51,9 @@ async fn root_error_handler(err: BoxError) -> impl IntoResponse {
     }
 }
 
-async fn fallback() -> impl IntoResponse {
-    errs::RootErrors::NOT_FOUND
+async fn fallback(
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+) -> impl IntoResponse {
+    errs::RootErrors::NOT_FOUND(original_uri, cookie_jar)
 }

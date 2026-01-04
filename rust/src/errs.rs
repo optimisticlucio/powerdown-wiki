@@ -6,21 +6,22 @@ use std::fs;
 use lazy_static::lazy_static;
 use askama::{Template};
 use crate::user::User;
+use tower_cookies::Cookies;
 
 pub enum RootErrors {
-    NOT_FOUND,
+    NOT_FOUND(Uri, Cookies),
     INTERNAL_SERVER_ERROR,
     REQUEST_TIMEOUT,
-    BAD_REQUEST(String)
+    BAD_REQUEST(Uri, Cookies, String)
 }
 
 impl IntoResponse for RootErrors {
     fn into_response(self) -> Response {
         match self {
-            Self::NOT_FOUND => page_not_found().into_response(),
+            Self::NOT_FOUND(original_uri, cookie_jar) => page_not_found().into_response(),
             Self::INTERNAL_SERVER_ERROR => (StatusCode::INTERNAL_SERVER_ERROR, Html::from(INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone())).into_response(),
             Self::REQUEST_TIMEOUT => request_timeout().into_response(),
-            Self::BAD_REQUEST(elaboration) => bad_request(elaboration).into_response()
+            Self::BAD_REQUEST(original_uri, cookie_jar, elaboration) => bad_request(elaboration).into_response()
         }
     }
 }

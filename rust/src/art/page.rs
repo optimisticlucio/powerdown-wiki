@@ -1,4 +1,4 @@
-use axum::{extract::{OriginalUri, Path, Query, State}, response::IntoResponse};
+use axum::{extract::{OriginalUri, Path, Query, State}, response::{IntoResponse, Response}};
 use http::Uri;
 use postgres_types::{FromSql, ToSql, Type};
 use askama::Template;
@@ -37,14 +37,15 @@ pub async fn art_page(
     State(state): State<ServerState>,
     Query(query_params): Query<structs::ArtSearchParameters>,
     OriginalUri(original_uri): OriginalUri,
-) -> impl IntoResponse {
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
     if let Some(requested_art) = structs::PageArt::get_by_slug(state.db_pool.get().await.unwrap(), &art_slug).await {
         let (older_art_url, newer_art_url) = get_older_and_newer_art_slugs(&art_slug, &query_params, state.db_pool.get().await.unwrap()).await;
         let art_urls = requested_art.get_art_urls();
 
-        template_to_response(
+        Ok(template_to_response(
             ArtPage {
-                user: None, // TODO: Connect this to user system.
+                user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?, 
                 original_uri,
                 user_search_params: &query_params,
 
@@ -58,10 +59,10 @@ pub async fn art_page(
                 older_art_url,
                 newer_art_url,
             }
-        )
+        ))
     }   
     else {
-        RootErrors::NOT_FOUND.into_response()
+        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
     }
 }
 

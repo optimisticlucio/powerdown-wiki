@@ -75,7 +75,7 @@ pub fn get_s3_public_object_url(file_key: &str) -> String {
 pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
     field.text().await
     .map_err(|err| match err.status() {
-        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(err.body_text()),
+        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(http::Uri::from_static("/"), tower_cookies::Cookies::default(), err.body_text()),
         _ => RootErrors::INTERNAL_SERVER_ERROR
     })
 }

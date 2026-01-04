@@ -1,4 +1,4 @@
-use axum::{extract::{OriginalUri, Path, State}, response::IntoResponse};
+use axum::{extract::{OriginalUri, Path, State}, response::{IntoResponse, Response}};
 use askama::Template;
 use http::Uri;
 use rand::seq::IndexedRandom;
@@ -30,7 +30,8 @@ pub async fn story_page(
     Path(story_slug): Path<String>,
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
-) -> impl IntoResponse {
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
     if let Some(requested_story) = structs::PageStory::get_by_slug(&story_slug, state.db_pool.get().await.unwrap()).await {
 
         // TODO: Sanitize custom_css.
@@ -49,9 +50,9 @@ pub async fn story_page(
             ammonia_settings.clean(&unsafe_story).to_string()
         };
 
-        template_to_response(
+        Ok(template_to_response(
             StoryPage {
-                user: None, // TODO: Connect this to user system.
+                user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
                 original_uri,
 
                 story_title: &requested_story.inpage_title.unwrap_or(requested_story.base_story.title),
@@ -66,9 +67,9 @@ pub async fn story_page(
 
                 content: &converted_story
             }
-        )
+        ))
     }   
     else {
-        RootErrors::NOT_FOUND.into_response()
+        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
     }
 }

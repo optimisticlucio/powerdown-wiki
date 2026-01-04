@@ -1,4 +1,4 @@
-use axum::{extract::{OriginalUri, Path, State}, response::IntoResponse};
+use axum::{extract::{OriginalUri, Path, State}, response::{IntoResponse, Response}};
 use askama::Template;
 use http::Uri;
 use rand::seq::IndexedRandom;
@@ -33,15 +33,16 @@ pub async fn character_page(
     Path(character_slug): Path<String>,
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
-) -> impl IntoResponse {
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
     if let Some(chosen_char) = PageCharacter::get_by_slug(character_slug, state.db_pool.get().await.unwrap()).await {
 
         let parsed_content = chosen_char.page_contents.map(|contents| parse_character_page_contents(&contents).unwrap_or("PARSING FAILED!".to_owned()));
         let retirement_reason = chosen_char.retirement_reason.as_ref().map(|f| markdown_to_html(&f, &comrak::Options::default()));
 
-        template_to_response(
+        Ok(template_to_response(
             CharacterPage {
-                user: None,
+                user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
                 original_uri,
 
                 retirement_reason: retirement_reason.as_deref(),
@@ -58,10 +59,10 @@ pub async fn character_page(
                 character_logo: chosen_char.logo_url.as_deref(),
                 content: parsed_content.as_deref()
             }
-        )
+        ))
     }
     else {
-        RootErrors::NOT_FOUND.into_response()
+        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
     }
 }
 

@@ -17,10 +17,11 @@ pub fn router() -> Router<ServerState> {
 pub async fn discord(
     State(state): State<ServerState>, 
     Query(query): Query<DiscordOauthQuery>,
-    cookie_jar: Cookies,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     // Did the user give us an authorization code?
-    let authorization_code = query.code.ok_or( RootErrors::BAD_REQUEST("Entered Discord Authorization Callback without an authorization code.".to_string()))?;
+    let authorization_code = query.code.ok_or( RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Entered Discord Authorization Callback without an authorization code.".to_string()))?;
 
     // First, talk to the Discord servers to see what account we just got access to.
     let discord_access_token_request_client = reqwest::ClientBuilder::default()

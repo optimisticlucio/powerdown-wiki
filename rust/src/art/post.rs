@@ -18,13 +18,18 @@ use serde::{self, Deserialize, Serialize};
 
 /// Post Request Handler for art category.
 #[axum::debug_handler]
-pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<ArtPostingSteps>) -> Result<Response, RootErrors> {
+pub async fn add_art(
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+    Json(posting_step): Json<ArtPostingSteps>,
+    ) -> Result<Response, RootErrors> {
     match posting_step {
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             if art_amount < 1 {
-                Err(RootErrors::BAD_REQUEST("art post must have at least one art piece".to_string()))
+                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "art post must have at least one art piece".to_string()))
             } else if art_amount > 25 {
-                Err(RootErrors::BAD_REQUEST("for the good of mankind, don't put that many art pieces in one post. split them up".to_string()))
+                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "for the good of mankind, don't put that many art pieces in one post. split them up".to_string()))
             } else {
                 let amount_of_presigned_urls_needed = art_amount + 1; // The art, plus the thumbnail.
                 
@@ -79,7 +84,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
         ArtPostingSteps::UploadMetadata(page_art) => {
             // First let's make sure what we were given is even logical
             if page_art.art_keys.is_empty() {
-                return Err(RootErrors::BAD_REQUEST("No Art Keys Given".to_owned()));
+                return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "No Art Keys Given".to_owned()));
             }
 
             // TODO: Validate all of the given values make sense.
@@ -111,7 +116,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
             columns.push("thumbnail".into());
 
             let temp_thumbnail_key = Url::parse(&page_art.base_art.thumbnail_key)
-                .map_err(|_| RootErrors::BAD_REQUEST(format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key)))?
+                .map_err(|_| RootErrors::BAD_REQUEST(original_uri, cookie_jar, format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key)))?
                 .path().trim_start_matches("/").trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
                 .to_owned();
 
@@ -226,7 +231,7 @@ pub async fn add_art(State(state): State<ServerState>, Json(posting_step): Json<
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         },
-        _ => Err(RootErrors::BAD_REQUEST("invalid upload step".to_string()))
+        _ => Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "invalid upload step".to_string()))
     }
 }
 

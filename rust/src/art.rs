@@ -1,13 +1,14 @@
 use std::cmp::{self, min};
 
 use askama::Template;
-use axum::{extract::{DefaultBodyLimit, Query, State, OriginalUri}, response::Html, routing::{get, post}, Router};
+use axum::{Router, extract::{DefaultBodyLimit, OriginalUri, Query, State}, response::{Html, Response}, routing::{get, post}};
 use axum_extra::routing::RouterExt;
-use crate::{ServerState, user::User};
+use crate::{RootErrors, ServerState, user::User, utils::template_to_response};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use structs::ArtSearchParameters;
 use http::{Uri};
+use tower_cookies::Cookies;
 
 mod page;
 mod structs;
@@ -46,7 +47,8 @@ async fn art_index(
         State(state): State<ServerState>, 
         Query(query_params): Query<ArtSearchParameters>,
         OriginalUri(original_uri): OriginalUri,
-    ) -> Html<String> {
+        cookie_jar: Cookies,
+    ) -> Result<Response, RootErrors> {
     // Static Values
     const AMOUNT_OF_ART_PER_PAGE: i64 = 24;
 
@@ -80,8 +82,8 @@ async fn art_index(
             &query_params
         ).await;
 
-    ArtIndexPage {
-        user: None, // TODO: Connect to user system.
+    Ok(template_to_response(ArtIndexPage {
+        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
         original_uri,
         user_search_params: &query_params,
 
@@ -106,7 +108,7 @@ async fn art_index(
         all_tags: get_all_tags(state.db_pool.get().await.unwrap()).await,
 
         art_pieces
-    }.render().unwrap().into()
+    }))
 }
 
 /// Returns the total amount of art currently in the db. May be given tags to constrain the search

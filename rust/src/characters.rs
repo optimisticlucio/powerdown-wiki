@@ -1,7 +1,7 @@
 use askama::Template;
-use axum::{extract::{DefaultBodyLimit, OriginalUri, State}, response::Html, routing::{get, post}, Router};
+use axum::{Router, extract::{DefaultBodyLimit, OriginalUri, State}, response::{Html, Response}, routing::{get, post}};
 use http::Uri;
-use crate::{user::User, utils, ServerState};
+use crate::{user::User, utils, ServerState, RootErrors};
 use chrono;
 use axum_extra::routing::RouterExt;
 
@@ -34,7 +34,8 @@ struct CharacterIndex<'a> {
 async fn character_index(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
-    ) -> Html<String> {
+    cookie_jar: tower_cookies::Cookies,
+    ) -> Result<Response, RootErrors> {
     let all_characters = BaseCharacter::get_all_characters(state.db_pool.get().await.unwrap())
                 .await;
 
@@ -70,8 +71,8 @@ async fn character_index(
         }
     };
 
-    CharacterIndex {
-        user: None,
+    Ok(utils::template_to_response(CharacterIndex {
+        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
         original_uri, 
         random_subtitle: &random_subtitle,
         active_characters: &active_characters,
@@ -79,5 +80,5 @@ async fn character_index(
         birthday_characters: &birthday_characters,
         date_today_readable: &date_today_readable,
         birthday_character_names: &birthday_character_names
-    }.render().unwrap().into()
+    }))
 }

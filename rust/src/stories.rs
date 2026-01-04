@@ -1,9 +1,11 @@
 use axum::Router;
 use axum::extract::Query;
+use axum::response::Response;
 use axum_extra::routing::RouterExt;
 use axum::routing::{get, post};
 use axum::{extract::{OriginalUri, State}, response::IntoResponse};
 use askama::Template;
+use crate::RootErrors;
 use crate::stories::structs::{BaseStory, StorySearchParameters};
 use crate::{ServerState, user::User};
 use crate::utils::template_to_response;
@@ -17,7 +19,7 @@ mod page;
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(story_index))
             .route_with_tsr("/new", post(post::add_story))
-            .route_with_tsr("/{story_slug}", get(page::story_page).post(post::update_story))
+            .route_with_tsr("/{story_slug}", get(page::story_page))
 }
 
 #[derive(Template)] 
@@ -41,7 +43,8 @@ pub async fn story_index(
     State(state): State<ServerState>,
     Query(search_params): Query<StorySearchParameters>,
     OriginalUri(original_uri): OriginalUri,
-) -> impl IntoResponse {
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
     const AMOUNT_OF_STORIES_PER_PAGE: i64 = 12;
 
     let total_story_amount = BaseStory::get_total_amount(state.db_pool.get().await.unwrap(), &search_params).await.unwrap();
@@ -58,9 +61,9 @@ pub async fn story_index(
             AMOUNT_OF_STORIES_PER_PAGE
         ).await;
 
-    template_to_response(
+    Ok(template_to_response(
         StoryIndex {
-            user: None, // TODO: Connect this to user system.
+            user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
             original_uri,
 
             stories: relevant_stories,
@@ -81,7 +84,7 @@ pub async fn story_index(
                 Some(get_search_url(StorySearchParameters { page: total_page_number , ..search_params.clone()}))
             }, 
         }
-    )
+    ))
 }
 
 /// Given relevant query parameters, returns the relative URL of that story search.
