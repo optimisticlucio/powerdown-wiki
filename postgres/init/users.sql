@@ -20,7 +20,7 @@ CREATE TABLE site_user (
     -- TODO: Think of relevant fields.
 );
 
-CREATE TABLE user_oauth (
+CREATE TABLE user_openid (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 
     user_id integer NOT NULL 
@@ -29,11 +29,10 @@ CREATE TABLE user_oauth (
     
     provider oauth_provider NOT NULL,
 
-    access_token text NOT NULL,
-    refresh_token text NOT NULL,
+    sub text NOT NULL,
 
     UNIQUE(provider, user_id),
-    UNIQUE(provider, access_token)
+    UNIQUE(provider, sub)
 );
 
 CREATE TABLE user_session (

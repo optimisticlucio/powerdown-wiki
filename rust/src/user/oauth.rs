@@ -1,6 +1,5 @@
 use std::env;
-
-use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, UserOauth2, UserSession}}};
+use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, UserOpenId, UserSession}}};
 use axum::{Router, extract::{OriginalUri, Query, State}, response::{IntoResponse, Redirect, Response}, routing::get};
 use tower_cookies::{Cookies};
 use axum_extra::routing::RouterExt;
@@ -30,7 +29,7 @@ pub async fn discord(
             RootErrors::INTERNAL_SERVER_ERROR
         })?;
 
-    let discord_tokens: OAuthTokens = discord_access_token_request_client
+    let discord_response = discord_access_token_request_client
         .post(Oauth2Provider::Discord.get_token_url())
         .form(&[
             ("grant_type", "authorization_code"),
@@ -42,19 +41,32 @@ pub async fn discord(
         .map_err(|err| {
             println!("[OAUTH2; DISCORD] Failed sending request for access token: {:?}", err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
-        })?
-        .json().await
+        })?;
+        
+    let discord_tokens: OAuthTokens =  discord_response.json().await
         .map_err(|err| {
             println!("[OAUTH2; DISCORD] Failed reading access token response: {:?}", err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
         })?;
 
+    // Now, parse the openID token to something readable.
+
+    todo!("i hath headache");
+    /*let discord_decode_key = jsonwebtoken::DecodingKey::
+
+    let discord_openid: OpenIDTokenClaims = jsonwebtoken::decode(
+        &discord_tokens.id_token, 
+        key, 
+        validation)
+        .unwrap(); // TODO: Convert to map err*/
+
     let db_connection = state.db_pool.get().await.unwrap();
 
+
     // Did this discord user create an account already?
-    let access_token_user = Oauth2Provider::Discord.get_user_from_access_token(
+    let access_token_user = Oauth2Provider::Discord.get_user_from_sub(
         &db_connection,
-        &discord_tokens.access_token).await;
+        &discord_tokens.sub).await;
 
     if let Some(existing_user_with_connection) = access_token_user {
         // This connection exists in the DB.
@@ -71,10 +83,9 @@ pub async fn discord(
         };
 
         // Connect the OAuth method to the relevant user.
-        UserOauth2 {
+        UserOpenId {
             provider: Oauth2Provider::Discord,
-            access_token: discord_tokens.access_token,
-            refresh_token: discord_tokens.refresh_token,
+            sub: discord_tokens.sub,
         }.associate_with_user(&db_connection, &account_to_connect_to).await;
 
         let user_session = UserSession::create_new_session(&db_connection, &account_to_connect_to).await;
@@ -100,4 +111,20 @@ pub struct OAuthTokens {
     token_type: String,
     expires_in: Option<u64>,
     refresh_token: String,
+    id_token: String, // the OpenID token
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OpenIDTokenClaims {
+    sub: String,           // Subject (user ID)
+    iss: String,           // Issuer
+    aud: String,           // Audience
+    exp: usize,            // Expiration time
+    iat: usize,            // Issued at
+    #[serde(skip_serializing_if = "Option::is_none")]
+    username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    global_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    avatar: Option<String>,
 }

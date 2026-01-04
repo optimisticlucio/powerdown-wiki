@@ -1,5 +1,5 @@
 use std::{fs, path::{Path, PathBuf}};
-use reqwest::{multipart, Response, Url};
+use reqwest::{Response, Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
 use owo_colors::{ OwoColorize};

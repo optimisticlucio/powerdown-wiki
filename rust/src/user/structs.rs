@@ -39,12 +39,10 @@ pub struct UserSession {
 
 static USER_SESSION_MAX_LENGTH: Duration = Duration::days(30);
 
-pub struct UserOauth2 {
+pub struct UserOpenId {
     // TODO: Fill this in
-    /// Part of the OAuth2 protocol; the token used to communicate with the resource owner.
-    pub access_token: String,
-    /// Part of the OAuth2 protocol; the token used to get new access tokens.
-    pub refresh_token: String,
+    /// Part of the OpenID protocol; the sub is the user's ID, in function.
+    pub sub: String,
     pub provider: Oauth2Provider,
 
 }
@@ -180,12 +178,12 @@ impl UserSession {
     }
 }
 
-impl UserOauth2 {
-    /// Creates DB associations between the given OAuth2 data and the given user.
+impl UserOpenId {
+    /// Creates DB associations between the given OpenID data and the given user.
     pub async fn associate_with_user(&self, db_connection: &Object<Manager>, user: &User) -> () {
-        const QUERY: &str = "INSERT INTO user_oauth (user_id,provider,access_token,refresh_token) VALUES ($1,$2,$3,$4)";
+        const QUERY: &str = "INSERT INTO user_oauth (user_id,provider,sub) VALUES ($1,$2,$3)";
 
-        let _ = db_connection.execute(QUERY, &[&user.id, &self.provider, &self.access_token, &self.refresh_token])
+        let _ = db_connection.execute(QUERY, &[&user.id, &self.provider, &self.sub])
                 .await.unwrap(); 
     }
 }
@@ -232,11 +230,11 @@ impl Oauth2Provider {
         }
     }
 
-    /// Given an access token, attempts to get a relevant user.
-    pub async fn get_user_from_access_token(&self, db_connection: &Object<Manager>, access_token: &str) -> Option<User> {
-        let query = "SELECT * FROM site_user INNER JOIN user_oauth ON site_user.id = user_oauth.user_id WHERE provider=$1 AND access_token=$2";
+    /// Given an OpenID sub, attempts to get a relevant user.
+    pub async fn get_user_from_sub(&self, db_connection: &Object<Manager>, sub: &str) -> Option<User> {
+        let query = "SELECT * FROM site_user INNER JOIN user_openid ON site_user.id = user_oauth.user_id WHERE provider=$1 AND sub=$2";
 
-        let resulted_row = db_connection.query_opt(query, &[&self, &access_token])
+        let resulted_row = db_connection.query_opt(query, &[&self, &sub])
                 .await.unwrap(); // Can unwrap here because access token uniqueness enforced by DB.
         
         resulted_row.map(User::from_row)
