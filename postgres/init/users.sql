@@ -20,7 +20,8 @@ CREATE TABLE site_user (
     -- TODO: Think of relevant fields.
 );
 
-CREATE TABLE user_openid (
+-- Associations between users and OAuth2 providers
+CREATE TABLE user_oauth_association (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 
     user_id integer NOT NULL 
@@ -29,10 +30,10 @@ CREATE TABLE user_openid (
     
     provider oauth_provider NOT NULL,
 
-    sub text NOT NULL,
+    oauth_user_id text NOT NULL, -- The user ID, or equivalent thereof, on the provider's DB
 
     UNIQUE(provider, user_id),
-    UNIQUE(provider, sub)
+    UNIQUE(provider, oauth_user_id)
 );
 
 CREATE TABLE user_session (
@@ -42,8 +43,7 @@ CREATE TABLE user_session (
     
     session_id text PRIMARY KEY, -- Session ID should be a long, random string.
 
-    creation_time timestamp with time zone NOT NULL DEFAULT NOW(), -- For the love of god don't set this manually.
+    creation_time timestamp with time zone NOT NULL DEFAULT NOW() -- For the love of god don't set this manually.
     -- The server, whenever reading the session, should check if it's been enough time since the creation for the session to be invalid. If it is, delete the entry.
 
-    session_ip_address inet NOT NULL -- TODO: If the IP address changes, should the session be dropped? Worried about phones switching networks.
 );

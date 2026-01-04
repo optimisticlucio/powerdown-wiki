@@ -1,5 +1,5 @@
 use std::env;
-use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, UserOpenId, UserSession}}};
+use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, OAuth2Association, UserSession}}};
 use axum::{Router, extract::{OriginalUri, Query, State}, response::{IntoResponse, Redirect, Response}, routing::get};
 use tower_cookies::{Cookies};
 use axum_extra::routing::RouterExt;
@@ -21,7 +21,7 @@ pub async fn discord(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     // Did the user give us an authorization code?
-    let authorization_code = query.code.ok_or( RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Entered Discord Authorization Callback without an authorization code.".to_string()))?;
+    let authorization_code = query.code.ok_or_else(|| RootErrors::BAD_REQUEST(original_uri, Cookies::default(), "Entered Discord Authorization Callback without an authorization code.".to_string()))?;
 
     // First, talk to the Discord servers to see what account we just got access to.
     let discord_access_token_request_client = reqwest::ClientBuilder::default()
@@ -43,31 +43,43 @@ pub async fn discord(
             println!("[OAUTH2; DISCORD] Failed sending request for access token: {:?}", err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
         })?;
-        
-    let discord_tokens: OAuthTokens =  discord_response.json().await
+    
+    let text_response = discord_response.text().await.unwrap();
+    // For some reason, converting the response to json directly results in a parse error. Can't wrap my head around it, but this seems to work.
+    let discord_tokens: OAuthTokens =  serde_json::from_str(&text_response)
         .map_err(|err| {
             println!("[OAUTH2; DISCORD] Failed reading access token response: {:?}", err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
         })?;
 
-    // Now, parse the openID token to something readable.
+    // Now we send another message to discord: "Who tf is this person?"
 
-    todo!("i hath headache");
-    /*let discord_decode_key = jsonwebtoken::DecodingKey::
+    let discord_identify_request = reqwest::ClientBuilder::default()
+        .build().map_err(|err| {
+            println!("[OAUTH2; DISCORD] Failed to build identification request client: {:?}", err);
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?
+        .get("https://discord.com/api/users/@me") // The API to get user info
+        .header("Authorization", format!("Bearer {}", &discord_tokens.access_token))
+        .send().await
+        .map_err(|err| {
+            println!("[OAUTH2; DISCORD] Failed sending identification request: {:?}", err.to_string());
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?;
 
-    let discord_openid: OpenIDTokenClaims = jsonwebtoken::decode(
-        &discord_tokens.id_token, 
-        key, 
-        validation)
-        .unwrap(); // TODO: Convert to map err*/
+    let discord_user: DiscordUser = discord_identify_request
+        .json().await
+        .map_err(|err| {
+            println!("[OAUTH2; DISCORD] Failed reading user's @me info: {:?}", err.to_string());
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?;
 
     let db_connection = state.db_pool.get().await.unwrap();
 
-
     // Did this discord user create an account already?
-    let access_token_user = Oauth2Provider::Discord.get_user_from_sub(
+    let access_token_user: Option<User> = Oauth2Provider::Discord.get_user_by_association(
         &db_connection,
-        &discord_tokens.sub).await;
+        &discord_user.id).await; 
 
     if let Some(existing_user_with_connection) = access_token_user {
         // This connection exists in the DB.
@@ -79,14 +91,14 @@ pub async fn discord(
         let account_in_db = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
         let account_to_connect_to = if account_in_db.is_some() { account_in_db.unwrap() } else {
-            let display_name = "DIDNT_IMPLEMENT_GETTING_DISPLAYNAME_YET";
+            let display_name = discord_user.global_name.unwrap_or(discord_user.username);
             User::create_in_db(&db_connection, &display_name).await
         };
 
         // Connect the OAuth method to the relevant user.
-        UserOpenId {
+        OAuth2Association {
             provider: Oauth2Provider::Discord,
-            sub: discord_tokens.sub,
+            provider_user_id: /*discord_tokens.sub*/ "TODO".to_string(),
         }.associate_with_user(&db_connection, &account_to_connect_to).await;
 
         let user_session = UserSession::create_new_session(&db_connection, &account_to_connect_to).await;
@@ -107,25 +119,23 @@ pub struct DiscordOauthQuery {
 
 /// Struct to handle the end of the oauth handshake
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OAuthTokens {
     access_token: String,
     token_type: String,
+    #[serde(default)]
     expires_in: Option<u64>,
     refresh_token: String,
-    id_token: String, // the OpenID token
+    #[serde(default)]
+    scope: Option<String>,
+    #[serde(default)]
+    id_token: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct OpenIDTokenClaims {
-    sub: String,           // Subject (user ID)
-    iss: String,           // Issuer
-    aud: String,           // Audience
-    exp: usize,            // Expiration time
-    iat: usize,            // Issued at
-    #[serde(skip_serializing_if = "Option::is_none")]
-    username: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+#[derive(Deserialize)] 
+/// The info we get from discord after running users/@me, and more specifically, the info we care for
+pub struct DiscordUser {
+    id: String,
+    username: String,
     global_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    avatar: Option<String>,
 }

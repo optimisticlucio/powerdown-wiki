@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc, Duration};
-use rand::{Rng};
+use rand::{Rng, distr::Alphanumeric};
 use tower_cookies::cookie;
+use rand::distr::SampleString;
 use std::net::{SocketAddr, SocketAddrV4};
 use postgres::Row;
 use deadpool::managed::Object;
@@ -25,7 +26,7 @@ pub struct User {
 pub enum UserType {
     Normal,
     Admin,
-    SuperAdmin
+    Superadmin
 }
 
 pub struct UserSession {
@@ -39,12 +40,11 @@ pub struct UserSession {
 
 static USER_SESSION_MAX_LENGTH: Duration = Duration::days(30);
 
-pub struct UserOpenId {
-    // TODO: Fill this in
-    /// Part of the OpenID protocol; the sub is the user's ID, in function.
-    pub sub: String,
+/// A struct representing an association between a given user and an OAuth2 provider, will probably only use for login methods.
+pub struct OAuth2Association {
+    /// The user ID, or any equivalent thereof, this given user has on the provider's database.
+    pub provider_user_id: String,
     pub provider: Oauth2Provider,
-
 }
 
 #[derive(FromSql, ToSql, Debug)]
@@ -57,7 +57,7 @@ pub enum Oauth2Provider {
 
 impl User {
     /// Given a user ID, returns the user, if it exists.
-    pub async fn get_by_id(db_connection: &Object<Manager>, given_id: &str) -> Option<Self> {
+    pub async fn get_by_id(db_connection: &Object<Manager>, given_id: &i32) -> Option<Self> {
         let query = "SELECT * FROM site_user WHERE id=$1";
 
         let resulted_row = db_connection.query_opt(query, &[&given_id])
@@ -154,7 +154,7 @@ impl UserSession {
     async fn from_row(db_connection: &Object<Manager>, row: Row) -> Self {
         Self {
             // Existence of parent user is enforced by DB, unwrap allowed.
-            user: User::get_by_id(db_connection, row.get("user_id")).await.unwrap(),
+            user: User::get_by_id(db_connection, &row.get("user_id")).await.unwrap(),
             session_id: row.get("session_id"),
             creation_time: row.get("creation_time"),
             //session_ip:  // TODO
@@ -163,7 +163,18 @@ impl UserSession {
 
     /// Starts a new user session for the given user, returns the session.
     pub async fn create_new_session(db_connection: &Object<Manager>, user: &User) -> Self {
-        todo!("Didn't implement create_new_session")
+        const QUERY: &str = "INSERT INTO user_session (user_id, session_id) VALUES ($1, $2) RETURNING *";
+
+        loop {
+            let random_session_id = Alphanumeric.sample_string(&mut rand::rng(), 64);
+
+            let resulted_row = db_connection.query_one(QUERY, &[&user.id, &random_session_id])
+                .await;
+
+            if let Ok(successful_insert) = resulted_row {
+                return Self::from_row(db_connection, successful_insert).await;
+            }
+        }
     }
 
     /// Creates a cookie of the given session to pass to the user.
@@ -173,17 +184,18 @@ impl UserSession {
         cookie.set_same_site(SameSite::Strict);
         cookie.set_http_only(true);
         cookie.set_max_age(cookie::time::Duration::seconds_f64(USER_SESSION_MAX_LENGTH.as_seconds_f64()));
+        cookie.set_path("/");
         
         cookie
     }
 }
 
-impl UserOpenId {
+impl OAuth2Association {
     /// Creates DB associations between the given OpenID data and the given user.
     pub async fn associate_with_user(&self, db_connection: &Object<Manager>, user: &User) -> () {
-        const QUERY: &str = "INSERT INTO user_oauth (user_id,provider,sub) VALUES ($1,$2,$3)";
+        const QUERY: &str = "INSERT INTO user_oauth_association (user_id,provider,oauth_user_id) VALUES ($1,$2,$3)";
 
-        let _ = db_connection.execute(QUERY, &[&user.id, &self.provider, &self.sub])
+        let _ = db_connection.execute(QUERY, &[&user.id, &self.provider, &self.provider_user_id])
                 .await.unwrap(); 
     }
 }
@@ -206,7 +218,7 @@ impl Oauth2Provider {
                 let client_id = env::var("DISCORD_OAUTH2_CLIENT_ID").unwrap();
                 let redirect_uri = self.get_redirect_uri();
                 // The format for scopes is "scope1+scope2+scope3"
-                const SCOPES: &'static str = "identify+openid";
+                const SCOPES: &'static str = "identify";
 
                 let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
 
@@ -231,10 +243,10 @@ impl Oauth2Provider {
     }
 
     /// Given an OpenID sub, attempts to get a relevant user.
-    pub async fn get_user_from_sub(&self, db_connection: &Object<Manager>, sub: &str) -> Option<User> {
-        let query = "SELECT * FROM site_user INNER JOIN user_openid ON site_user.id = user_oauth.user_id WHERE provider=$1 AND sub=$2";
+    pub async fn get_user_by_association(&self, db_connection: &Object<Manager>, oauth_user_id: &str) -> Option<User> {
+        let query = "SELECT * FROM site_user INNER JOIN user_oauth_association ON site_user.id = user_oauth_association.user_id WHERE provider=$1 AND oauth_user_id=$2";
 
-        let resulted_row = db_connection.query_opt(query, &[&self, &sub])
+        let resulted_row = db_connection.query_opt(query, &[&self, &oauth_user_id])
                 .await.unwrap(); // Can unwrap here because access token uniqueness enforced by DB.
         
         resulted_row.map(User::from_row)
