@@ -26,11 +26,22 @@ pub async fn discord(
 
     let discord_tokens: OAuthTokens = discord_access_token_request_client
         .post(Oauth2Provider::Discord.get_token_url())
-        // TODO: Insert relevant info
+        .json(&[
+            ("grant_type", "authorization_code"),
+            ("code", &authorization_code),
+            ("redirect_uri", &Oauth2Provider::Discord.get_redirect_uri())
+        ])
+        .header("Content-Type", "application/x-www-form-urlencoded")
         .send().await
-        .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?
+        .map_err(|err| {
+            println!("[OAUTH2; DISCORD] Failed sending request for access token: {}", err.to_string());
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?
         .json().await
-        .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            println!("[OAUTH2; DISCORD] Failed reading access token response: {}", err.to_string());
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?;
 
     let db_connection = state.db_pool.get().await.unwrap();
 
@@ -49,7 +60,7 @@ pub async fn discord(
         let account_in_db = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
         let account_to_connect_to = if account_in_db.is_some() { account_in_db.unwrap() } else {
-            let display_name = "TODO: Properly get display name";
+            let display_name = "DIDNT_IMPLEMENT_GETTING_DISPLAYNAME_YET";
             User::create_in_db(&db_connection, &display_name).await
         };
 
