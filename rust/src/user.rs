@@ -1,7 +1,7 @@
 use axum::{
     Router, extract::{OriginalUri, State}, response::{Html, IntoResponse, Redirect, Response}, routing::get};
 use axum_extra::routing::RouterExt;
-use crate::{ServerState, RootErrors};
+use crate::{RootErrors, ServerState, utils::template_to_response};
 use askama::{Template};
 use http::Uri;
 use tower_cookies::Cookies;
@@ -16,7 +16,7 @@ use structs::Oauth2Provider;
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(user_page))
         .route_with_tsr("/login", get(login_page))
-        .nest("oauth2", oauth::router())
+        .nest("/oauth2", oauth::router())
 }
 
 /// Returns the user page. If the user is not logged in, redirects to login page.
@@ -35,16 +35,21 @@ pub async fn user_page(
 
     let session_user = session_user.unwrap();
 
-    Ok("TODO: Implement user page".into_response()) // TODO
+    Ok(
+        template_to_response(
+            UserPageTemplate {
+                user: Some(session_user),
+                original_uri
+            }
+        )
+    )
 }
 
 #[derive(Template)] 
 #[template(path = "user/user_page.html")]
-struct UserPageTemplate<'a> {
+struct UserPageTemplate {
     user: Option<User>,
     original_uri: Uri,
-    
-    discord_oauth_url: &'a str,
 }
 
 /// Returns page allowing user to login/create an account/connect an existing account using oauth methods.

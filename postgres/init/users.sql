@@ -8,12 +8,12 @@ CREATE TYPE oauth_provider AS ENUM (
     'discord',
     'google',
     'github'
-)
+);
 
 CREATE TABLE site_user (
-    id text PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- TODO: Should this be random IDs? Identity is sequential.
+    id integer PRIMARY KEY, -- GENERATE THESE AS RANDOM INTEGERS IN CODE!
 
-    display_name text NOT NULL CHECK (TRIM(username) != ''),
+    display_name text NOT NULL CHECK (TRIM(display_name) != ''),
     user_type user_type NOT NULL DEFAULT 'normal'
     -- TODO: Add pfp.
 
@@ -23,7 +23,7 @@ CREATE TABLE site_user (
 CREATE TABLE user_oauth (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 
-    user_id text NOT NULL 
+    user_id integer NOT NULL 
         REFERENCES site_user(id)
         ON DELETE CASCADE,
     
@@ -32,12 +32,12 @@ CREATE TABLE user_oauth (
     access_token text NOT NULL,
     refresh_token text NOT NULL,
 
-    UNIQUE(oauth_provider, user_id),
-    UNIQUE(oauth_provider, access_token)
+    UNIQUE(provider, user_id),
+    UNIQUE(provider, access_token)
 );
 
 CREATE TABLE user_session (
-    user_id text NOT NULL
+    user_id integer NOT NULL
         REFERENCES site_user(id)
         ON DELETE CASCADE,
     

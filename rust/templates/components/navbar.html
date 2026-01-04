@@ -21,9 +21,11 @@
     </div>
     <div class="right">
         {% if let Some(user) = user %}
-        <div>
+        <a href="/user">
             User: {{ user.display_name }}
-        </div>
+        </a>
+        {% else %}
+        <a href="/user">Log In</a>
         {% endif %}
     </div>
 </nav>

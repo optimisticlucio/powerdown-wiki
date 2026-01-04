@@ -15,6 +15,7 @@ services:
       S3_PUBLIC_BUCKET_NAME: ${S3_PUBLIC_BUCKET_NAME:-powerdown-public-storage}
       S3_SQL_BACKUP_BUCKET_NAME: ${S3_SQL_BACKUP_BUCKET_NAME:-powerdown-sql-backups-storage}
       RUST_LOG: debug
+      WEBSITE_URL: ${WEBSITE_URL}
     ports:
       - 8080:8080
   

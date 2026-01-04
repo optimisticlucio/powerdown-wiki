@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc, Duration};
-use rand::{distr::Alphanumeric, Rng};
-use rand::distr::SampleString;
-use rayon::result;
+use rand::{Rng};
+use tower_cookies::cookie;
 use std::net::{SocketAddr, SocketAddrV4};
 use postgres::Row;
 use deadpool::managed::Object;
@@ -13,7 +12,7 @@ use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 use crate::{RootErrors, ServerState};
 
 pub struct User {
-    id: i64,
+    id: i32,
     pub user_type: UserType,
 
     /// The display name is not unique. It can have spaces, etc! If you need something that's 100% tied to this user, use the ID.
@@ -22,6 +21,7 @@ pub struct User {
 }
 
 #[derive(FromSql, ToSql, Debug)]
+#[postgres(name="user_type", rename_all = "snake_case")]
 pub enum UserType {
     Normal,
     Admin,
@@ -37,6 +37,8 @@ pub struct UserSession {
 
 }
 
+static USER_SESSION_MAX_LENGTH: Duration = Duration::days(30);
+
 pub struct UserOauth2 {
     // TODO: Fill this in
     /// Part of the OAuth2 protocol; the token used to communicate with the resource owner.
@@ -48,6 +50,7 @@ pub struct UserOauth2 {
 }
 
 #[derive(FromSql, ToSql, Debug)]
+#[postgres(name="oauth_provider", rename_all = "snake_case")]
 pub enum Oauth2Provider {
     Discord,
     Google,
@@ -98,7 +101,7 @@ impl User {
         // To make sure the ID is fully unique, we'll create it just before inserting and let the DB assure it is unique.
         // If the code verifies its uniqueness we run into all sorts of race conditions.
         loop {
-            let random_user_id = Alphanumeric.sample_string(&mut rand::rng(), 64);
+            let random_user_id = rand::rng().random_range(1..i32::MAX); // Best not to have negative IDs.
 
             let result_of_insert = db_connection.query_one(query, &[&random_user_id, &display_name])
                 .await;
@@ -116,10 +119,8 @@ impl User {
 impl UserSession {
     /// Checks whether the given user session is expired yet.
     fn is_expired(&self) -> bool {
-        const SESSION_TIME_TO_EXPIRE: Duration = Duration::days(30);
-
         // Compare creation date + session length to the current UTC.
-        self.creation_time.checked_add_signed(SESSION_TIME_TO_EXPIRE)
+        self.creation_time.checked_add_signed(USER_SESSION_MAX_LENGTH)
             .unwrap() // This'll only panic if we reach the year 3000. It'll be fine.
             <=  chrono::Utc::now()
     }
@@ -173,6 +174,7 @@ impl UserSession {
         
         cookie.set_same_site(SameSite::Strict);
         cookie.set_http_only(true);
+        cookie.set_max_age(cookie::time::Duration::seconds_f64(USER_SESSION_MAX_LENGTH.as_seconds_f64()));
         
         cookie
     }
@@ -206,7 +208,7 @@ impl Oauth2Provider {
                 let client_id = env::var("DISCORD_OAUTH2_CLIENT_ID").unwrap();
                 let redirect_uri = self.get_redirect_uri();
                 // The format for scopes is "scope1+scope2+scope3"
-                const SCOPES: &'static str = "identify";
+                const SCOPES: &'static str = "identify+openid";
 
                 let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
 

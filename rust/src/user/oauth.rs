@@ -1,4 +1,6 @@
-use crate::{RootErrors, ServerState, user::{User, structs::{Oauth2Provider, UserOauth2, UserSession}}};
+use std::env;
+
+use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, UserOauth2, UserSession}}};
 use axum::{Router, extract::{OriginalUri, Query, State}, response::{IntoResponse, Redirect, Response}, routing::get};
 use tower_cookies::{Cookies};
 use axum_extra::routing::RouterExt;
@@ -12,6 +14,7 @@ pub fn router() -> Router<ServerState> {
 /// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
 /// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
 /// If the user is logged in and this oauth method already exists for someone else, throws an error.
+#[axum::debug_handler]
 pub async fn discord(
     State(state): State<ServerState>, 
     Query(query): Query<DiscordOauthQuery>,
@@ -21,25 +24,28 @@ pub async fn discord(
     let authorization_code = query.code.ok_or( RootErrors::BAD_REQUEST("Entered Discord Authorization Callback without an authorization code.".to_string()))?;
 
     // First, talk to the Discord servers to see what account we just got access to.
-    let discord_access_token_request_client = reqwest::Client::builder()
-        .build().map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+    let discord_access_token_request_client = reqwest::ClientBuilder::default()
+        .build().map_err(|err| {
+            println!("[OAUTH2; DISCORD] Failed to build request client: {:?}", err);
+            RootErrors::INTERNAL_SERVER_ERROR
+        })?;
 
     let discord_tokens: OAuthTokens = discord_access_token_request_client
         .post(Oauth2Provider::Discord.get_token_url())
-        .json(&[
+        .form(&[
             ("grant_type", "authorization_code"),
             ("code", &authorization_code),
             ("redirect_uri", &Oauth2Provider::Discord.get_redirect_uri())
         ])
-        .header("Content-Type", "application/x-www-form-urlencoded")
+        .basic_auth(env::var("DISCORD_OAUTH2_CLIENT_ID").unwrap(), env::var("DISCORD_OAUTH2_CLIENT_SECRET").ok())
         .send().await
         .map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed sending request for access token: {}", err.to_string());
+            println!("[OAUTH2; DISCORD] Failed sending request for access token: {:?}", err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
         })?
         .json().await
         .map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed reading access token response: {}", err.to_string());
+            println!("[OAUTH2; DISCORD] Failed reading access token response: {:?}", err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
         })?;
 

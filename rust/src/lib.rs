@@ -31,6 +31,7 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/art", art::router()) 
         .route_with_tsr("/art-archive", get(|uri: Uri| async move { Redirect::permanent(&format!("/art{}", uri.path()))}))
         .nest("/stories", stories::router())
+        .nest("/user", user::router())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
