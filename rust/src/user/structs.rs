@@ -13,7 +13,7 @@ use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 use crate::{RootErrors, ServerState};
 
 pub struct User {
-    id: i32,
+    pub id: i32,
     pub user_type: UserType,
 
     /// The display name is not unique. It can have spaces, etc! If you need something that's 100% tied to this user, use the ID.
@@ -113,6 +113,11 @@ impl User {
     }
 }
 
+impl PartialEq for User {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
 
 impl UserSession {
     /// Checks whether the given user session is expired yet.

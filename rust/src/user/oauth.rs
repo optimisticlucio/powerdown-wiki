@@ -12,7 +12,7 @@ pub fn router() -> Router<ServerState> {
 /// Recieves the Discord Oauth callback. 
 /// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
 /// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
-/// If the user is logged in and this oauth method already exists for someone else, throws an error.
+/// If the user is logged in and this oauth method already exists, throws an error.
 #[axum::debug_handler]
 pub async fn discord(
     State(state): State<ServerState>, 
@@ -21,7 +21,10 @@ pub async fn discord(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     // Did the user give us an authorization code?
-    let authorization_code = query.code.ok_or_else(|| RootErrors::BAD_REQUEST(original_uri, Cookies::default(), "Entered Discord Authorization Callback without an authorization code.".to_string()))?;
+    let authorization_code = match query.code {
+        None => return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Entered Discord Authorization Callback without an authorization code.".to_string())),
+        Some(x) => x
+    };
 
     // First, talk to the Discord servers to see what account we just got access to.
     let discord_access_token_request_client = reqwest::ClientBuilder::default()
@@ -80,25 +83,41 @@ pub async fn discord(
     let access_token_user: Option<User> = Oauth2Provider::Discord.get_user_by_association(
         &db_connection,
         &discord_user.id).await; 
+    
+    // Additionally, Is the user actively logged in?
+        let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(existing_user_with_connection) = access_token_user {
         // This connection exists in the DB.
-        todo!("Implement case where db connection exists.")
+        
+        // If the user is logged in, some error is gonna be thrown.
+        if let Some(logged_in_user) = logged_in_user {
+            if logged_in_user == existing_user_with_connection {
+                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "You're already logged in, silly! You can't re-log-in!".to_string()))
+            }
+            else {
+                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
+            }
+        }
+        // If the user isn't logged in, log in as usual.
+        else {
+            Ok(Redirect::to("/user").into_response())
+        }
+
     }
     else {
         // This connection does not exist in the DB.
-        // Firstly, find or create the account to connect this to.
-        let account_in_db = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-        let account_to_connect_to = if account_in_db.is_some() { account_in_db.unwrap() } else {
+        // If the user isn't logged in, create a new account for them.
+        let account_to_connect_to = if logged_in_user.is_some() { logged_in_user.unwrap() } else {
             let display_name = discord_user.global_name.unwrap_or(discord_user.username);
             User::create_in_db(&db_connection, &display_name).await
         };
 
-        // Connect the OAuth method to the relevant user.
+        // Connect the OAuth method to the user we now have.
         OAuth2Association {
             provider: Oauth2Provider::Discord,
-            provider_user_id: /*discord_tokens.sub*/ "TODO".to_string(),
+            provider_user_id: discord_user.id,
         }.associate_with_user(&db_connection, &account_to_connect_to).await;
 
         let user_session = UserSession::create_new_session(&db_connection, &account_to_connect_to).await;

@@ -7,7 +7,7 @@
     {% if let Some(user) = user %}
     <h1>Logged Into Wiki</h1>
 
-    <p>Hello, {{user.display_name}}! You have successfully logged in!</p>
+    <p>Hello, {{user.display_name}}! You have successfully logged in! Your ID is {{user.id}}.</p>
     {% else %}
     <h1>...Huh</h1>
         
