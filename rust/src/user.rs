@@ -1,7 +1,7 @@
 use axum::{
     Router, extract::{OriginalUri, State}, response::{Html, IntoResponse, Redirect, Response}, routing::get};
 use axum_extra::routing::RouterExt;
-use crate::{RootErrors, ServerState, utils::template_to_response};
+use crate::{RootErrors, ServerState, utils::{self, template_to_response}};
 use askama::{Template};
 use http::Uri;
 use tower_cookies::Cookies;
@@ -57,13 +57,14 @@ pub async fn login_page(
         State(state): State<ServerState>,
         OriginalUri(original_uri): OriginalUri,
         cookie_jar: Cookies,
-    ) -> Html<String> {
-    LoginTemplate {
-        user: None, // TODO: Check if user is logged in, and if so, connect more accounts!
+    ) -> Result<Response, RootErrors> {
+    Ok(utils::template_to_response(LoginTemplate {
+        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?, // TODO: Check if user is logged in, and if so, connect more accounts!
         original_uri,
 
-        discord_oauth_url: &Oauth2Provider::Discord.get_user_login_url()
-    }.render().unwrap().into()
+        discord_oauth_url: &Oauth2Provider::Discord.get_user_login_url(),
+        google_oauth_url: &Oauth2Provider::Google.get_user_login_url()
+    }))
 }
 
 #[derive(Template)] 
@@ -73,4 +74,5 @@ struct LoginTemplate<'a> {
     original_uri: Uri,
     
     discord_oauth_url: &'a str,
+    google_oauth_url: &'a str,
 }

@@ -23,6 +23,8 @@ If these are missing when you run docker compose is made, you *will* get a crash
 
 - DISCORD_OAUTH2_CLIENT_ID, DISCORD_OAUTH2_CLIENT_SECRET: Discord client authentication data for OAuth2. You can get those in the [Discord Developer Portal](https://discord.com/developers/applications). We're using OAuth2 because I do not want to deal with passwords.
 
+- GOOGLE_OAUTH2_CLIENT_ID, GOOGLE_OAUTH2_CLIENT_SECRET: Ditto, for google instead. Get them in the [Google Auth Platform Dashboard](https://console.cloud.google.com/auth/clients).
+
 ### Optional Variables
 
 These variables aren't *required*, as they have default values incase they're missing. Still, you might need them for some case or another.

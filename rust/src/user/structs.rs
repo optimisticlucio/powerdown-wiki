@@ -186,7 +186,7 @@ impl UserSession {
     pub fn to_cookie(&self) -> Cookie<'static> {
         let mut cookie = Cookie::new("USER_SESSION_ID", self.session_id.clone()); 
         
-        cookie.set_same_site(SameSite::Strict);
+        cookie.set_same_site(SameSite::Lax);
         cookie.set_http_only(true);
         cookie.set_max_age(cookie::time::Duration::seconds_f64(USER_SESSION_MAX_LENGTH.as_seconds_f64()));
         cookie.set_path("/");
@@ -210,6 +210,7 @@ impl Oauth2Provider {
     pub fn get_redirect_uri(&self) -> String {
         match self {
             Oauth2Provider::Discord => format!("{}/user/oauth2/discord", env::var("WEBSITE_URL").unwrap()),
+            Oauth2Provider::Google => format!("{}/user/oauth2/google", env::var("WEBSITE_URL").unwrap()),
             _ => {
                 todo!("Requested an unimplemented oauth2 redirect URI");
             }
@@ -228,7 +229,18 @@ impl Oauth2Provider {
                 let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
 
                 format!("https://discord.com/oauth2/authorize?client_id={client_id}&response_type=code&redirect_uri={encoded_redirect_uri}&scope={SCOPES}")
-            }
+            },
+            Oauth2Provider::Google => {
+                let client_id = env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap();
+                let redirect_uri = self.get_redirect_uri();
+                // The format for scopes is "scope1+scope2+scope3"
+                const SCOPES: &'static str = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid";
+
+                let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
+                let encoded_scopes = urlencoding::encode(&SCOPES);
+
+                format!("https://accounts.google.com/o/oauth2/auth?client_id={client_id}&response_type=code&redirect_uri={encoded_redirect_uri}&scope={encoded_scopes}")
+            },
             _ => {
                 todo!("Requested an unimplemented oauth2 login");
             }
@@ -240,14 +252,32 @@ impl Oauth2Provider {
         match self {
             Oauth2Provider::Discord => {
                 "https://discord.com/api/oauth2/token".to_string()
-            }
+            },
+            Oauth2Provider::Google => {
+                "https://oauth2.googleapis.com/token".to_string()
+            },
             _ => {
                 todo!("Requested an unimplemented oauth2 token");
             }
         }
     }
 
-    /// Given an OpenID sub, attempts to get a relevant user.
+    /// Returns the relevant URL to send the "who is this person" request after we got the access token
+    pub fn get_identification_url(&self) -> String {
+        match self {
+            Oauth2Provider::Discord => {
+                "https://discord.com/api/users/@me".to_string()
+            },
+            Oauth2Provider::Google => {
+                "https://www.googleapis.com/oauth2/v2/userinfo".to_string()
+            },
+            _ => {
+                todo!("Requested an unimplemented oauth2 identification url");
+            }
+        }
+    }
+
+    /// Given a user ID, attempts to get a relevant user.
     pub async fn get_user_by_association(&self, db_connection: &Object<Manager>, oauth_user_id: &str) -> Option<User> {
         let query = "SELECT * FROM site_user INNER JOIN user_oauth_association ON site_user.id = user_oauth_association.user_id WHERE provider=$1 AND oauth_user_id=$2";
 

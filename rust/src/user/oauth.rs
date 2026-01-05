@@ -1,12 +1,14 @@
 use std::env;
 use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, OAuth2Association, UserSession}}};
 use axum::{Router, extract::{OriginalUri, Query, State}, response::{IntoResponse, Redirect, Response}, routing::get};
+use http::Uri;
 use tower_cookies::{Cookies};
 use axum_extra::routing::RouterExt;
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<ServerState> {
     Router::new().route_with_tsr("/discord", get(discord))
+        .route_with_tsr("/google", get(google))
 }
 
 /// Recieves the Discord Oauth callback. 
@@ -16,121 +18,22 @@ pub fn router() -> Router<ServerState> {
 #[axum::debug_handler]
 pub async fn discord(
     State(state): State<ServerState>, 
-    Query(query): Query<DiscordOauthQuery>,
+    Query(query): Query<OAuthQuery>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
-    // Did the user give us an authorization code?
-    let authorization_code = match query.code {
-        None => return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Entered Discord Authorization Callback without an authorization code.".to_string())),
-        Some(x) => x
-    };
-
-    // First, talk to the Discord servers to see what account we just got access to.
-    let discord_access_token_request_client = reqwest::ClientBuilder::default()
-        .build().map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed to build request client: {:?}", err);
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?;
-
-    let discord_response = discord_access_token_request_client
-        .post(Oauth2Provider::Discord.get_token_url())
-        .form(&[
-            ("grant_type", "authorization_code"),
-            ("code", &authorization_code),
-            ("redirect_uri", &Oauth2Provider::Discord.get_redirect_uri())
-        ])
-        .basic_auth(env::var("DISCORD_OAUTH2_CLIENT_ID").unwrap(), env::var("DISCORD_OAUTH2_CLIENT_SECRET").ok())
-        .send().await
-        .map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed sending request for access token: {:?}", err.to_string());
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?;
-    
-    let text_response = discord_response.text().await.unwrap();
-    // For some reason, converting the response to json directly results in a parse error. Can't wrap my head around it, but this seems to work.
-    let discord_tokens: OAuthTokens =  serde_json::from_str(&text_response)
-        .map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed reading access token response: {:?}", err.to_string());
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?;
-
-    // Now we send another message to discord: "Who tf is this person?"
-
-    let discord_identify_request = reqwest::ClientBuilder::default()
-        .build().map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed to build identification request client: {:?}", err);
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?
-        .get("https://discord.com/api/users/@me") // The API to get user info
-        .header("Authorization", format!("Bearer {}", &discord_tokens.access_token))
-        .send().await
-        .map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed sending identification request: {:?}", err.to_string());
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?;
-
-    let discord_user: DiscordUser = discord_identify_request
-        .json().await
-        .map_err(|err| {
-            println!("[OAUTH2; DISCORD] Failed reading user's @me info: {:?}", err.to_string());
-            RootErrors::INTERNAL_SERVER_ERROR
-        })?;
-
-    let db_connection = state.db_pool.get().await.unwrap();
-
-    // Did this discord user create an account already?
-    let access_token_user: Option<User> = Oauth2Provider::Discord.get_user_by_association(
-        &db_connection,
-        &discord_user.id).await; 
-    
-    // Additionally, Is the user actively logged in?
-        let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
-
-    if let Some(existing_user_with_connection) = access_token_user {
-        // This connection exists in the DB.
-        
-        // If the user is logged in, some error is gonna be thrown.
-        if let Some(logged_in_user) = logged_in_user {
-            if logged_in_user == existing_user_with_connection {
-                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "You're already logged in, silly! You can't re-log-in!".to_string()))
-            }
-            else {
-                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
-            }
-        }
-        // If the user isn't logged in, log in as usual.
-        else {
-            Ok(Redirect::to("/user").into_response())
-        }
-
-    }
-    else {
-        // This connection does not exist in the DB.
-
-        // If the user isn't logged in, create a new account for them.
-        let account_to_connect_to = if logged_in_user.is_some() { logged_in_user.unwrap() } else {
-            let display_name = discord_user.global_name.unwrap_or(discord_user.username);
-            User::create_in_db(&db_connection, &display_name).await
-        };
-
-        // Connect the OAuth method to the user we now have.
-        OAuth2Association {
-            provider: Oauth2Provider::Discord,
-            provider_user_id: discord_user.id,
-        }.associate_with_user(&db_connection, &account_to_connect_to).await;
-
-        let user_session = UserSession::create_new_session(&db_connection, &account_to_connect_to).await;
-
-        cookie_jar.add(user_session.to_cookie());
-
-        Ok(Redirect::to("/user").into_response())
-    }
+    oauth_process("Discord",
+    |discord_user: &DiscordUser| discord_user.global_name.as_ref().unwrap_or(&discord_user.username).clone(),
+    |discord_user: &DiscordUser| discord_user.id.clone(),
+    Oauth2Provider::Discord,
+    "DISCORD_OAUTH2_CLIENT_ID", 
+    "DISCORD_OAUTH2_CLIENT_SECRET",
+        state, query, original_uri, cookie_jar).await
 }
 
 /// Struct to handle Discord's query response to the oauth2 login.
 #[derive(Deserialize)]
-pub struct DiscordOauthQuery {
+pub struct OAuthQuery {
     state: Option<String>,
     /// The authorization code we send to discord to get the access token and refresh token.
     code: Option<String>, 
@@ -144,7 +47,8 @@ pub struct OAuthTokens {
     token_type: String,
     #[serde(default)]
     expires_in: Option<u64>,
-    refresh_token: String,
+    #[serde(default)]
+    refresh_token: Option<String>,
     #[serde(default)]
     scope: Option<String>,
     #[serde(default)]
@@ -158,3 +62,160 @@ pub struct DiscordUser {
     username: String,
     global_name: Option<String>,
 }
+
+#[derive(Deserialize)] 
+pub struct GoogleUser {
+    id: String,
+    email: String,
+    name: String, // Their actual IRL full name
+    given_name: String, // First name
+    picture: String // URL to their pfp image
+}
+
+/// Recieves the Google Oauth callback. 
+/// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
+/// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
+/// If the user is logged in and this oauth method already exists, throws an error.
+#[axum::debug_handler]
+pub async fn google(
+    State(state): State<ServerState>, 
+    Query(query): Query<OAuthQuery>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
+    oauth_process("Google",
+        |user: &GoogleUser| user.given_name.clone(),
+        |user: &GoogleUser| user.id.clone(), 
+        Oauth2Provider::Google,
+        "GOOGLE_OAUTH2_CLIENT_ID",
+        "GOOGLE_OAUTH2_CLIENT_SECRET",
+        state, query, original_uri, cookie_jar).await
+}
+
+async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> String, F: FnOnce(&T) -> String>(
+        process_name_for_debug: &'a str,
+        get_display_name: U,
+        get_user_id: F,
+        provider: Oauth2Provider,
+        client_id_cookie_name: &'a str,
+        client_secret_cookie_name: &'a str,
+        state: ServerState, 
+        query: OAuthQuery,
+        original_uri: Uri,
+        cookie_jar: tower_cookies::Cookies,
+    ) -> Result<Response, RootErrors>
+    {
+        println!("Initiating {} Log In", process_name_for_debug);
+        // Did the user give us an authorization code?
+        let authorization_code = match query.code {
+            None => return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, format!("Entered {} Authorization Callback without an authorization code.", process_name_for_debug))),
+            Some(x) => x
+        };
+
+        // First, talk to the Google servers to see what account we just got access to.
+        let access_token_request_client = reqwest::ClientBuilder::default()
+            .build().map_err(|err| {
+                println!("[OAUTH2; {}] Failed to build request client: {:?}", process_name_for_debug, err);
+                RootErrors::INTERNAL_SERVER_ERROR
+            })?;
+
+        let response = access_token_request_client
+            .post(provider.get_token_url())
+            .form(&[
+                ("grant_type", "authorization_code"),
+                ("code", &authorization_code),
+                ("redirect_uri", &provider.get_redirect_uri())
+            ])
+            .basic_auth(env::var(client_id_cookie_name).unwrap(), env::var(client_secret_cookie_name).ok())
+            .send().await
+            .map_err(|err| {
+                println!("[OAUTH2; {}] Failed sending request for access token: {:?}", process_name_for_debug, err.to_string());
+                RootErrors::INTERNAL_SERVER_ERROR
+            })?;
+        
+        let text_response = response.text().await.unwrap();
+        // For some reason, converting the response to json directly results in a parse error. Can't wrap my head around it, but this seems to work.
+        let tokens: OAuthTokens =  serde_json::from_str(&text_response)
+            .map_err(|err| {
+                println!("[OAUTH2; {}] Failed reading access token response: {:?}", process_name_for_debug, err.to_string());
+                RootErrors::INTERNAL_SERVER_ERROR
+            })?;
+
+        // Now we send another message: "Who tf is this person?"
+        let identify_request = reqwest::ClientBuilder::default()
+            .build().map_err(|err| {
+                println!("[OAUTH2; {}] Failed to build identification request client: {:?}", process_name_for_debug, err);
+                RootErrors::INTERNAL_SERVER_ERROR
+            })?
+            .get(provider.get_identification_url()) 
+            .header("Authorization", format!("Bearer {}", &tokens.access_token))
+            .send().await
+            .map_err(|err| {
+                println!("[OAUTH2; {}] Failed sending identification request: {:?}", process_name_for_debug, err.to_string());
+                RootErrors::INTERNAL_SERVER_ERROR
+            })?;
+
+        let user_info: T = identify_request
+            .json().await
+            .map_err(|err| {
+                println!("[OAUTH2; {}] Failed reading user's @me info: {:?}", process_name_for_debug, err.to_string());
+                RootErrors::INTERNAL_SERVER_ERROR
+            })?;
+
+        let user_id = get_user_id(&user_info);
+
+        let db_connection = state.db_pool.get().await.unwrap();
+
+        // Did this discord user create an account already?
+        let access_token_user: Option<User> = provider.get_user_by_association(
+            &db_connection,
+            &user_id).await; 
+
+        println!("This user {} an account", if access_token_user.is_some() {"has"} else {"does not have"});
+        
+        // Additionally, Is the user actively logged in?
+        let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+        println!("Client {} logged in", if logged_in_user.is_some() {"is"} else {"is not"});
+
+        if let Some(existing_user_with_connection) = access_token_user {
+            // This connection exists in the DB.
+            println!("Connection exists");
+            
+            // If the user is logged in, some error is gonna be thrown.
+            if let Some(logged_in_user) = logged_in_user {
+                if logged_in_user == existing_user_with_connection {
+                    Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "You're already logged in, silly! You can't re-log-in!".to_string()))
+                }
+                else {
+                    Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
+                }
+            }
+            // If the user isn't logged in, log in as usual.
+            else {
+                Ok(Redirect::to("/user").into_response())
+            }
+
+        }
+        else {
+            // This connection does not exist in the DB.
+            println!("Connection does not exist");
+
+            // If the user isn't logged in, create a new account for them.
+            let account_to_connect_to = if logged_in_user.is_some() { logged_in_user.unwrap() } else {
+                User::create_in_db(&db_connection, &get_display_name(&user_info)).await
+            };
+
+            // Connect the OAuth method to the user we now have.
+            OAuth2Association {
+                provider: provider,
+                provider_user_id: user_id,
+            }.associate_with_user(&db_connection, &account_to_connect_to).await;
+
+            let user_session = UserSession::create_new_session(&db_connection, &account_to_connect_to).await;
+
+            cookie_jar.add(user_session.to_cookie());
+
+            Ok(Redirect::to("/user").into_response())
+        }
+    }

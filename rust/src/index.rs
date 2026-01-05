@@ -1,9 +1,9 @@
 use axum::{
-    extract::{OriginalUri, State}, response::Html, routing::get, Router};
+    Router, extract::{OriginalUri, State}, response::{Html, Response}, routing::get};
 use askama::{Template};
 use http::Uri;
 use rand::seq::IndexedRandom;
-use crate::{test_data, user::User, utils};
+use crate::{RootErrors, test_data, user::User, utils};
 use lazy_static::lazy_static;
 use crate::{ServerState, characters};
 
@@ -54,7 +54,8 @@ struct FrontpageTemplate<'a> {
 async fn homepage(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
-    ) -> Html<String> {
+    cookie_jar: tower_cookies::Cookies
+    ) -> Result<Response, RootErrors> {
     let random_subtitle = {
         let statement = "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;"; 
 
@@ -70,8 +71,8 @@ async fn homepage(
 
     let birthday_characters = characters::BaseCharacter::get_birthday_characters(state.db_pool.get().await.unwrap()).await;
 
-    FrontpageTemplate {
-        user: None,
+    Ok(utils::template_to_response(FrontpageTemplate {
+        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
         original_uri,
 
         buttons: &FRONTPAGE_ITEMS,
@@ -79,5 +80,5 @@ async fn homepage(
         random_ad: &test_data::get_frontpage_ads().choose(&mut rand::rng()).unwrap(),
         birthday_characters,
         today_date: &utils::format_date_to_human_readable(chrono::Local::now().into())
-    }.render().unwrap().into()
+    }))
 }
