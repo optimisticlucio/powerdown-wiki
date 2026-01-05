@@ -115,10 +115,13 @@ pub async fn add_art(
             // TODO: RESIZE THUMBNAIL
             columns.push("thumbnail".into());
 
-            let temp_thumbnail_key = Url::parse(&page_art.base_art.thumbnail_key)
-                .map_err(|_| RootErrors::BAD_REQUEST(original_uri, cookie_jar, format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key)))?
-                .path().trim_start_matches("/").trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
-                .to_owned();
+            let temp_thumbnail_key = match Url::parse(&page_art.base_art.thumbnail_key) {
+                Err(err) => return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key))),
+                Ok(parsed_thumbnail_url) => parsed_thumbnail_url
+                    .path().trim_start_matches("/")
+                    .trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
+                    .to_owned()
+            };
 
             values.push(&temp_thumbnail_key); 
 
@@ -127,6 +130,13 @@ pub async fn add_art(
 
             columns.push("is_nsfw".into());
             values.push(&page_art.base_art.is_nsfw);
+
+            let uploading_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+            if uploading_user.is_some() {
+                columns.push("uploading_user_id".into());
+                values.push(&uploading_user.as_ref().unwrap().id);
+            }
 
             if let Some(description) = &page_art.description {
                 // TODO: SANITIZE

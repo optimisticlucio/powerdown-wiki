@@ -23,7 +23,12 @@ CREATE TABLE art (
     description text CHECK (TRIM(description) != ''),
 
     is_nsfw boolean NOT NULL DEFAULT FALSE, --TODO: Should we have other flags? This is clearly not a tag, it has unique behaviour.
-    post_state art_post_state NOT NULL DEFAULT 'public'
+    post_state art_post_state NOT NULL DEFAULT 'public',
+
+    uploading_user_id integer -- If NULL, points to "Unknown User", to handle deleted accounts or pre-website archival.
+        REFERENCES site_user(id)
+        ON DELETE SET NULL
+        DEFAULT NULL,
 
     CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
