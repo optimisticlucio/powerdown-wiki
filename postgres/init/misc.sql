@@ -4,7 +4,7 @@ CREATE TABLE misc (
     
     title text NOT NULL,
     description text NOT NULL,
-    thumbnail text, -- TODO: Not null? Maybe?
+    thumbnail text, 
     url text NOT NULL
 );
 

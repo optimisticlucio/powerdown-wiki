@@ -17,6 +17,7 @@ mod errs;
 mod stories;
 mod user;
 mod art;
+mod misc;
 mod askama;
 mod server_state;
 
@@ -32,6 +33,7 @@ pub fn router(state: ServerState) -> Router<()> {
         .route_with_tsr("/art-archive", get(|uri: Uri| async move { Redirect::permanent(&format!("/art{}", uri.path()))}))
         .nest("/stories", stories::router())
         .nest("/user", user::router())
+        .nest("/misc", misc::router())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))

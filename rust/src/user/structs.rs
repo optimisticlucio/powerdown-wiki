@@ -29,6 +29,23 @@ pub enum UserType {
     Superadmin
 }
 
+/// A struct representing the permissions we give each user type. Should only be accessed using the .perms() function, and never constructed.
+#[derive(Clone, Copy)]
+pub struct UserPermissions {
+    /// Whether the given user type can post art to the art section.
+    pub can_post_art: bool,
+    /// Whether the given user type can create new characters.
+    pub can_post_characters: bool,
+    /// Whether the given user type can modify the misc section of the site.
+    pub can_modify_misc: bool,
+    /// Whether the given user type can turn other people into admins.
+    pub can_promote_to_admin: bool,
+    /// Whether the given user type can modify other users' types, except turning into admin.
+    pub can_modify_user_type: bool,
+    /// Whether the given user can ban other users from the site.
+    pub can_ban_users: bool,
+}
+
 pub struct UserSession {
     pub user: User,
     pub creation_time: DateTime<Utc>,
@@ -116,6 +133,38 @@ impl User {
 impl PartialEq for User {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+impl UserType {
+    /// Returns the given user type's permissions.
+    pub fn permissions(&self) -> UserPermissions {
+        match self {
+            Self::Normal => UserPermissions { 
+                can_post_art: true,
+                can_post_characters: false,
+                can_modify_misc: false,
+                can_ban_users: false,
+                can_promote_to_admin: false,
+                can_modify_user_type: false
+            },
+            Self::Admin => UserPermissions {
+                can_post_art: true,
+                can_post_characters: true,
+                can_modify_misc: true,
+                can_ban_users: true,
+                can_modify_user_type: true,
+                can_promote_to_admin: false,
+            },
+            Self::Superadmin => UserPermissions {
+                can_post_art: true,
+                can_post_characters: true,
+                can_modify_misc: true,
+                can_ban_users: true,
+                can_modify_user_type: true,
+                can_promote_to_admin: true
+            }
+        }
     }
 }
 
