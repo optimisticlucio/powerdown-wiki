@@ -141,7 +141,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
 
     let db_connection = state.db_pool.get().await.unwrap();
 
-    // Did this discord user create an account already?
+    // Did this user create an account already?
     let access_token_user: Option<User> = provider.get_user_by_association(
         &db_connection,
         &user_id).await; 
@@ -177,7 +177,10 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
 
         // If the user isn't logged in, create a new account for them.
         let account_to_connect_to = if logged_in_user.is_some() { logged_in_user.unwrap() } else {
-            User::create_in_db(&db_connection, &get_display_name(&user_info)).await
+            // TODO: Download pfp. Insert into the following variable:
+            let user_existing_pfp: Option<Vec<u8>> = None;
+
+            User::create_in_db(&state, &db_connection, &get_display_name(&user_info), user_existing_pfp).await
         };
 
         // Connect the OAuth method to the user we now have.

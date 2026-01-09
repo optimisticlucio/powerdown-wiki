@@ -5,11 +5,14 @@ use derive_builder::Builder;
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
+use powerdown_wiki_macros::UserModified;
+
+use crate::user::User;
 
 #[derive(Clone, Deserialize)]
 pub struct BaseArt {
     #[serde(default)]
-    db_id: i32,
+    pub id: i32,
     pub title: String,
     pub creators: Vec<String>,
     pub thumbnail_key: String,
@@ -36,11 +39,13 @@ pub struct PageArt {
     #[serde(default)]
     pub art_keys: Vec<String>,
     pub creation_date: chrono::NaiveDate,
+    #[serde(default)]
+    pub uploading_user: Option<User>,
 }
 
 impl BaseArt {
     /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
-    pub async fn get_art_from_index(db_connection: Object<Manager>, index: i64, amount_to_return: i64, search_parameters: &ArtSearchParameters) -> Vec<Self>{
+    pub async fn get_art_from_index(db_connection: &Object<Manager>, index: i64, amount_to_return: i64, search_parameters: &ArtSearchParameters) -> Vec<Self>{
         // TODO: Narrow down select so it runs faster.
         let mut query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&amount_to_return, &index];
 
@@ -58,7 +63,7 @@ impl BaseArt {
     /// Converts a DB row with the relevant info to a BaseArt struct.
     fn from_db_row(row: &Row) -> Self {
         BaseArt {
-            db_id: row.get("id"),
+            id: row.get("id"),
             title: row.get("title"),
             creators: row.get("creators"),
             thumbnail_key: row.get("thumbnail"),
@@ -71,7 +76,7 @@ impl BaseArt {
 
     /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
     /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
-    pub async fn get_unused_id(db_connection: Object<Manager>) -> i32 {
+    pub async fn get_unused_id(db_connection: &Object<Manager>) -> i32 {
         let random_page_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
 
         // There's a very slight chance this operation panics on correct behaviour
@@ -91,7 +96,7 @@ impl BaseArt {
 }
 
 impl PageArt {
-    pub async fn get_by_slug(db_connection: Object<Manager>, page_slug: &str) -> Option<Self> {
+    pub async fn get_by_slug(db_connection: &Object<Manager>, page_slug: &str) -> Option<Self> {
         let requested_art = db_connection.query_one(
             "SELECT * FROM art WHERE page_slug=$1",
             &[&page_slug]).await
@@ -101,7 +106,7 @@ impl PageArt {
     }
 
     /// Converts a DB row with the relevant info to a PageArt struct.
-    async fn from_db_row(db_connection: Object<Manager>, row: &Row) -> Self {
+    async fn from_db_row(db_connection: &Object<Manager>, row: &Row) -> Self {
         let art_id: i32 = row.get("id");
 
         // Get the relevant art URLs from the art_file table.
@@ -118,12 +123,18 @@ impl PageArt {
 
         let art_keys = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>(); 
 
+        let uploading_user_id: Option<i32> = row.get("uploading_user_id");
+        let uploading_user = if let Some(user_id) = uploading_user_id {
+            User::get_by_id(&db_connection, &user_id).await
+        } else { None };
+
         PageArt {
             base_art: BaseArt::from_db_row(row),
             description: row.get("description"),
             tags: row.try_get("tags").unwrap_or(Vec::new()),
             art_keys,
-            creation_date: row.get("creation_date")
+            creation_date: row.get("creation_date"),
+            uploading_user,
         }
     }
 

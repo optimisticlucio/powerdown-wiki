@@ -13,11 +13,13 @@ use tower_cookies::Cookies;
 mod page;
 mod structs;
 mod post;
+mod edit;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
         .route_with_tsr("/new", post(post::add_art).get(post::art_posting_page)).layer(DefaultBodyLimit::max(50 * 1000 * 1000)) // Upload limit of 50MB 
-        .route_with_tsr("/{art_slug}", get(page::art_page)) 
+        .route_with_tsr("/{art_slug}", get(page::art_page).delete(page::delete_art_page)) 
+        .route_with_tsr("/{art_slug}/edit", get(edit::edit_art_page))
 }
 
 #[derive(Template)] 
@@ -52,22 +54,19 @@ async fn art_index(
     // Static Values
     const AMOUNT_OF_ART_PER_PAGE: i64 = 24;
 
+    let db_connection = state.db_pool.get().await.unwrap();
+
     let random_quote = {
         let association = if query_params.is_nsfw { "sex_joke" } else { "quote" };
 
         let statement = format!("SELECT * FROM quote WHERE association = '{}' ORDER BY RANDOM() LIMIT 1;", association); 
 
-        match state.db_pool.get().await {
-            // TODO: Turn this unwrap into something that handles error better.
-            Ok(db_connection) => 
-                db_connection.query(&statement, &[]).await.unwrap()
-                    .get(0).unwrap()
-                    .get(0),
-            _ => "Insert funny text here.".to_owned() // "Oh shit it broke" text that won't seem too odd for a random user.
-        }
+        db_connection.query(&statement, &[]).await.unwrap()
+            .get(0).unwrap()
+            .get(0)
     };
 
-    let total_amount_of_art = get_total_amount_of_art(state.db_pool.get().await.unwrap(), &query_params).await.unwrap();
+    let total_amount_of_art = get_total_amount_of_art(&db_connection, &query_params).await.unwrap();
 
     // Total / per_page, rounded up. 
     let total_pages_available_for_search =  (total_amount_of_art + AMOUNT_OF_ART_PER_PAGE - 1) / AMOUNT_OF_ART_PER_PAGE;
@@ -76,7 +75,7 @@ async fn art_index(
     let page_number_to_show = cmp::max(1, min(total_pages_available_for_search, query_params.page));
 
     let art_pieces = structs::BaseArt::get_art_from_index(
-            state.db_pool.get().await.unwrap(), 
+            &db_connection, 
             (page_number_to_show - 1) * AMOUNT_OF_ART_PER_PAGE,
             AMOUNT_OF_ART_PER_PAGE.into(),
             &query_params
@@ -112,7 +111,7 @@ async fn art_index(
 }
 
 /// Returns the total amount of art currently in the db. May be given tags to constrain the search
-pub async fn get_total_amount_of_art(db_connection: Object<Manager>, search_params: &ArtSearchParameters) -> Result<i64, Box<dyn std::error::Error>> {
+pub async fn get_total_amount_of_art(db_connection: &Object<Manager>, search_params: &ArtSearchParameters) -> Result<i64, Box<dyn std::error::Error>> {
     let mut query_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
     let query_where = search_params.get_postgres_where(&mut query_params);

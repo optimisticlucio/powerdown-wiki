@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc, Duration};
 use rand::{Rng, distr::Alphanumeric};
+use serde::Deserialize;
 use tower_cookies::cookie;
 use rand::distr::SampleString;
 use std::net::{SocketAddr, SocketAddrV4};
@@ -12,16 +13,17 @@ use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 
 use crate::{RootErrors, ServerState};
 
+#[derive(Clone, Deserialize)]
 pub struct User {
     pub id: i32,
     pub user_type: UserType,
 
     /// The display name is not unique. It can have spaces, etc! If you need something that's 100% tied to this user, use the ID.
     pub display_name: String,
-    //pub profile_pic_s3_key: String, // The S3 key of their pfp image. Assumed to be in public bucket. // TODO
+    pub profile_pic_s3_key: Option<String>, // The S3 key of their pfp image. Assumed to be in public bucket. 
 }
 
-#[derive(FromSql, ToSql, Debug)]
+#[derive(FromSql, ToSql, Debug, Clone, Deserialize)]
 #[postgres(name="user_type", rename_all = "snake_case")]
 pub enum UserType {
     Normal,
@@ -44,6 +46,8 @@ pub struct UserPermissions {
     pub can_modify_user_type: bool,
     /// Whether the given user can ban other users from the site.
     pub can_ban_users: bool,
+    /// Whether the given user type can modify content posted by other users, like stories or art.
+    pub can_modify_others_content: bool,
 }
 
 pub struct UserSession {
@@ -92,6 +96,7 @@ impl User {
             id: row.get("id"),
             display_name: row.get("display_name"),
             user_type: row.get("user_type"),
+            profile_pic_s3_key: row.get("profile_picture_s3_key"),
         }
     }
 
@@ -110,12 +115,13 @@ impl User {
     }
 
     /// Creates a new user in the DB, returns the created user.
-    pub async fn create_in_db(db_connection: &Object<Manager>, display_name: &str) -> Self {
+    pub async fn create_in_db(server_state: &ServerState, db_connection: &Object<Manager>, display_name: &str, pfp_file: Option<Vec<u8>>) -> Self {
         let query = "INSERT INTO site_user (id,display_name) VALUES ($1,$2) RETURNING *";
 
         // To make sure the ID is fully unique, we'll create it just before inserting and let the DB assure it is unique.
         // If the code verifies its uniqueness we run into all sorts of race conditions.
-        loop {
+        let mut created_user: Option<User> = None;
+        while created_user.is_none() {
             let random_user_id = rand::rng().random_range(1..i32::MAX); // Best not to have negative IDs.
 
             let result_of_insert = db_connection.query_one(query, &[&random_user_id, &display_name])
@@ -123,10 +129,50 @@ impl User {
 
             // If the insert was successful, return the created user!
             if let Ok(successful_user_row) = result_of_insert {
-                return Self::from_row(successful_user_row);
+                created_user =  Some(Self::from_row(successful_user_row));
             }
         }
 
+        let successfully_created_user = created_user.unwrap();
+
+        // User is created? Splendid. Now let's get some info that we're either unsure about or is dependent on the ID.
+        
+        // If we were given a pfp file, let's put it in S3.
+        if let Some(pfp_file) = pfp_file {
+            let converted_file = crate::utils::file_compression::compress_image_lossless(pfp_file.to_vec(), None)
+            .unwrap_or(pfp_file.to_vec()); // If can't compress it, just send back the original untouched.
+
+            let s3_client = server_state.s3_client.clone();
+
+            let target_file_key: String = format!("user/profile_picture/{}", successfully_created_user.id); 
+
+            s3_client.put_object()
+                .bucket(&server_state.config.s3_public_bucket)
+                .key(&target_file_key)
+                .body(converted_file.into())
+                .send()
+                .await
+                .map_err(|err| {
+                    eprintln!("[CREATE USER IN DB] Failed to upload pfp to target {target_file_key} due to an error during upload: {}", err.to_string());
+                }).unwrap();
+        }
+
+        successfully_created_user
+    }
+
+    /// Returns a URL pointing towards the default pfp image.
+    pub fn get_default_pfp_url() -> &'static str {
+        "/static/pd_logo.svg"
+    }
+
+    /// Returns a URL pointing towards the given user's PFP.
+    pub fn get_pfp_url(&self) -> String {
+        if let Some(profile_pic_s3_key) = &self.profile_pic_s3_key {
+            crate::utils::get_s3_public_object_url(profile_pic_s3_key)
+        }
+        else {
+            Self::get_default_pfp_url().to_string()
+        }
     }
 }
 
@@ -146,7 +192,8 @@ impl UserType {
                 can_modify_misc: false,
                 can_ban_users: false,
                 can_promote_to_admin: false,
-                can_modify_user_type: false
+                can_modify_user_type: false,
+                can_modify_others_content: false
             },
             Self::Admin => UserPermissions {
                 can_post_art: true,
@@ -155,6 +202,7 @@ impl UserType {
                 can_ban_users: true,
                 can_modify_user_type: true,
                 can_promote_to_admin: false,
+                can_modify_others_content: true,
             },
             Self::Superadmin => UserPermissions {
                 can_post_art: true,
@@ -162,7 +210,8 @@ impl UserType {
                 can_modify_misc: true,
                 can_ban_users: true,
                 can_modify_user_type: true,
-                can_promote_to_admin: true
+                can_promote_to_admin: true,
+                can_modify_others_content: true
             }
         }
     }
@@ -323,6 +372,13 @@ impl Oauth2Provider {
             _ => {
                 todo!("Requested an unimplemented oauth2 identification url");
             }
+        }
+    }
+
+    /// Returns a URL pointing towards an existing pfp the user has on the provider, if one exists
+    pub fn get_existing_user_pfp(&self, access_token: &str) -> Option<String> {
+        match self {
+            _ => None
         }
     }
 

@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["optimisticlucio <73440828+optimisticlucio@users.noreply.github.com>"]
 
 [dependencies]
+powerdown-wiki-macros = { path = "./powerdown-wiki-macros" }
 tower-service = "0.3.3"
 openidconnect = "4.0.1"
 lazy_static = "1.5.0"

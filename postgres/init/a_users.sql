@@ -14,9 +14,8 @@ CREATE TABLE site_user (
     id integer PRIMARY KEY, -- GENERATE THESE AS RANDOM INTEGERS IN CODE!
 
     display_name text NOT NULL CHECK (TRIM(display_name) != ''),
-    user_type user_type NOT NULL DEFAULT 'normal'
-    -- TODO: Add pfp.
-
+    user_type user_type NOT NULL DEFAULT 'superadmin', -- TODO: CHANGE TO NORMAL BEFORE PUTTING IN PROD!!!
+    profile_picture_s3_key text CHECK (TRIM(profile_picture_s3_key) != '') DEFAULT NULL -- If null, insert some default pfp. Points to the public bucket.
     -- TODO: Think of relevant fields.
 );
 

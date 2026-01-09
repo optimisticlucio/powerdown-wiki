@@ -6,6 +6,7 @@ use crate::{errs::RootErrors, user::User, ServerState, utils::template_to_respon
 use super::structs;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
+use aws_sdk_s3::{types::ObjectIdentifier};
 
 #[derive(Template)] 
 #[template(path = "art/page.html")]
@@ -13,6 +14,9 @@ struct ArtPage<'a> {
     user: Option<User>,
     original_uri: Uri,
     user_search_params: &'a structs::ArtSearchParameters,
+    
+    // Whether or not the user has the permissions to edit the page.
+    user_can_edit_page: bool,
 
     title: String,
     artists: Vec<String>,
@@ -39,15 +43,25 @@ pub async fn art_page(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
-    if let Some(requested_art) = structs::PageArt::get_by_slug(state.db_pool.get().await.unwrap(), &art_slug).await {
-        let (older_art_url, newer_art_url) = get_older_and_newer_art_slugs(&art_slug, &query_params, state.db_pool.get().await.unwrap()).await;
+    let db_connection = state.db_pool.get().await.unwrap();
+    if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
+        let (older_art_url, newer_art_url) = get_older_and_newer_art_slugs(&art_slug, &query_params, &db_connection).await;
         let art_urls = requested_art.get_art_urls();
+
+        let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+        let user_can_edit_page: bool = user.as_ref().is_some_and(
+            |user| user.user_type.permissions().can_modify_others_content ||
+                requested_art.uploading_user.as_ref().is_some_and(|uploading_user| uploading_user.id == user.id)
+            );
 
         Ok(template_to_response(
             ArtPage {
-                user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?, 
+                user, 
                 original_uri,
                 user_search_params: &query_params,
+
+                user_can_edit_page,
 
                 title: requested_art.base_art.title,
                 artists: requested_art.base_art.creators,
@@ -68,7 +82,7 @@ pub async fn art_page(
 
 /// Given an art piece's slug and any search parameters, returns the previous and next art pieces, relative to it.
 /// The first value is the older one, the second is the newer one.
-async fn get_older_and_newer_art_slugs(slug: &str, params: &structs::ArtSearchParameters, db_connection: Object<Manager>) -> (Option<String>, Option<String>) {
+async fn get_older_and_newer_art_slugs(slug: &str, params: &structs::ArtSearchParameters, db_connection: &Object<Manager>) -> (Option<String>, Option<String>) {
     let mut sql_params: Vec<&(dyn ToSql + Sync)>= vec![&slug];
 
     // This query uses LAG and LEAD to get the previous and next page slugs, ordered by creation date first, and the page slug second.
@@ -102,5 +116,71 @@ async fn get_older_and_newer_art_slugs(slug: &str, params: &structs::ArtSearchPa
         }
         
         (None, None)
+    }
+}
+
+/// Handle a user requesting to delete the page.
+pub async fn delete_art_page(
+    Path(art_slug): Path<String>,
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
+    let db_connection = state.db_pool.get().await.unwrap();
+    if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
+        if let Some(requesting_user) = User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+             // Ok first and foremost - can this user do this?
+            let user_can_delete_given_image = requesting_user.user_type.permissions().can_modify_others_content
+                || requested_art.uploading_user.is_some_and(|user| user == requesting_user);
+
+            // If not, gtfo.
+            if !user_can_delete_given_image {
+                return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "You do not have permission to delete this page.".to_string()))
+            }
+
+            // If so - let's start nuking stuff. First of all, take aim at the S3 bucket.
+            let s3_client = state.s3_client.clone();
+
+            // Get all of the art
+            let mut files_to_delete: Vec<ObjectIdentifier> = requested_art.art_keys
+                .iter().map(|key| ObjectIdentifier::builder().key(key).build().unwrap())
+                .collect();
+
+            // Add the thumbnail
+            files_to_delete.push(ObjectIdentifier::builder().key(requested_art.base_art.thumbnail_key).build().unwrap());
+
+            // now, KILL
+            s3_client.delete_objects()
+                .bucket(&state.config.s3_public_bucket)
+                .delete(aws_sdk_s3::types::Delete::builder()
+                .set_objects(
+                    Some(files_to_delete))
+                    .build()
+                    .unwrap()
+                )
+                .send()
+                .await
+                .map_err(|err| 
+                    {
+                        eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {:?}", &requested_art.base_art.id, &requested_art.base_art.title, err);
+                        RootErrors::INTERNAL_SERVER_ERROR
+                    }
+                )?;
+
+            // Now that everything else is complete, nuke the page from the DB.
+            const DELETION_QUERY: &str = "DELETE FROM art WHERE id=$1";
+            db_connection.execute(DELETION_QUERY, &[&requested_art.base_art.id]).await.unwrap();
+
+            // Yay! The page is deleted! :)
+            let mut not_found_but_204 = RootErrors::NOT_FOUND(original_uri, cookie_jar).into_response();
+            *not_found_but_204.status_mut() = axum::http::StatusCode::NO_CONTENT;
+            Ok(not_found_but_204)
+        }
+        else {
+            Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Only logged-in users can delete pages.".to_string()))
+        }
+    }
+    else {
+        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
     }
 }

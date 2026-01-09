@@ -55,6 +55,12 @@
         </a>
         {% endif %}
     </div>
+
+    <div class="upload-data"> 
+        {% if user_can_edit_page %}
+            <a href="./edit">Edit Page</a>
+        {% endif %}
+    </div>
 </div>
 
 {% endblock %}
