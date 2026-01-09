@@ -266,7 +266,7 @@ struct PresignedUrlsResponse {
 }
 
 #[derive(Template)] 
-#[template(path = "art/post.html")]
+#[template(path = "art/new.html")]
 struct ArtPostingPage {
     user: Option<User>,
     original_uri: Uri,
@@ -275,11 +275,12 @@ struct ArtPostingPage {
 pub async fn art_posting_page(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
-    ) -> Result<impl IntoResponse, RootErrors> {
+    cookie_jar: tower_cookies::Cookies,
+    ) -> Result<Response, RootErrors> {
     Ok (
         template_to_response(
             ArtPostingPage {
-                user: None, //TODO: Connect with user system.
+                user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
                 original_uri
             }
         )

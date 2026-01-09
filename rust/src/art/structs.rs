@@ -11,7 +11,7 @@ use crate::user::User;
 
 #[derive(Clone, Deserialize)]
 pub struct BaseArt {
-    #[serde(default)]
+    #[serde(skip)]
     pub id: i32,
     pub title: String,
     pub creators: Vec<String>,
@@ -39,7 +39,7 @@ pub struct PageArt {
     #[serde(default)]
     pub art_keys: Vec<String>,
     pub creation_date: chrono::NaiveDate,
-    #[serde(default)]
+    #[serde(skip)]
     pub uploading_user: Option<User>,
 }
 

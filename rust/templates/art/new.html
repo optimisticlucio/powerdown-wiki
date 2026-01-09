@@ -1,0 +1,29 @@
+{% extends "base-template.html" %}
+
+{% block title %}Create New Art{% endblock %}
+
+{% block customhead %}<script src="/static/js/art-page-upload.js" ></script>{% endblock %}
+
+{% block content %}
+<h1>Upload New Art Whoa</h1>
+
+<label for="postTitle">Post Title:</label>
+<input type="text" id="postTitle" required minLength="1"/>
+
+<label for="postCreationDate">Creation Date:</label>
+<input type="date" id="postCreationDate" required min="2016-01-01"/>
+
+<label for="postIsNsfw">Post is NSFW: <input type="checkbox" id="postIsNsfw" /></label>
+
+<label for="postArtists">Artists (If multiple, separate with commas!) : </label>
+<input type="text" id="postArtists" required minLength="1"/>
+
+<label for="postTags">Tags (If multiple, separate with commas!) : </label>
+<input type="text" id="postTags"/>
+
+<p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage"/> </br>
+<div id="postImages">
+</div>
+
+<button class="light" onclick="attemptNewArtUpload()">Upload Art</button>
+{% endblock %}
