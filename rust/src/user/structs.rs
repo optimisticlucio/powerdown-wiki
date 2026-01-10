@@ -14,7 +14,7 @@ use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 use crate::{RootErrors, ServerState};
 
 /// Relative links to various default profile pictures users may have.
-const USER_DEFAULT_PFPS: [&str; 9] = 
+const USER_DEFAULT_PFPS: [&str; 9] =
 [
     "/static/img/pd_logo.svg",
     "/static/img/user/default_pfps/nikki.jpg",
@@ -34,7 +34,7 @@ pub struct User {
 
     /// The display name is not unique. It can have spaces, etc! If you need something that's 100% tied to this user, use the ID.
     pub display_name: String,
-    pub profile_pic_s3_key: Option<String>, // The S3 key of their pfp image. Assumed to be in public bucket. 
+    pub profile_pic_s3_key: Option<String>, // The S3 key of their pfp image. Assumed to be in public bucket.
 }
 
 #[derive(FromSql, ToSql, Debug, Clone, Deserialize)]
@@ -69,7 +69,7 @@ pub struct UserSession {
     pub creation_time: DateTime<Utc>,
     //pub session_ip: SocketAddr, // TODO: Implement
     /// A string representing this specific session. Long enough to be somewhat secure.
-    pub session_id: String 
+    pub session_id: String
 
 }
 
@@ -97,7 +97,7 @@ impl User {
 
         let resulted_row = db_connection.query_opt(query, &[&given_id])
                 .await.unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
-        
+
         match resulted_row {
             None => None,
             Some(row) => Some(Self::from_row(row))
@@ -150,7 +150,7 @@ impl User {
         let successfully_created_user = created_user.unwrap();
 
         // User is created? Splendid. Now let's get some info that we're either unsure about or is dependent on the ID.
-        
+
         // If we were given a pfp file, let's put it in S3.
         if let Some(pfp_file) = pfp_file {
             let converted_file = crate::utils::file_compression::compress_image_lossless(pfp_file.to_vec(), None)
@@ -158,7 +158,7 @@ impl User {
 
             let s3_client = server_state.s3_client.clone();
 
-            let target_file_key: String = format!("user/profile_picture/{}", successfully_created_user.id); 
+            let target_file_key: String = format!("user/profile_picture/{}", successfully_created_user.id);
 
             s3_client.put_object()
                 .bucket(&server_state.config.s3_public_bucket)
@@ -202,7 +202,7 @@ impl UserType {
     /// Returns the given user type's permissions.
     pub fn permissions(&self) -> UserPermissions {
         match self {
-            Self::Normal => UserPermissions { 
+            Self::Normal => UserPermissions {
                 can_post_art: true,
                 can_post_characters: false,
                 can_modify_misc: false,
@@ -248,7 +248,7 @@ impl UserSession {
 
         let resulted_row = db_connection.query_opt(QUERY, &[&given_id])
                 .await.unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
-        
+
         match resulted_row {
             None => None,
             Some(row) => {
@@ -261,7 +261,7 @@ impl UserSession {
                     let _ = db_connection.execute(DELETE_QUERY, &[&given_id]).await;
 
                     None
-                }   
+                }
                 else {
                     Some(parsed_session)
                 }
@@ -298,13 +298,13 @@ impl UserSession {
 
     /// Creates a cookie of the given session to pass to the user.
     pub fn to_cookie(&self) -> Cookie<'static> {
-        let mut cookie = Cookie::new("USER_SESSION_ID", self.session_id.clone()); 
-        
+        let mut cookie = Cookie::new("USER_SESSION_ID", self.session_id.clone());
+
         cookie.set_same_site(SameSite::Lax);
         cookie.set_http_only(true);
         cookie.set_max_age(cookie::time::Duration::seconds_f64(USER_SESSION_MAX_LENGTH.as_seconds_f64()));
         cookie.set_path("/");
-        
+
         cookie
     }
 }
@@ -315,7 +315,7 @@ impl OAuth2Association {
         const QUERY: &str = "INSERT INTO user_oauth_association (user_id,provider,oauth_user_id) VALUES ($1,$2,$3)";
 
         let _ = db_connection.execute(QUERY, &[&user.id, &self.provider, &self.provider_user_id])
-                .await.unwrap(); 
+                .await.unwrap();
     }
 }
 
@@ -358,13 +358,13 @@ impl Oauth2Provider {
 
                 let redirect_uri = self.get_redirect_uri();
                 let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
-                
+
                 format!("https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={encoded_redirect_uri}")
             }
         }
     }
 
-    /// Returns the relevant URL to send the access token. 
+    /// Returns the relevant URL to send the access token.
     pub fn get_token_url(&self) -> String {
         match self {
             Oauth2Provider::Discord => {
@@ -407,7 +407,7 @@ impl Oauth2Provider {
 
         let resulted_row = db_connection.query_opt(query, &[&self, &oauth_user_id])
                 .await.unwrap(); // Can unwrap here because access token uniqueness enforced by DB.
-        
+
         resulted_row.map(User::from_row)
     }
 }

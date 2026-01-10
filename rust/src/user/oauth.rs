@@ -12,13 +12,13 @@ pub fn router() -> Router<ServerState> {
         .route_with_tsr("/github", get(github))
 }
 
-/// Recieves the Discord Oauth callback. 
+/// Recieves the Discord Oauth callback.
 /// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
 /// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
 /// If the user is logged in and this oauth method already exists, throws an error.
 #[axum::debug_handler]
 pub async fn discord(
-    State(state): State<ServerState>, 
+    State(state): State<ServerState>,
     Query(query): Query<OAuthQuery>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
@@ -27,12 +27,12 @@ pub async fn discord(
     |discord_user: &DiscordUser| discord_user.global_name.as_ref().unwrap_or(&discord_user.username).clone(),
     |discord_user: &DiscordUser| discord_user.id.clone(),
     Oauth2Provider::Discord,
-    "DISCORD_OAUTH2_CLIENT_ID", 
+    "DISCORD_OAUTH2_CLIENT_ID",
     "DISCORD_OAUTH2_CLIENT_SECRET",
         state, query, original_uri, cookie_jar).await
 }
 
-#[derive(Deserialize)] 
+#[derive(Deserialize)]
 /// The info we get from discord after running users/@me, and more specifically, the info we care for
 pub struct DiscordUser {
     id: String,
@@ -40,27 +40,27 @@ pub struct DiscordUser {
     global_name: Option<String>,
 }
 
-/// Recieves the Google Oauth callback. 
+/// Recieves the Google Oauth callback.
 /// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
 /// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
 /// If the user is logged in and this oauth method already exists, throws an error.
 #[axum::debug_handler]
 pub async fn google(
-    State(state): State<ServerState>, 
+    State(state): State<ServerState>,
     Query(query): Query<OAuthQuery>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     oauth_process("Google",
         |user: &GoogleUser| user.given_name.clone(),
-        |user: &GoogleUser| user.id.clone(), 
+        |user: &GoogleUser| user.id.clone(),
         Oauth2Provider::Google,
         "GOOGLE_OAUTH2_CLIENT_ID",
         "GOOGLE_OAUTH2_CLIENT_SECRET",
         state, query, original_uri, cookie_jar).await
 }
 
-#[derive(Deserialize)] 
+#[derive(Deserialize)]
 pub struct GoogleUser {
     id: String,
     email: String,
@@ -69,20 +69,20 @@ pub struct GoogleUser {
     picture: String // URL to their pfp image
 }
 
-/// Recieves the Github Oauth callback. 
+/// Recieves the Github Oauth callback.
 /// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
 /// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
 /// If the user is logged in and this oauth method already exists, throws an error.
 #[axum::debug_handler]
 pub async fn github(
-    State(state): State<ServerState>, 
+    State(state): State<ServerState>,
     Query(query): Query<OAuthQuery>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     oauth_process("Github",
         |user: &GithubUser| user.login.clone(),
-        |user: &GithubUser| user.id.to_string(), 
+        |user: &GithubUser| user.id.to_string(),
         Oauth2Provider::Github,
         "GITHUB_OAUTH2_CLIENT_ID",
         "GITHUB_OAUTH2_CLIENT_SECRET",
@@ -103,7 +103,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
         provider: Oauth2Provider,
         client_id_cookie_name: &'a str,
         client_secret_cookie_name: &'a str,
-        state: ServerState, 
+        state: ServerState,
         query: OAuthQuery,
         original_uri: Uri,
         cookie_jar: tower_cookies::Cookies,
@@ -135,7 +135,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
             println!("[OAUTH2; {}] Failed sending request for access token: {:?}", process_name_for_debug, err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
         })?;
-    
+
     let text_response = response.text().await.unwrap();
     // For some reason, converting the response to json directly results in a parse error. Can't wrap my head around it, but this seems to work.
     let tokens: OAuthTokens =  serde_json::from_str(&text_response)
@@ -155,7 +155,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
             println!("[OAUTH2; {}] Failed to build identification request client: {:?}", process_name_for_debug, err);
             RootErrors::INTERNAL_SERVER_ERROR
         })?
-        .get(provider.get_identification_url()) 
+        .get(provider.get_identification_url())
         .header("Authorization", format!("Bearer {}", &tokens.access_token))
         .header(USER_AGENT, "powerdown-wiki")
         .send().await
@@ -178,14 +178,14 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
     // Did this user create an account already?
     let access_token_user: Option<User> = provider.get_user_by_association(
         &db_connection,
-        &user_id).await; 
-    
+        &user_id).await;
+
     // Additionally, Is the user actively logged in?
     let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(existing_user_with_connection) = access_token_user {
         // This connection exists in the DB.
-        
+
         // If the user is logged in, some error is gonna be thrown.
         if let Some(logged_in_user) = logged_in_user {
             if logged_in_user == existing_user_with_connection {
@@ -235,7 +235,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
 pub struct OAuthQuery {
     state: Option<String>,
     /// The authorization code we send to discord to get the access token and refresh token.
-    code: Option<String>, 
+    code: Option<String>,
 }
 
 /// Struct to handle the end of the oauth handshake

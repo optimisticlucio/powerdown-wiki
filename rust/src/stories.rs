@@ -22,14 +22,14 @@ pub fn router() -> Router<ServerState> {
             .route_with_tsr("/{story_slug}", get(page::story_page))
 }
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "stories/index.html")]
 struct StoryIndex {
         user: Option<User>,
         original_uri: Uri,
 
         stories: Vec<BaseStory>,
-        
+
         current_page_number: i64,
         total_page_number: i64,
 
@@ -49,15 +49,15 @@ pub async fn story_index(
 
     let total_story_amount = BaseStory::get_total_amount(state.db_pool.get().await.unwrap(), &search_params).await.unwrap();
 
-    // Total / per_page, rounded up. 
+    // Total / per_page, rounded up.
     let total_page_number = (total_story_amount + AMOUNT_OF_STORIES_PER_PAGE - 1) / AMOUNT_OF_STORIES_PER_PAGE;
 
     // The requested page, with a minimal value of 1 and maximal value of the total pages available.
     let page_number_to_show = cmp::max(1, min(total_page_number, search_params.page));
 
     let relevant_stories = BaseStory::get_art_from_index(
-            state.db_pool.get().await.unwrap(), 
-            (page_number_to_show - 1) * AMOUNT_OF_STORIES_PER_PAGE, 
+            state.db_pool.get().await.unwrap(),
+            (page_number_to_show - 1) * AMOUNT_OF_STORIES_PER_PAGE,
             AMOUNT_OF_STORIES_PER_PAGE
         ).await;
 
@@ -71,18 +71,18 @@ pub async fn story_index(
             current_page_number: page_number_to_show,
             total_page_number,
 
-            first_page_url: if page_number_to_show <= 2 { None } else { 
+            first_page_url: if page_number_to_show <= 2 { None } else {
                 Some(get_search_url(StorySearchParameters { page: 1, ..search_params.clone()}))
-            }, 
-            prev_page_url: if page_number_to_show == 1 { None } else { 
+            },
+            prev_page_url: if page_number_to_show == 1 { None } else {
                 Some(get_search_url(StorySearchParameters { page: page_number_to_show - 1 , ..search_params.clone()}))
-            }, 
-            next_page_url: if page_number_to_show >= total_page_number { None } else { 
+            },
+            next_page_url: if page_number_to_show >= total_page_number { None } else {
                 Some(get_search_url(StorySearchParameters { page: page_number_to_show + 1 , ..search_params.clone()}))
-            }, 
-            last_page_url: if page_number_to_show >= total_page_number - 1  { None } else { 
+            },
+            last_page_url: if page_number_to_show >= total_page_number - 1  { None } else {
                 Some(get_search_url(StorySearchParameters { page: total_page_number , ..search_params.clone()}))
-            }, 
+            },
         }
     ))
 }

@@ -5,7 +5,7 @@ use tower_cookies::Cookies;
 use axum::{extract::{OriginalUri, Path, Query, State}, response::{IntoResponse, Response}};
 use super::structs;
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "art/edit.html")]
 struct EditArtPage {
     user: Option<User>,

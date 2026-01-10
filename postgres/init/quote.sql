@@ -62,7 +62,7 @@ FROM unnest(ARRAY[
     'Now featuring quantum cup sizes!'
     ]) AS joke;
 
-    
+
 INSERT INTO quote(line, association)
 SELECT joke, 'quote'
 FROM unnest(ARRAY[

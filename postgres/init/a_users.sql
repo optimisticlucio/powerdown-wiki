@@ -23,10 +23,10 @@ CREATE TABLE site_user (
 CREATE TABLE user_oauth_association (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 
-    user_id integer NOT NULL 
+    user_id integer NOT NULL
         REFERENCES site_user(id)
         ON DELETE CASCADE,
-    
+
     provider oauth_provider NOT NULL,
 
     oauth_user_id text NOT NULL, -- The user ID, or equivalent thereof, on the provider's DB
@@ -39,7 +39,7 @@ CREATE TABLE user_session (
     user_id integer NOT NULL
         REFERENCES site_user(id)
         ON DELETE CASCADE,
-    
+
     session_id text PRIMARY KEY, -- Session ID should be a long, random string.
 
     creation_time timestamp with time zone NOT NULL DEFAULT NOW() -- For the love of god don't set this manually.

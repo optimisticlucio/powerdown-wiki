@@ -5,7 +5,7 @@ CREATE TABLE art_comment (
     under_post int NOT NULL-- The post this was commented on.
         REFERENCES art(id)
         ON DELETE CASCADE,
-    
+
     poster_id integer -- If NULL, points to "Unknown User", to handle deleted accounts and such.
         REFERENCES site_user(id)
         ON DELETE SET NULL,

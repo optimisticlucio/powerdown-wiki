@@ -68,7 +68,7 @@ pub async fn add_art(
                     .to_owned()
             };
 
-            values.push(&temp_thumbnail_key); 
+            values.push(&temp_thumbnail_key);
 
             columns.push("tags".into());
             values.push(&page_art.tags);
@@ -101,7 +101,7 @@ pub async fn add_art(
                     RootErrors::INTERNAL_SERVER_ERROR
                 })?
                 .get(0);
-                
+
 
             // ---- We have the ID? process the thumbnail and update. ----
             let target_s3_folder = format!("art/{art_id}");
@@ -122,7 +122,7 @@ pub async fn add_art(
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
             let query = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
-            
+
             let mut art_upload_tasks = JoinSet::new();
 
             // The names of the files we're supposed to create, incase the upload fails.
@@ -160,7 +160,7 @@ pub async fn add_art(
                         let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
                         values.push(&art_id);
                         values.push(&index);
-                        values.push(&file_key); 
+                        values.push(&file_key);
 
                         db_connection.execute(query, &values).await
                             .map_err(|err| err.to_string())
@@ -178,11 +178,11 @@ pub async fn add_art(
                 let file_keys_to_delete: Vec<String> = temp_file_keys.iter().map(|key|
                     format!("{target_s3_folder}/{}", key.split_terminator("/").last().unwrap())
                     ).collect();
-                
+
                 // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES.
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
-                
+
                 eprintln!("[ART POST] Failed to move files from temp to permanent location! [{}]",
                         failed_uploads.join(", "));
 
@@ -213,7 +213,7 @@ pub enum ArtPostingSteps {
         art_amount: u8 // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
     },
 
-    #[serde(rename="2")] 
+    #[serde(rename="2")]
     UploadMetadata(PageArt),
 }
 
@@ -223,7 +223,7 @@ struct PresignedUrlsResponse {
     art_presigned_urls: Vec<String>,
 }
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "art/new.html")]
 struct ArtPostingPage {
     user: Option<User>,
@@ -293,7 +293,7 @@ pub async fn edit_art_put_request (
                 columns.push("page_slug".into());
                 values.push(&sent_page_art.base_art.slug);
             }
-            
+
             if sent_page_art.creation_date != existing_art.creation_date {
                 columns.push("creation_date".into());
                 values.push(&sent_page_art.creation_date);
@@ -313,7 +313,7 @@ pub async fn edit_art_put_request (
                 columns.push("tags".into());
                 values.push(&sent_page_art.tags);
             }
-            
+
             if sent_page_art.base_art.is_nsfw != existing_art.base_art.is_nsfw {
                 columns.push("is_nsfw".into());
                 values.push(&sent_page_art.base_art.is_nsfw);
@@ -332,7 +332,7 @@ pub async fn edit_art_put_request (
             let query = format!(
                 "UPDATE art ({}) VALUES ({}) WHERE id={};",
                 columns.join(","),
-                (1..values.len() + 1).map(|i| format!("${i}")).collect::<Vec<_>>().join(","), 
+                (1..values.len() + 1).map(|i| format!("${i}")).collect::<Vec<_>>().join(","),
                 format!("${}",values.len() + 2)
             );
 
@@ -360,11 +360,11 @@ pub async fn edit_art_put_request (
 
 /// Given an amount of urls requested by the user, sends the user back the appropriate amount of new temp S3 presigned URLs. May also request an extra url for the thumbnail.
 async fn give_user_presigned_s3_urls(
-        requested_amount_of_urls: u8, 
-        including_thumbnail: bool, 
-        original_uri: Uri, 
-        cookie_jar: tower_cookies::Cookies, 
-        state: &ServerState) 
+        requested_amount_of_urls: u8,
+        including_thumbnail: bool,
+        original_uri: Uri,
+        cookie_jar: tower_cookies::Cookies,
+        state: &ServerState)
     -> Result<Response,RootErrors> {
     if requested_amount_of_urls < 1 {
         Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "art post must have at least one art piece".to_string()))
@@ -372,7 +372,7 @@ async fn give_user_presigned_s3_urls(
         Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "for the good of mankind, don't put that many art pieces in one post. split them up".to_string()))
     } else {
         let amount_of_presigned_urls_needed = requested_amount_of_urls + if including_thumbnail {1} else {0}; // The art, plus the thumbnail.
-        
+
         let temp_key_tasks: Vec<_> = (0..amount_of_presigned_urls_needed)
             .map(|_| {
                 let s3_client = state.s3_client.clone();
@@ -392,10 +392,10 @@ async fn give_user_presigned_s3_urls(
                         .await
                         .map(|x| x.uri().to_string())
                 })
-                
+
             })
             .collect();
-            
+
         let mut temp_keys_for_presigned = Vec::new();
 
         for task in temp_key_tasks {
@@ -429,6 +429,6 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
     }
 
     // TODO: Validate all of the given values make sense.
-    
+
     Ok(())
 }
