@@ -1,3 +1,5 @@
+#![deny(missing_debug_impl)]
+
 use powerdown_wiki::ServerState;
 use tower::Layer;
 use axum::{

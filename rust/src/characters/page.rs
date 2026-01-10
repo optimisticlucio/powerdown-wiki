@@ -6,7 +6,7 @@ use crate::{characters::{PageCharacter, structs::{InfoboxRow}}, errs::RootErrors
 use crate::utils::template_to_response;
 use comrak::{ markdown_to_html};
 
-#[derive(Template)] 
+#[derive(Debug, Template)]
 #[template(path = "characters/page.html")]
 struct CharacterPage<'a> {
     user: Option<User>,

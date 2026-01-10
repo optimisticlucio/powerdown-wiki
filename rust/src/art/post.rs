@@ -205,7 +205,7 @@ pub async fn add_art(
 
 
 /// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload art to the site.
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(tag = "step")]
 pub enum ArtPostingSteps {
     #[serde(rename = "1")]
@@ -217,13 +217,13 @@ pub enum ArtPostingSteps {
     UploadMetadata(PageArt),
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct PresignedUrlsResponse {
     thumbnail_presigned_url: Option<String>,
     art_presigned_urls: Vec<String>,
 }
 
-#[derive(Template)] 
+#[derive(Debug, Template)]
 #[template(path = "art/new.html")]
 struct ArtPostingPage {
     user: Option<User>,

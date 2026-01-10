@@ -22,7 +22,7 @@ pub fn router() -> Router<ServerState> {
         .route_with_tsr("/{art_slug}/edit", get(edit::edit_art_page))
 }
 
-#[derive(Template)] 
+#[derive(Debug, Template)]
 #[template(path = "art/index.html")]
 struct ArtIndexPage<'a> {
     user: Option<User>,

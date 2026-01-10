@@ -7,7 +7,7 @@ use crate::utils::template_to_response;
 use comrak::{ markdown_to_html};
 use ammonia::clean;
 
-#[derive(Template)] 
+#[derive(Debug, Template)]
 #[template(path = "stories/page.html")]
 struct StoryPage<'a> {
         user: Option<User>,

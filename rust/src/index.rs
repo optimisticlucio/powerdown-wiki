@@ -12,6 +12,7 @@ pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(homepage))
 }
 
+#[derive(Debug)]
 struct FrontpageItem {
     pub name: &'static str,
     pub url: &'static str,
@@ -38,7 +39,7 @@ lazy_static! {
     ];
 }
 
-#[derive(Template)] 
+#[derive(Debug, Template)]
 #[template(path = "index.html")]
 struct FrontpageTemplate<'a> {
     user: Option<User>,

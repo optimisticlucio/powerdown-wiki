@@ -7,7 +7,7 @@ use tokio::join;
 
 pub mod config;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ServerState {
     pub db_pool: Pool<Manager>,
     pub s3_client: aws_sdk_s3::Client, // Apparently cloning these doesn't cause race conditions. 

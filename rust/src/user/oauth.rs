@@ -32,7 +32,7 @@ pub async fn discord(
         state, query, original_uri, cookie_jar).await
 }
 
-#[derive(Deserialize)] 
+#[derive(Debug, Deserialize)]
 /// The info we get from discord after running users/@me, and more specifically, the info we care for
 pub struct DiscordUser {
     id: String,
@@ -60,7 +60,7 @@ pub async fn google(
         state, query, original_uri, cookie_jar).await
 }
 
-#[derive(Deserialize)] 
+#[derive(Debug, Deserialize)]
 pub struct GoogleUser {
     id: String,
     email: String,
@@ -89,7 +89,7 @@ pub async fn github(
         state, query, original_uri, cookie_jar).await
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct GithubUser {
     login: String, // The username
     id: i32,
@@ -231,7 +231,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
     }
 }
 /// Struct to handle query response to the oauth2 login.
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct OAuthQuery {
     state: Option<String>,
     /// The authorization code we send to discord to get the access token and refresh token.
@@ -239,7 +239,7 @@ pub struct OAuthQuery {
 }
 
 /// Struct to handle the end of the oauth handshake
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OAuthTokens {
     access_token: String,
