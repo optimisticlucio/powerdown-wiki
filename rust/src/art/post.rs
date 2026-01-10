@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
@@ -180,9 +181,23 @@ pub async fn add_art(
             
             let mut art_upload_tasks = JoinSet::new();
 
-            for (url, index) in page_art.art_keys.iter().zip(1i32..) {
+            // The names of the files we're supposed to create, incase the upload fails.
+            let temp_file_keys = page_art.art_keys.iter().map(|given_art_key| {
+                Ok(Url::parse(&given_art_key)
+                .map_err(|_| format!("Invalid Art Url: {}", &given_art_key))?
+                .path().trim_start_matches("/").trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
+                .to_owned())
+            }).collect::<Result<Vec<String>,String>>();
+
+            // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
+            let temp_file_keys = match temp_file_keys {
+                Err(err_string) =>  return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, err_string)),
+                Ok(temp_keys) => temp_keys,
+            };
+
+            for (s3_key, index) in temp_file_keys.iter().zip(1i32..) {
                 // Clone everything to move it into the async move.
-                let url = url.clone();
+                let s3_key = s3_key.clone();
                 let index = index.clone();
                 let art_id = art_id.clone();
                 let s3_client = state.s3_client.clone();
@@ -193,14 +208,9 @@ pub async fn add_art(
 
                 // tokio::spawn lets all the tasks run simultaneously, which is nice.
                 art_upload_tasks.spawn(async move {
-                        let temp_file_key = Url::parse(&url)
-                            .map_err(|_| format!("Invalid Thumbnail Url: {}", &url))?
-                            .path().trim_start_matches("/").trim_start_matches(&config.s3_public_bucket).trim_start_matches("/")
-                            .to_owned();
+                        let file_key = format!("{target_s3_folder}/{}", s3_key.split_terminator("/").last().unwrap());
 
-                        let file_key = format!("{target_s3_folder}/{}", temp_file_key.split_terminator("/").last().unwrap());
-
-                        utils::move_temp_s3_file(s3_client, &config, &temp_file_key, &public_bucket_key, &file_key).await
+                        utils::move_temp_s3_file(s3_client, &config, &s3_key, &public_bucket_key, &file_key).await
                             .map_err(|err| err.to_string())?;
 
                         let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
@@ -221,6 +231,10 @@ pub async fn add_art(
                 .collect();
 
             if !failed_uploads.is_empty() {
+                let file_keys_to_delete: Vec<String> = temp_file_keys.iter().map(|key|
+                    format!("{target_s3_folder}/{}", key.split_terminator("/").last().unwrap())
+                    ).collect();
+                
                 // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES.
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
@@ -286,3 +300,4 @@ pub async fn art_posting_page(
         )
     )
 }
+
