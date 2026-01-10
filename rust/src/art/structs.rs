@@ -5,8 +5,6 @@ use derive_builder::Builder;
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
-use powerdown_wiki_macros::UserModified;
-
 use crate::user::User;
 
 #[derive(Clone, Deserialize)]

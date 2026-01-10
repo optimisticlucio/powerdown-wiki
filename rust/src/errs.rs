@@ -9,10 +9,18 @@ use crate::user::User;
 use tower_cookies::Cookies;
 
 pub enum RootErrors {
+    /// User asked for something that the server doesn't recognize.
     NOT_FOUND(Uri, Cookies),
+    /// Part of my code ate shit and it's not the user's fault.
     INTERNAL_SERVER_ERROR,
+    /// My code took too long to respond.
     REQUEST_TIMEOUT,
-    BAD_REQUEST(Uri, Cookies, String)
+    /// Part of my code ate shit and it *is* the user's fault.
+    BAD_REQUEST(Uri, Cookies, String),
+    /// The user tried doing an action requiring to be logged in, and they aren't.
+    UNAUTHORIZED,
+    /// The user is logged in, and they don't have the permissions to do what they were doing.
+    FORBIDDEN,
 }
 
 impl IntoResponse for RootErrors {
@@ -21,7 +29,9 @@ impl IntoResponse for RootErrors {
             Self::NOT_FOUND(original_uri, cookie_jar) => page_not_found().into_response(),
             Self::INTERNAL_SERVER_ERROR => (StatusCode::INTERNAL_SERVER_ERROR, Html::from(INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone())).into_response(),
             Self::REQUEST_TIMEOUT => request_timeout().into_response(),
-            Self::BAD_REQUEST(original_uri, cookie_jar, elaboration) => bad_request(elaboration).into_response()
+            Self::BAD_REQUEST(original_uri, cookie_jar, elaboration) => bad_request(elaboration).into_response(),
+            Self::UNAUTHORIZED => unauthorized().into_response(),
+            Self::FORBIDDEN => forbidden().into_response(),
         }
     }
 }
@@ -58,4 +68,14 @@ fn request_timeout() -> impl IntoResponse{
 fn bad_request(elaboration: String) -> impl IntoResponse {
     (StatusCode::BAD_REQUEST,
     format!("Bad request: {}", elaboration))
+}
+
+fn unauthorized() -> impl IntoResponse {
+    (StatusCode::UNAUTHORIZED,
+    format!("Unauthorized! If you see this, you tried doing some action that needs to be logged in without being logged in. Log in dickhead. Also, if you see this, tell lucio to update this shit page."))
+}
+
+fn forbidden() -> impl IntoResponse {
+    (StatusCode::FORBIDDEN,
+    format!("You do not have the necessary permissions to do whatever you were trying to do."))
 }

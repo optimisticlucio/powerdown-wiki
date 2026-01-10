@@ -18,7 +18,7 @@ mod edit;
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(art_index))
         .route_with_tsr("/new", post(post::add_art).get(post::art_posting_page)).layer(DefaultBodyLimit::max(50 * 1000 * 1000)) // Upload limit of 50MB 
-        .route_with_tsr("/{art_slug}", get(page::art_page).delete(page::delete_art_page)) 
+        .route_with_tsr("/{art_slug}", get(page::art_page).delete(page::delete_art_page).put(post::edit_art_put_request).post(post::edit_art_put_request)) 
         .route_with_tsr("/{art_slug}/edit", get(edit::edit_art_page))
 }
 
