@@ -13,6 +13,17 @@ use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 
 use crate::{RootErrors, ServerState};
 
+/// Relative links to various default profile pictures users may have.
+const USER_DEFAULT_PFPS: [&str; 6] = 
+[
+    "/static/img/pd_logo.svg",
+    "/static/img/user/default_pfps/nikki.jpg",
+    "/static/img/user/default_pfps/kate.jpg",
+    "/static/img/user/default_pfps/fynn.jpg",
+    "/static/img/user/default_pfps/casti.jpg",
+    "/static/img/user/default_pfps/artemis.jpg",
+];
+
 #[derive(Clone, Deserialize)]
 pub struct User {
     pub id: i32,
@@ -160,9 +171,11 @@ impl User {
         successfully_created_user
     }
 
-    /// Returns a URL pointing towards the default pfp image.
-    pub fn get_default_pfp_url() -> &'static str {
-        "/static/pd_logo.svg"
+    /// Returns a URL pointing towards a default pfp image.
+    pub fn get_default_pfp_url(&self) -> &'static str {
+        let default_pfp_index = (self.id.abs() as usize) % USER_DEFAULT_PFPS.len();
+
+        return USER_DEFAULT_PFPS[default_pfp_index]
     }
 
     /// Returns a URL pointing towards the given user's PFP.
@@ -171,7 +184,7 @@ impl User {
             crate::utils::get_s3_public_object_url(profile_pic_s3_key)
         }
         else {
-            Self::get_default_pfp_url().to_string()
+            self.get_default_pfp_url().to_string()
         }
     }
 }
@@ -376,7 +389,7 @@ impl Oauth2Provider {
     }
 
     /// Returns a URL pointing towards an existing pfp the user has on the provider, if one exists
-    pub fn get_existing_user_pfp(&self, access_token: &str) -> Option<String> {
+    pub async fn get_existing_user_pfp(&self, access_token: &str) -> Option<String> {
         match self {
             _ => None
         }
