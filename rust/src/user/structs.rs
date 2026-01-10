@@ -14,7 +14,7 @@ use tower_cookies::{Cookie, Cookies, cookie::SameSite};
 use crate::{RootErrors, ServerState};
 
 /// Relative links to various default profile pictures users may have.
-const USER_DEFAULT_PFPS: [&str; 6] = 
+const USER_DEFAULT_PFPS: [&str; 9] = 
 [
     "/static/img/pd_logo.svg",
     "/static/img/user/default_pfps/nikki.jpg",
@@ -22,6 +22,9 @@ const USER_DEFAULT_PFPS: [&str; 6] =
     "/static/img/user/default_pfps/fynn.jpg",
     "/static/img/user/default_pfps/casti.jpg",
     "/static/img/user/default_pfps/artemis.jpg",
+    "/static/img/user/default_pfps/ucas.jpg",
+    "/static/img/user/default_pfps/clyde.jpg",
+    "/static/img/user/default_pfps/delphi.jpg",
 ];
 
 #[derive(Clone, Deserialize)]
@@ -322,9 +325,7 @@ impl Oauth2Provider {
         match self {
             Oauth2Provider::Discord => format!("{}/user/oauth2/discord", env::var("WEBSITE_URL").unwrap()),
             Oauth2Provider::Google => format!("{}/user/oauth2/google", env::var("WEBSITE_URL").unwrap()),
-            _ => {
-                todo!("Requested an unimplemented oauth2 redirect URI");
-            }
+            Oauth2Provider::Github => format!("{}/user/oauth2/github", env::var("WEBSITE_URL").unwrap())
         }
     }
 
@@ -352,8 +353,13 @@ impl Oauth2Provider {
 
                 format!("https://accounts.google.com/o/oauth2/auth?client_id={client_id}&response_type=code&redirect_uri={encoded_redirect_uri}&scope={encoded_scopes}")
             },
-            _ => {
-                todo!("Requested an unimplemented oauth2 login");
+            Oauth2Provider::Github => {
+                let client_id = env::var("GITHUB_OAUTH2_CLIENT_ID").unwrap();
+
+                let redirect_uri = self.get_redirect_uri();
+                let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
+                
+                format!("https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={encoded_redirect_uri}")
             }
         }
     }
@@ -367,8 +373,8 @@ impl Oauth2Provider {
             Oauth2Provider::Google => {
                 "https://oauth2.googleapis.com/token".to_string()
             },
-            _ => {
-                todo!("Requested an unimplemented oauth2 token");
+            Oauth2Provider::Github => {
+                "https://github.com/login/oauth/access_token".to_string()
             }
         }
     }
@@ -382,8 +388,8 @@ impl Oauth2Provider {
             Oauth2Provider::Google => {
                 "https://www.googleapis.com/oauth2/v2/userinfo".to_string()
             },
-            _ => {
-                todo!("Requested an unimplemented oauth2 identification url");
+            Oauth2Provider::Github => {
+                "https://api.github.com/user".to_string()
             }
         }
     }

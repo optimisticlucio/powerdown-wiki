@@ -25,6 +25,8 @@ If these are missing when you run docker compose is made, you *will* get a crash
 
 - GOOGLE_OAUTH2_CLIENT_ID, GOOGLE_OAUTH2_CLIENT_SECRET: Ditto, for google instead. Get them in the [Google Auth Platform Dashboard](https://console.cloud.google.com/auth/clients).
 
+- GITHUB_OAUTH2_CLIENT_ID, GITHUB_OAUTH2_CLIENT_SECRET: You get the idea. [Get them here](https://github.com/settings/developers).
+
 ### Optional Variables
 
 These variables aren't *required*, as they have default values incase they're missing. Still, you might need them for some case or another.
@@ -37,7 +39,7 @@ The various bucket names in S3 for storing the PD-related data. Because every bu
 
 - S3_PUBLIC_BUCKET_NAME (powerdown-public-storage): The bucket where we store everything the average user may run into during regular browsing - art, character thumbnails, videos, user pfps, that sort of deal. As the name indicates, should be public access.
 
-- S3_SQL_BACKUP_BUCKET_NAME (powerdown-sql-backups-storage): The bucket with backups of the various SQL tables we have going, and it'll read from there to see if there's an existing backup to read from on startup. **Shouldn't be public access**, unless you fancy random people being able to access your OAuth2 secret keys.
+- S3_SQL_BACKUP_BUCKET_NAME (powerdown-sql-backups-storage): The bucket with backups of the various SQL tables we have going, and it'll read from there to see if there's an existing backup to read from on startup. **Shouldn't be public access**, unless you fancy random people being able to access your OAuth2 access keys.
 
 ## Cookies
 

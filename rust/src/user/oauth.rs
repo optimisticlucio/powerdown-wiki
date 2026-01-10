@@ -1,7 +1,7 @@
 use std::env;
 use crate::{RootErrors, ServerState, errs, user::{User, structs::{Oauth2Provider, OAuth2Association, UserSession}}};
 use axum::{Router, extract::{OriginalUri, Query, State}, response::{IntoResponse, Redirect, Response}, routing::get};
-use http::Uri;
+use http::{Uri, header::USER_AGENT};
 use tower_cookies::{Cookies};
 use axum_extra::routing::RouterExt;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub fn router() -> Router<ServerState> {
     Router::new().route_with_tsr("/discord", get(discord))
         .route_with_tsr("/google", get(google))
+        .route_with_tsr("/github", get(github))
 }
 
 /// Recieves the Discord Oauth callback. 
@@ -68,6 +69,33 @@ pub struct GoogleUser {
     picture: String // URL to their pfp image
 }
 
+/// Recieves the Github Oauth callback. 
+/// If user isn't logged in, and an account with these values exist, logs in. If an account with these values doesn't exist, creates one.
+/// If the user is logged in, and an account with these values doesn't exist, connects this oauth to the logged in account.
+/// If the user is logged in and this oauth method already exists, throws an error.
+#[axum::debug_handler]
+pub async fn github(
+    State(state): State<ServerState>, 
+    Query(query): Query<OAuthQuery>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
+    oauth_process("Github",
+        |user: &GithubUser| user.login.clone(),
+        |user: &GithubUser| user.id.to_string(), 
+        Oauth2Provider::Github,
+        "GITHUB_OAUTH2_CLIENT_ID",
+        "GITHUB_OAUTH2_CLIENT_SECRET",
+        state, query, original_uri, cookie_jar).await
+}
+
+#[derive(Deserialize)]
+pub struct GithubUser {
+    login: String, // The username
+    id: i32,
+    avatar_url: String,
+}
+
 async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> String, F: FnOnce(&T) -> String>(
         process_name_for_debug: &'a str,
         get_display_name: U,
@@ -111,6 +139,11 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
     let text_response = response.text().await.unwrap();
     // For some reason, converting the response to json directly results in a parse error. Can't wrap my head around it, but this seems to work.
     let tokens: OAuthTokens =  serde_json::from_str(&text_response)
+        .or_else(|_|{
+            // It's not JSON. Is it a URL-encoded form data?
+            serde_urlencoded::from_str(&text_response)
+            }
+        )
         .map_err(|err| {
             println!("[OAUTH2; {}] Failed reading access token response: {:?}", process_name_for_debug, err.to_string());
             RootErrors::INTERNAL_SERVER_ERROR
@@ -124,6 +157,7 @@ async fn oauth_process<'a, T: serde::de::DeserializeOwned, U: FnOnce(&T) -> Stri
         })?
         .get(provider.get_identification_url()) 
         .header("Authorization", format!("Bearer {}", &tokens.access_token))
+        .header(USER_AGENT, "powerdown-wiki")
         .send().await
         .map_err(|err| {
             println!("[OAUTH2; {}] Failed sending identification request: {:?}", process_name_for_debug, err.to_string());

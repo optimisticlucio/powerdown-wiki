@@ -63,7 +63,8 @@ pub async fn login_page(
         original_uri,
 
         discord_oauth_url: &Oauth2Provider::Discord.get_user_login_url(),
-        google_oauth_url: &Oauth2Provider::Google.get_user_login_url()
+        google_oauth_url: &Oauth2Provider::Google.get_user_login_url(),
+        github_oauth_url: &Oauth2Provider::Github.get_user_login_url(),
     }))
 }
 
@@ -75,4 +76,5 @@ struct LoginTemplate<'a> {
     
     discord_oauth_url: &'a str,
     google_oauth_url: &'a str,
+    github_oauth_url: &'a str,
 }
