@@ -1,11 +1,11 @@
-use postgres::Row;
+use crate::user::{User, UsermadePost};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use derive_builder::Builder;
+use postgres::Row;
 use postgres_types::{FromSql, ToSql};
-use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
-use crate::user::{User, UsermadePost};
+use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BaseArt {
@@ -43,18 +43,28 @@ pub struct PageArt {
 
 impl BaseArt {
     /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
-    pub async fn get_art_from_index(db_connection: &Object<Manager>, index: i64, amount_to_return: i64, search_parameters: &ArtSearchParameters) -> Vec<Self>{
+    pub async fn get_art_from_index(
+        db_connection: &Object<Manager>,
+        index: i64,
+        amount_to_return: i64,
+        search_parameters: &ArtSearchParameters,
+    ) -> Vec<Self> {
         // TODO: Narrow down select so it runs faster.
-        let mut query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&amount_to_return, &index];
+        let mut query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> =
+            vec![&amount_to_return, &index];
 
         let query_where = search_parameters.get_postgres_where(&mut query_parameters);
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
-        let query = format!("SELECT * FROM art {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2", query_where);
+        let query = format!(
+            "SELECT * FROM art {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
+            query_where
+        );
 
-        let requested_art_rows = db_connection.query(
-            &query,
-            &query_parameters).await.unwrap();
+        let requested_art_rows = db_connection
+            .query(&query, &query_parameters)
+            .await
+            .unwrap();
 
         requested_art_rows.iter().map(Self::from_db_row).collect()
     }
@@ -69,21 +79,30 @@ impl BaseArt {
             slug: row.get("page_slug"),
             has_video: false, //TODO: Handle this somehow.
             is_nsfw: row.get("is_nsfw"),
-            art_state: row.get("post_state")
+            art_state: row.get("post_state"),
         }
     }
 
     /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
     /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
     pub async fn get_unused_id(db_connection: &Object<Manager>) -> i32 {
-        let random_page_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
+        let random_page_slug: String = rand::rng()
+            .sample_iter(&Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
 
         // There's a very slight chance this operation panics on correct behaviour
         // bc it uses random strings. It should probably be fine, but I should fix this someday.
-        let insert_operation_result = db_connection.query_one(
-            "INSERT INTO art (post_state, page_slug, title, creators, thumbnail)
+        let insert_operation_result = db_connection
+            .query_one(
+                "INSERT INTO art (post_state, page_slug, title, creators, thumbnail)
             VALUES ('pending', $1, 'TEMP', ARRAY['RNJesus'], '')
-            RETURNING id", &[&random_page_slug]).await.unwrap();
+            RETURNING id",
+                &[&random_page_slug],
+            )
+            .await
+            .unwrap();
 
         insert_operation_result.get(0) // id is int, which converts to i32.
     }
@@ -96,9 +115,9 @@ impl BaseArt {
 
 impl PageArt {
     pub async fn get_by_slug(db_connection: &Object<Manager>, page_slug: &str) -> Option<Self> {
-        let requested_art = db_connection.query_one(
-            "SELECT * FROM art WHERE page_slug=$1",
-            &[&page_slug]).await
+        let requested_art = db_connection
+            .query_one("SELECT * FROM art WHERE page_slug=$1", &[&page_slug])
+            .await
             .ok()?;
 
         Some(Self::from_db_row(db_connection, &requested_art).await)
@@ -109,23 +128,32 @@ impl PageArt {
         let art_id: i32 = row.get("id");
 
         // Get the relevant art URLs from the art_file table.
-        let mut art_files = db_connection.query("SELECT * FROM art_file WHERE belongs_to=$1", &[&art_id])
-                .await.unwrap_or(Vec::new())
-                .iter().map(|row| {
-                    let index: i32 = row.get("internal_order");
-                    let key: String = row.get("s3_key");
+        let mut art_files = db_connection
+            .query("SELECT * FROM art_file WHERE belongs_to=$1", &[&art_id])
+            .await
+            .unwrap_or(Vec::new())
+            .iter()
+            .map(|row| {
+                let index: i32 = row.get("internal_order");
+                let key: String = row.get("s3_key");
 
-                    (index, key)
-                }).collect::<Vec<_>>();
+                (index, key)
+            })
+            .collect::<Vec<_>>();
 
         art_files.sort();
 
-        let art_keys = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>();
+        let art_keys = art_files
+            .iter()
+            .map(|(_, x)| x.to_owned())
+            .collect::<Vec<_>>();
 
         let uploading_user_id: Option<i32> = row.get("uploading_user_id");
         let uploading_user = if let Some(user_id) = uploading_user_id {
             User::get_by_id(&db_connection, &user_id).await
-        } else { None };
+        } else {
+            None
+        };
 
         PageArt {
             base_art: BaseArt::from_db_row(row),
@@ -139,13 +167,20 @@ impl PageArt {
 
     /// Returns the proper urls for the art.
     pub fn get_art_urls(&self) -> Vec<String> {
-        self.art_keys.iter().map(|key| crate::utils::get_s3_public_object_url(key)).collect()
+        self.art_keys
+            .iter()
+            .map(|key| crate::utils::get_s3_public_object_url(key))
+            .collect()
     }
 }
 
 impl UsermadePost for PageArt {
     fn can_be_modified_by(&self, user: &User) -> bool {
-        user.user_type.permissions().can_modify_others_content || self.uploading_user.as_ref().is_some_and(|uploading_user| uploading_user == user)
+        user.user_type.permissions().can_modify_others_content
+            || self
+                .uploading_user
+                .as_ref()
+                .is_some_and(|uploading_user| uploading_user == user)
     }
 }
 
@@ -162,7 +197,6 @@ pub struct ArtSearchParameters {
 
     #[serde(default)]
     pub art_state: ArtState,
-
     // TODO: Handle Artist Name
 }
 
@@ -173,7 +207,10 @@ fn default_page_number() -> i64 {
 impl ArtSearchParameters {
     /// Creates the WHERE section of a postgresql statement for these parameters. Modifies a given set of function parameters.
     /// Lifetime of parameter modifications tied to lifetime of struct.
-    pub fn get_postgres_where<'a>(&'a self, params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>) -> String{
+    pub fn get_postgres_where<'a>(
+        &'a self,
+        params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>,
+    ) -> String {
         let mut query_conditions: Vec<String> = Vec::new();
 
         params.push(&self.art_state);
@@ -181,8 +218,7 @@ impl ArtSearchParameters {
 
         if self.is_nsfw {
             query_conditions.push("is_nsfw".to_string());
-        }
-        else {
+        } else {
             query_conditions.push("NOT is_nsfw".to_string());
         }
 
@@ -194,8 +230,7 @@ impl ArtSearchParameters {
         // --- Return ---
         if query_conditions.is_empty() {
             String::new()
-        }
-        else {
+        } else {
             format!("WHERE {}", query_conditions.join(" AND "))
         }
     }
@@ -220,8 +255,7 @@ impl ArtSearchParameters {
 
         if parameters.is_empty() {
             "".to_string()
-        }
-        else {
+        } else {
             format!("?{}", parameters.join("&"))
         }
     }
@@ -232,7 +266,8 @@ impl ArtSearchParameters {
         Self {
             is_nsfw: !self.is_nsfw,
             ..self.clone()
-        }.to_uri_parameters(false)
+        }
+        .to_uri_parameters(false)
     }
 }
 
@@ -242,7 +277,7 @@ impl Default for ArtSearchParameters {
             page: default_page_number(),
             tags: Vec::new(),
             is_nsfw: false,
-            art_state: ArtState::Public
+            art_state: ArtState::Public,
         }
     }
 }
@@ -268,11 +303,13 @@ where
 #[derive(Clone, FromSql, ToSql, Deserialize, Debug)]
 #[postgres(name = "art_post_state", rename_all = "snake_case")]
 pub enum ArtState {
-    Public, // Publicly viewable, standard state.
+    Public,          // Publicly viewable, standard state.
     PendingApproval, // User-uploaded, pending admin review to be moved to public. Not visible.
-    Processing // Currently mid-process by the server and/or database. Should not be viewable.
+    Processing,      // Currently mid-process by the server and/or database. Should not be viewable.
 }
 
 impl Default for ArtState {
-    fn default() -> Self { Self::Public }
+    fn default() -> Self {
+        Self::Public
+    }
 }

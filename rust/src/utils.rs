@@ -1,14 +1,14 @@
 use std::error::Error;
 use std::{env, fmt};
 
-use chrono::{DateTime, Datelike, Utc};
-use axum::response::{Response, IntoResponse, Html};
-use axum::body::Body;
-use askama::Template;
 use crate::errs::RootErrors;
-use serde::{Deserialize};
-use serde::de::{Deserializer};
-use axum::extract::multipart::{Field};
+use askama::Template;
+use axum::body::Body;
+use axum::extract::multipart::Field;
+use axum::response::{Html, IntoResponse, Response};
+use chrono::{DateTime, Datelike, Utc};
+use serde::de::Deserializer;
+use serde::Deserialize;
 
 pub mod file_compression;
 
@@ -36,7 +36,7 @@ pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
         1 => "1st".to_owned(),
         2 => "2nd".to_owned(),
         3 => "3rd".to_owned(),
-        x => format!("{x}th")
+        x => format!("{x}th"),
     };
     let readable_month = date.format("%B");
 
@@ -48,7 +48,11 @@ pub fn join_names_human_readable(names: Vec<&str>) -> String {
         0 => String::new(),
         1 => names[0].to_string(),
         2 => format!("{} and {}", names[0], names[1]),
-        _ => format!("{}, and {}", names[..names.len()-1].join(", "), names.last().unwrap()),
+        _ => format!(
+            "{}, and {}",
+            names[..names.len() - 1].join(", "),
+            names.last().unwrap()
+        ),
     }
 }
 
@@ -73,23 +77,25 @@ pub fn get_s3_public_object_url(file_key: &str) -> String {
 }
 
 pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
-    field.text().await
-    .map_err(|err| match err.status() {
-        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(http::Uri::from_static("/"), tower_cookies::Cookies::default(), err.body_text()),
-        _ => RootErrors::INTERNAL_SERVER_ERROR
+    field.text().await.map_err(|err| match err.status() {
+        http::status::StatusCode::BAD_REQUEST => RootErrors::BAD_REQUEST(
+            http::Uri::from_static("/"),
+            tower_cookies::Cookies::default(),
+            err.body_text(),
+        ),
+        _ => RootErrors::INTERNAL_SERVER_ERROR,
     })
 }
 
 /// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key.
 /// Mainly for usage with temp images uploaded by users.
 pub async fn move_temp_s3_file(
-        s3_client: aws_sdk_s3::Client,
-        server_config: &crate::server_state::config::Config,
-        temp_file_key: &str,
-        target_bucket_name: &str,
-        target_file_key: &str
-    ) -> Result<(), MoveTempS3FileErrs> {
-
+    s3_client: aws_sdk_s3::Client,
+    server_config: &crate::server_state::config::Config,
+    temp_file_key: &str,
+    target_bucket_name: &str,
+    target_file_key: &str,
+) -> Result<(), MoveTempS3FileErrs> {
     let downloaded_file = s3_client.get_object()
         .bucket(&server_config.s3_public_bucket)
         .key(temp_file_key)
@@ -109,8 +115,11 @@ pub async fn move_temp_s3_file(
         })?
         .into_bytes().to_vec();
 
-    let converted_file = file_compression::compress_image_lossless(original_file_bytes.to_vec(), content_type.as_deref())
-        .unwrap_or(original_file_bytes.to_vec()); // If can't compress it, just send back the original untouched.
+    let converted_file = file_compression::compress_image_lossless(
+        original_file_bytes.to_vec(),
+        content_type.as_deref(),
+    )
+    .unwrap_or(original_file_bytes.to_vec()); // If can't compress it, just send back the original untouched.
 
     s3_client.put_object()
         .bucket(target_bucket_name)
@@ -130,7 +139,7 @@ pub async fn move_temp_s3_file(
 pub enum MoveTempS3FileErrs {
     DownloadFailed,
     ConversionFailed,
-    UploadFailed
+    UploadFailed,
 }
 
 impl fmt::Display for MoveTempS3FileErrs {
@@ -138,11 +147,9 @@ impl fmt::Display for MoveTempS3FileErrs {
         match self {
             Self::DownloadFailed => write!(f, "Download Failed"),
             Self::ConversionFailed => write!(f, "Conversion Failed"),
-            Self::UploadFailed => write!(f, "Upload Failed")
+            Self::UploadFailed => write!(f, "Upload Failed"),
         }
     }
 }
 
-impl Error for MoveTempS3FileErrs {
-
-}
+impl Error for MoveTempS3FileErrs {}

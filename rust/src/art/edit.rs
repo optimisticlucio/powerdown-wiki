@@ -1,9 +1,12 @@
-use askama::Template;
-use crate::{errs::RootErrors, user::User, ServerState, utils::template_to_response};
-use http::{Uri};
-use tower_cookies::Cookies;
-use axum::{extract::{OriginalUri, Path, Query, State}, response::{IntoResponse, Response}};
 use super::structs;
+use crate::{errs::RootErrors, user::User, utils::template_to_response, ServerState};
+use askama::Template;
+use axum::{
+    extract::{OriginalUri, Path, Query, State},
+    response::{IntoResponse, Response},
+};
+use http::Uri;
+use tower_cookies::Cookies;
 
 #[derive(Debug, Template)]
 #[template(path = "art/edit.html")]
@@ -23,18 +26,16 @@ pub async fn edit_art_page(
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
 
-    if let Some(requested_art) = structs::PageArt::get_by_slug(&state.db_pool.get().await.unwrap(), &art_slug).await {
-        Ok(template_to_response(
-        EditArtPage {
+    if let Some(requested_art) =
+        structs::PageArt::get_by_slug(&state.db_pool.get().await.unwrap(), &art_slug).await
+    {
+        Ok(template_to_response(EditArtPage {
             user: User::get_from_cookie_jar(&db_connection, &cookie_jar).await,
             original_uri,
 
-            title: requested_art.base_art.title
-        })
-        )
-    }
-    else {
+            title: requested_art.base_art.title,
+        }))
+    } else {
         Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
     }
-
 }

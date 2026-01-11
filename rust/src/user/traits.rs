@@ -8,4 +8,3 @@ pub trait UsermadePost {
         user.user_type.permissions().can_modify_others_content
     }
 }
-

@@ -16,7 +16,7 @@ impl Config {
 
         Self {
             s3_public_bucket,
-            s3_sql_backup_bucket
+            s3_sql_backup_bucket,
         }
     }
 }

@@ -1,7 +1,7 @@
-use derive_builder::Builder;
-use postgres::Row;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
+use derive_builder::Builder;
+use postgres::Row;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Builder, Serialize, Deserialize)]
@@ -14,7 +14,7 @@ pub struct BaseStory {
     pub creation_date: chrono::NaiveDate,
     pub slug: String,
     #[builder(default = false)]
-    pub is_hidden: bool
+    pub is_hidden: bool,
 }
 
 #[derive(Debug, Clone, Builder, Serialize, Deserialize)]
@@ -40,13 +40,22 @@ pub struct PageStory {
 
 impl BaseStory {
     /// Gets [amount_to_return] amount of stories, starting from the [index] newest one.
-    pub async fn get_art_from_index(db_connection: Object<Manager>, index: i64, amount_to_return: i64) -> Vec<Self>{
+    pub async fn get_art_from_index(
+        db_connection: Object<Manager>,
+        index: i64,
+        amount_to_return: i64,
+    ) -> Vec<Self> {
         // TODO: Narrow down select so it runs faster.
-        let query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&amount_to_return, &index];
+        let query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> =
+            vec![&amount_to_return, &index];
 
-        let requested_story_rows = db_connection.query(
-            "SELECT * FROM story ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
-            &query_parameters).await.unwrap();
+        let requested_story_rows = db_connection
+            .query(
+                "SELECT * FROM story ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
+                &query_parameters,
+            )
+            .await
+            .unwrap();
 
         requested_story_rows.iter().map(Self::from_db_row).collect()
     }
@@ -54,9 +63,10 @@ impl BaseStory {
     /// Returns the base info of a single story, found by their page slug. If no such story exists, returns None.
     pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<Self> {
         // TODO: Limit search
-        let story_row = db_connection.query_one(
-            "SELECT * FROM story WHERE page_slug=$1",
-            &[&slug]).await.ok()?;
+        let story_row = db_connection
+            .query_one("SELECT * FROM story WHERE page_slug=$1", &[&slug])
+            .await
+            .ok()?;
 
         Some(Self::from_db_row(&story_row))
     }
@@ -70,29 +80,42 @@ impl BaseStory {
             creators: row.get("creators"),
             creation_date: row.get("creation_date"),
             slug: row.get("page_slug"),
-            is_hidden: row.get("is_hidden")
+            is_hidden: row.get("is_hidden"),
         }
     }
 
     /// Gets [amount_to_return] amount of stories, starting from the [index] newest piece.
-    pub async fn get_from_index(db_connection: Object<Manager>, index: i64, amount_to_return: i64, search_parameters: &StorySearchParameters) -> Vec<Self>{
+    pub async fn get_from_index(
+        db_connection: Object<Manager>,
+        index: i64,
+        amount_to_return: i64,
+        search_parameters: &StorySearchParameters,
+    ) -> Vec<Self> {
         // TODO: Narrow down select so it runs faster.
-        let mut query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![&amount_to_return, &index];
+        let mut query_parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> =
+            vec![&amount_to_return, &index];
 
         let query_where = search_parameters.get_postgres_where(&mut query_parameters);
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
-        let query = format!("SELECT * FROM story {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2", query_where);
+        let query = format!(
+            "SELECT * FROM story {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
+            query_where
+        );
 
-        let requested_rows = db_connection.query(
-            &query,
-            &query_parameters).await.unwrap();
+        let requested_rows = db_connection
+            .query(&query, &query_parameters)
+            .await
+            .unwrap();
 
         requested_rows.iter().map(Self::from_db_row).collect()
     }
 
     /// Returns the total amount of stories currently in the db.
-    pub async fn get_total_amount(db_connection: Object<Manager>, search_params: &StorySearchParameters) -> Result<i64, Box<dyn std::error::Error>> {
+    pub async fn get_total_amount(
+        db_connection: Object<Manager>,
+        search_params: &StorySearchParameters,
+    ) -> Result<i64, Box<dyn std::error::Error>> {
         let mut query_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
         let query_where = search_params.get_postgres_where(&mut query_params);
@@ -100,9 +123,7 @@ impl BaseStory {
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
         let query = format!("SELECT COUNT(page_slug) FROM story {}", query_where);
 
-        let row = db_connection
-            .query_one(&query, &query_params)
-            .await?;
+        let row = db_connection.query_one(&query, &query_params).await?;
 
         let count: i64 = row.get(0);
         Ok(count)
@@ -112,9 +133,10 @@ impl BaseStory {
 impl PageStory {
     /// Returns the page info of a single story, found by their page slug. If no such story exists, returns None.
     pub async fn get_by_slug(slug: &str, db_connection: Object<Manager>) -> Option<Self> {
-        let story_row = db_connection.query_one(
-            "SELECT * FROM story WHERE page_slug=$1",
-            &[&slug]).await.ok()?;
+        let story_row = db_connection
+            .query_one("SELECT * FROM story WHERE page_slug=$1", &[&slug])
+            .await
+            .ok()?;
 
         Some(Self::from_db_row(&story_row))
     }
@@ -127,10 +149,10 @@ impl PageStory {
             tagline: row.get("tagline"),
             tags: row.get("tags"),
             previous_story_slug: None, // TODO
-            next_story_slug: None, // TODO
+            next_story_slug: None,     // TODO
             custom_css: row.get("custom_css"),
             editors_note: row.get("editors_note"),
-            content: row.get("content")
+            content: row.get("content"),
         }
     }
 }
@@ -160,15 +182,17 @@ impl StorySearchParameters {
 
         if parameters.is_empty() {
             "".to_string()
-        }
-        else {
+        } else {
             format!("?{}", parameters.join("&"))
         }
     }
 
     /// Creates the WHERE section of a postgresql statement for these parameters. Modifies a given set of function parameters.
     /// Lifetime of parameter modifications tied to lifetime of struct.
-    pub fn get_postgres_where<'a>(&'a self, params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>) -> String{
+    pub fn get_postgres_where<'a>(
+        &'a self,
+        params: &mut Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>,
+    ) -> String {
         let mut query_conditions: Vec<String> = Vec::new();
 
         query_conditions.push("NOT is_hidden".to_string());
@@ -181,8 +205,7 @@ impl StorySearchParameters {
         // --- Return ---
         if query_conditions.is_empty() {
             String::new()
-        }
-        else {
+        } else {
             format!("WHERE {}", query_conditions.join(" AND "))
         }
     }
