@@ -8,7 +8,9 @@ use tower_cookies::Cookies;
 
 mod oauth;
 mod structs;
+mod traits;
 
+pub use traits::UsermadePost;
 pub use structs::User;
 
 use structs::Oauth2Provider;

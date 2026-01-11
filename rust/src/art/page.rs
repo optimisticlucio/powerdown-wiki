@@ -2,7 +2,7 @@ use axum::{extract::{OriginalUri, Path, Query, State}, response::{IntoResponse, 
 use http::Uri;
 use postgres_types::{FromSql, ToSql, Type};
 use askama::Template;
-use crate::{errs::RootErrors, user::User, ServerState, utils::template_to_response};
+use crate::{ServerState, errs::RootErrors, user::{User, UsermadePost}, utils::template_to_response};
 use super::structs;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
@@ -51,8 +51,7 @@ pub async fn art_page(
         let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
         let user_can_edit_page: bool = user.as_ref().is_some_and(
-            |user| user.user_type.permissions().can_modify_others_content ||
-                requested_art.uploading_user.as_ref().is_some_and(|uploading_user| uploading_user.id == user.id)
+            |user| requested_art.can_be_modified_by(user)
             );
 
         Ok(template_to_response(
@@ -130,8 +129,7 @@ pub async fn delete_art_page(
     if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         if let Some(requesting_user) = User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
              // Ok first and foremost - can this user do this?
-            let user_can_delete_given_image = requesting_user.user_type.permissions().can_modify_others_content
-                || requested_art.uploading_user.is_some_and(|user| user == requesting_user);
+            let user_can_delete_given_image = requested_art.can_be_modified_by(&requesting_user);
 
             // If not, gtfo.
             if !user_can_delete_given_image {

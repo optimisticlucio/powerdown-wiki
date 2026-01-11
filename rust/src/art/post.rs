@@ -9,7 +9,7 @@ use http::Uri;
 use rand::distr::SampleString;
 use url::Url;
 use crate::art::structs::PageArt;
-use crate::user::User;
+use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response};
 use crate::{ServerState, errs::RootErrors};
 use super::{structs::{BaseArt, ArtState}};
@@ -266,7 +266,7 @@ pub async fn edit_art_put_request (
     };
 
     // If they don't have permissions to do this, shoot back HTTP 403.
-    if !(requesting_user.user_type.permissions().can_modify_others_content || existing_art.uploading_user.is_some_and(|uploading_user| uploading_user == requesting_user)) {
+    if !(existing_art.can_be_modified_by(&requesting_user)) {
         return Err(RootErrors::FORBIDDEN);
     }
 

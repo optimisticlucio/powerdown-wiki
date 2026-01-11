@@ -5,7 +5,7 @@ use derive_builder::Builder;
 use postgres_types::{FromSql, ToSql};
 use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
-use crate::user::User;
+use crate::user::{User, UsermadePost};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BaseArt {
@@ -139,6 +139,12 @@ impl PageArt {
     /// Returns the proper urls for the art.
     pub fn get_art_urls(&self) -> Vec<String> {
         self.art_keys.iter().map(|key| crate::utils::get_s3_public_object_url(key)).collect()
+    }
+}
+
+impl UsermadePost for PageArt {
+    fn can_be_modified_by(&self, user: &User) -> bool {
+        user.user_type.permissions().can_modify_others_content || self.uploading_user.as_ref().is_some_and(|uploading_user| uploading_user == user)
     }
 }
 
