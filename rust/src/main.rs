@@ -1,13 +1,5 @@
-#![deny(missing_debug_impl)]
-
-use axum::{
-    extract::Request,
-    ServiceExt, // for `into_make_service`
-};
 use powerdown_wiki::ServerState;
 use std::net::SocketAddr;
-use tower::Layer;
-use tower_http::normalize_path::NormalizePathLayer;
 
 #[tokio::main]
 async fn main() {

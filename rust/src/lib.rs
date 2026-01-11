@@ -1,15 +1,14 @@
 use axum::{
     error_handling::HandleErrorLayer,
     extract::OriginalUri,
-    http::StatusCode,
-    response::{Html, IntoResponse, Redirect},
+    response::{IntoResponse, Redirect},
     routing::get,
     BoxError, Router,
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;
-use std::{sync::Arc, time};
-use tower::{layer::Layer, ServiceBuilder};
+use std::time;
+use tower::ServiceBuilder;
 use tower_cookies::CookieManagerLayer;
 use tower_http::compression::CompressionLayer;
 

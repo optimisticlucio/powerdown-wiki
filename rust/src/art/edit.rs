@@ -3,10 +3,9 @@ use crate::{errs::RootErrors, user::User, utils::template_to_response, ServerSta
 use askama::Template;
 use axum::{
     extract::{OriginalUri, Path, Query, State},
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use http::Uri;
-use tower_cookies::Cookies;
 
 #[derive(Debug, Template)]
 #[template(path = "art/edit.html")]

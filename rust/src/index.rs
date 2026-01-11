@@ -3,7 +3,7 @@ use crate::{test_data, user::User, utils, RootErrors};
 use askama::Template;
 use axum::{
     extract::{OriginalUri, State},
-    response::{Html, Response},
+    response::Response,
     routing::get,
     Router,
 };

@@ -2,7 +2,7 @@ use crate::{user::User, utils, RootErrors, ServerState};
 use askama::Template;
 use axum::{
     extract::{DefaultBodyLimit, OriginalUri, State},
-    response::{Html, Response},
+    response::Response,
     routing::{get, post},
     Router,
 };

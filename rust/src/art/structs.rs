@@ -1,7 +1,6 @@
 use crate::user::{User, UsermadePost};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
-use derive_builder::Builder;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
 use rand::{distr::Alphanumeric, Rng};

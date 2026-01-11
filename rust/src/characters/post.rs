@@ -1,14 +1,13 @@
-use crate::characters::{page, BaseCharacter};
+use crate::characters::BaseCharacter;
 use crate::utils::{self, get_s3_object_url, text_or_internal_err};
 use crate::{
     characters::structs::{BaseCharacterBuilder, InfoboxRow, PageCharacterBuilder},
     errs::RootErrors,
     ServerState,
 };
-use axum::extract::multipart::{Field, InvalidBoundary, MultipartError};
 use axum::extract::{Multipart, OriginalUri, State};
 use axum::http;
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::response::{IntoResponse, Redirect};
 use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;

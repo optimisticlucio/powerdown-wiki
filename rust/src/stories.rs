@@ -4,13 +4,10 @@ use crate::RootErrors;
 use crate::{user::User, ServerState};
 use askama::Template;
 use axum::extract::Query;
+use axum::extract::{OriginalUri, State};
 use axum::response::Response;
 use axum::routing::{get, post};
 use axum::Router;
-use axum::{
-    extract::{OriginalUri, State},
-    response::IntoResponse,
-};
 use axum_extra::routing::RouterExt;
 use http::Uri;
 use std::cmp::{self, min};

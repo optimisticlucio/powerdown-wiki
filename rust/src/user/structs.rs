@@ -2,12 +2,11 @@ use chrono::{DateTime, Duration, Utc};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
-use postgres_types::{FromSql, ToSql, Type};
+use postgres_types::{FromSql, ToSql};
 use rand::distr::SampleString;
 use rand::{distr::Alphanumeric, Rng};
 use serde::Deserialize;
 use std::env;
-use std::net::{SocketAddr, SocketAddrV4};
 use tower_cookies::cookie;
 use tower_cookies::{cookie::SameSite, Cookie, Cookies};
 

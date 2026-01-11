@@ -1,7 +1,7 @@
 use crate::user::User;
 use askama::Template;
 use axum::{
-    http::{response, StatusCode},
+    http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
 use http::Uri;

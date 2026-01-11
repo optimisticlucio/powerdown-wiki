@@ -5,15 +5,13 @@ use crate::{
     user::User,
     ServerState,
 };
-use ammonia::clean;
 use askama::Template;
 use axum::{
     extract::{OriginalUri, Path, State},
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use comrak::markdown_to_html;
 use http::Uri;
-use rand::seq::IndexedRandom;
 
 #[derive(Debug, Template)]
 #[template(path = "stories/page.html")]

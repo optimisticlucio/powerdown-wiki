@@ -9,7 +9,7 @@ use axum::{
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use http::Uri;
-use postgres_types::{FromSql, ToSql, Type};
+use postgres_types::ToSql;
 
 #[derive(Debug, Template)]
 #[template(path = "art/page.html")]

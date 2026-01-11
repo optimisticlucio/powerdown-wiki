@@ -1,5 +1,4 @@
 use crate::{
-    errs,
     user::{
         structs::{OAuth2Association, Oauth2Provider, UserSession},
         User,
@@ -14,9 +13,8 @@ use axum::{
 };
 use axum_extra::routing::RouterExt;
 use http::{header::USER_AGENT, Uri};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::env;
-use tower_cookies::Cookies;
 
 pub fn router() -> Router<ServerState> {
     Router::new()

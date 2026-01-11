@@ -1,4 +1,4 @@
-use super::structs::{ArtState, BaseArt};
+use super::structs::ArtState;
 use crate::art::structs::PageArt;
 use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response};
@@ -9,10 +9,9 @@ use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
 use http::Uri;
+use rand::distr::Alphanumeric;
 use rand::distr::SampleString;
-use rand::{distr::Alphanumeric, Rng};
 use serde::{self, Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::task::JoinSet;
 use url::Url;

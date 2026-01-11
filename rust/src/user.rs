@@ -5,7 +5,7 @@ use crate::{
 use askama::Template;
 use axum::{
     extract::{OriginalUri, State},
-    response::{Html, IntoResponse, Redirect, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
 };
