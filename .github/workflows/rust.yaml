@@ -1,0 +1,69 @@
+name: 'Rust'
+
+on:
+  pull_request:
+    paths:
+      - 'rust/Cargo.toml'
+      - 'rust/Cargo.lock'
+      - 'rust/src/**'
+      - '.github/workflows/rust.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cargo Cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-rust-default-${{ hashFiles('rust/Cargo.toml') }}
+
+      - name: Build
+        run: cd rust && cargo build --all-features
+
+      - name: Test
+        run: cd rust && cargo test --all-features -- --nocapture --test-threads 1
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cargo Cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-rust-lint-${{ hashFiles('rust/Cargo.toml') }}
+
+      # Unused dependencies
+      - name: Machete
+        uses: bnjbvr/cargo-machete@main
+        with:
+          args: 'rust'
+
+      # Code style
+      - name: Rustfmt
+        run: cd rust && cargo fmt --all -- --check
+
+      # Code linting
+      - name: Clippy
+        run: cd rust && cargo clippy --tests --no-deps
