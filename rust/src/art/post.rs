@@ -24,6 +24,17 @@ pub async fn add_art(
     cookie_jar: tower_cookies::Cookies,
     Json(posting_step): Json<ArtPostingSteps>,
 ) -> Result<Response, RootErrors> {
+    let db_connection = state
+                .db_pool
+                .get()
+                .await
+                .map_err(|_| RootErrors::InternalServerError)?;
+
+    // Who's trying to do this?
+    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+    // TODO: Validate user making the request is allowed to upload images.
+
     match posting_step {
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
@@ -34,17 +45,12 @@ pub async fn add_art(
                 return Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
+                    requesting_user,
                     err_explanation,
                 ));
             }
 
             // Makes sense? Good. Our job now.
-            let db_connection = state
-                .db_pool
-                .get()
-                .await
-                .map_err(|_| RootErrors::InternalServerError)?;
-
             // Let's build the query.
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
@@ -72,9 +78,11 @@ pub async fn add_art(
                     return Err(RootErrors::BadRequest(
                         original_uri,
                         cookie_jar,
+                        requesting_user,
                         format!(
-                            "Invalid Thumbnail Url: {}",
-                            &page_art.base_art.thumbnail_key
+                            "Invalid Thumbnail Url: {}, {:?}",
+                            &page_art.base_art.thumbnail_key,
+                            err
                         ),
                     ))
                 }
@@ -184,7 +192,7 @@ pub async fn add_art(
             // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
             let temp_file_keys = match temp_file_keys {
                 Err(err_string) => {
-                    return Err(RootErrors::BadRequest(original_uri, cookie_jar, err_string))
+                    return Err(RootErrors::BadRequest(original_uri, cookie_jar, requesting_user, err_string))
                 }
                 Ok(temp_keys) => temp_keys,
             };
@@ -242,7 +250,7 @@ pub async fn add_art(
                 .collect();
 
             if !failed_uploads.is_empty() {
-                let file_keys_to_delete: Vec<String> = temp_file_keys
+                let _file_keys_to_delete: Vec<String> = temp_file_keys
                     .iter()
                     .map(|key| {
                         format!(
@@ -335,20 +343,20 @@ pub async fn edit_art_put_request(
         .await
         .map_err(|_| RootErrors::InternalServerError)?;
 
-    let existing_art = match PageArt::get_by_slug(&db_connection, &art_slug).await {
-        None => return Err(RootErrors::NotFound(original_uri, cookie_jar)),
-        Some(existing_art) => existing_art,
-    };
-
     // Who's asking to do this?
     let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
         None => return Err(RootErrors::Unauthorized),
         Some(requesting_user) => requesting_user,
     };
 
+    let existing_art = match PageArt::get_by_slug(&db_connection, &art_slug).await {
+        None => return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user))),
+        Some(existing_art) => existing_art,
+    };
+
     // If they don't have permissions to do this, shoot back HTTP 403.
     if !(existing_art.can_be_modified_by(&requesting_user)) {
-        return Err(RootErrors::FORBIDDEN);
+        return Err(RootErrors::Forbidden);
     }
 
     match posting_step {
@@ -361,6 +369,7 @@ pub async fn edit_art_put_request(
                 return Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
+                    Some(requesting_user),
                     err_explanation,
                 ));
             }
@@ -471,16 +480,20 @@ async fn give_user_presigned_s3_urls(
     cookie_jar: tower_cookies::Cookies,
     state: &ServerState,
 ) -> Result<Response, RootErrors> {
+    let requesting_user = User::easy_get_from_cookie_jar(state, &cookie_jar).await?;
+
     if requested_amount_of_urls < 1 {
         Err(RootErrors::BadRequest(
             original_uri,
             cookie_jar,
+            requesting_user,
             "art post must have at least one art piece".to_string(),
         ))
     } else if requested_amount_of_urls > 25 {
         Err(RootErrors::BadRequest(
             original_uri,
             cookie_jar,
+            requesting_user,
             "for the good of mankind, don't put that many art pieces in one post. split them up"
                 .to_string(),
         ))

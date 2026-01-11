@@ -148,12 +148,16 @@ async fn oauth_process<
     original_uri: Uri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
+    let db_connection = state.db_pool.get().await.unwrap();
+    let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
     // Did the user give us an authorization code?
     let authorization_code = match query.code {
         None => {
             return Err(RootErrors::BadRequest(
                 original_uri,
                 cookie_jar,
+                logged_in_user,
                 format!(
                     "Entered {} Authorization Callback without an authorization code.",
                     process_name_for_debug
@@ -245,15 +249,10 @@ async fn oauth_process<
 
     let user_id = get_user_id(&user_info);
 
-    let db_connection = state.db_pool.get().await.unwrap();
-
     // Did this user create an account already?
     let access_token_user: Option<User> = provider
         .get_user_by_association(&db_connection, &user_id)
         .await;
-
-    // Additionally, Is the user actively logged in?
-    let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(existing_user_with_connection) = access_token_user {
         // This connection exists in the DB.
@@ -264,10 +263,15 @@ async fn oauth_process<
                 Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
+                    Some(logged_in_user),
                     "You're already logged in, silly! You can't re-log-in!".to_string(),
                 ))
             } else {
-                Err(RootErrors::BadRequest(original_uri, cookie_jar, "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
+                Err(RootErrors::BadRequest(
+                    original_uri,
+                    cookie_jar,
+                    Some(logged_in_user),
+                    "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
             }
         }
         // If the user isn't logged in, log in as usual.

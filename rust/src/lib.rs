@@ -1,9 +1,5 @@
 use axum::{
-    error_handling::HandleErrorLayer,
-    extract::OriginalUri,
-    response::{IntoResponse, Redirect},
-    routing::get,
-    BoxError, Router,
+    BoxError, Router, error_handling::HandleErrorLayer, extract::{OriginalUri, State}, response::{IntoResponse, Redirect}, routing::get
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;
@@ -27,6 +23,8 @@ mod utils;
 
 pub use errs::RootErrors;
 pub use server_state::ServerState;
+
+use crate::user::User;
 
 pub fn router(state: ServerState) -> Router<()> {
     Router::new()
@@ -61,8 +59,10 @@ async fn root_error_handler(err: BoxError) -> impl IntoResponse {
 }
 
 async fn fallback(
+    State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
-) -> impl IntoResponse {
-    errs::RootErrors::NotFound(original_uri, cookie_jar)
+) -> Result<RootErrors, RootErrors> {
+    let requesting_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
+    Ok(errs::RootErrors::NotFound(original_uri, cookie_jar, requesting_user))
 }

@@ -43,8 +43,11 @@ pub async fn character_page(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
+    let db_connection = state.db_pool.get().await.unwrap();
+    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
     if let Some(chosen_char) =
-        PageCharacter::get_by_slug(character_slug, state.db_pool.get().await.unwrap()).await
+        PageCharacter::get_by_slug(character_slug, db_connection).await
     {
         let parsed_content = chosen_char.page_contents.map(|contents| {
             parse_character_page_contents(&contents).unwrap_or("PARSING FAILED!".to_owned())
@@ -55,7 +58,7 @@ pub async fn character_page(
             .map(|f| markdown_to_html(&f, &comrak::Options::default()));
 
         Ok(template_to_response(CharacterPage {
-            user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+            user: requesting_user,
             original_uri,
 
             retirement_reason: retirement_reason.as_deref(),
@@ -77,7 +80,7 @@ pub async fn character_page(
             content: parsed_content.as_deref(),
         }))
     } else {
-        Err(RootErrors::NotFound(original_uri, cookie_jar))
+        Err(RootErrors::NotFound(original_uri, cookie_jar, requesting_user))
     }
 }
 

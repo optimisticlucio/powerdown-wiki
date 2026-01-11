@@ -1,5 +1,5 @@
 use super::structs;
-use crate::{errs::RootErrors, user::User, utils::template_to_response, ServerState};
+use crate::{errs::RootErrors, user::{User, UsermadePost}, utils::template_to_response, ServerState};
 use askama::Template;
 use aws_sdk_s3::types::ObjectIdentifier;
 use axum::{
@@ -47,12 +47,14 @@ pub async fn art_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
+    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
     if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         let (older_art_url, newer_art_url) =
             get_older_and_newer_art_slugs(&art_slug, &query_params, &db_connection).await;
         let art_urls = requested_art.get_art_urls();
 
-        let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+        
 
         let user_can_edit_page: bool = user
             .as_ref()
@@ -76,7 +78,7 @@ pub async fn art_page(
             newer_art_url,
         }))
     } else {
-        Err(RootErrors::NotFound(original_uri, cookie_jar))
+        Err(RootErrors::NotFound(original_uri, cookie_jar, user))
     }
 }
 
@@ -134,77 +136,70 @@ pub async fn delete_art_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
-        if let Some(requesting_user) = User::get_from_cookie_jar(&db_connection, &cookie_jar).await
-        {
-            // Ok first and foremost - can this user do this?
-            let user_can_delete_given_image = requested_art.can_be_modified_by(&requesting_user);
 
-            // If not, gtfo.
-            if !user_can_delete_given_image {
-                return Err(RootErrors::BadRequest(
-                    original_uri,
-                    cookie_jar,
-                    "You do not have permission to delete this page.".to_string(),
-                ));
-            }
+    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        // If the user isn't logged in, kick them out.
+        None => return Err(RootErrors::Unauthorized),
+        Some(user) => user
+    };
 
-            // If so - let's start nuking stuff. First of all, take aim at the S3 bucket.
-            let s3_client = state.s3_client.clone();
+    let requested_art = match structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
+        // If the requested art doesn't exist, also kick them out.
+        None => return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user))),
+        Some(art) => art
+    };
 
-            // Get all of the art
-            let mut files_to_delete: Vec<ObjectIdentifier> = requested_art
-                .art_keys
-                .iter()
-                .map(|key| ObjectIdentifier::builder().key(key).build().unwrap())
-                .collect();
-
-            // Add the thumbnail
-            files_to_delete.push(
-                ObjectIdentifier::builder()
-                    .key(requested_art.base_art.thumbnail_key)
-                    .build()
-                    .unwrap(),
-            );
-
-            // now, KILL
-            s3_client.delete_objects()
-                .bucket(&state.config.s3_public_bucket)
-                .delete(aws_sdk_s3::types::Delete::builder()
-                .set_objects(
-                    Some(files_to_delete))
-                    .build()
-                    .unwrap()
-                )
-                .send()
-                .await
-                .map_err(|err|
-                    {
-                        eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {:?}", &requested_art.base_art.id, &requested_art.base_art.title, err);
-                        RootErrors::InternalServerError
-                    }
-                )?;
-
-            // Now that everything else is complete, nuke the page from the DB.
-            const DELETION_QUERY: &str = "DELETE FROM art WHERE id=$1";
-            db_connection
-                .execute(DELETION_QUERY, &[&requested_art.base_art.id])
-                .await
-                .unwrap();
-
-            // Yay! The page is deleted! :)
-            let mut not_found_but_204 =
-                RootErrors::NotFound(original_uri, cookie_jar).into_response();
-            *not_found_but_204.status_mut() = axum::http::StatusCode::NO_CONTENT;
-            Ok(not_found_but_204)
-        } else {
-            Err(RootErrors::BadRequest(
-                original_uri,
-                cookie_jar,
-                "Only logged-in users can delete pages.".to_string(),
-            ))
-        }
-    } else {
-        Err(RootErrors::NotFound(original_uri, cookie_jar))
+    // If the user cant modify this art... you get the idea.
+    if !requested_art.can_be_modified_by(&requesting_user) {
+        return Err(RootErrors::Forbidden);
     }
+
+    // The request is valid? Lovely! Let's start nuking stuff. First of all, take aim at the S3 bucket.
+    let s3_client = state.s3_client.clone();
+
+    // Get all of the art
+    let mut files_to_delete: Vec<ObjectIdentifier> = requested_art
+        .art_keys
+        .iter()
+        .map(|key| ObjectIdentifier::builder().key(key).build().unwrap())
+        .collect();
+
+    // Add the thumbnail
+    files_to_delete.push(
+        ObjectIdentifier::builder()
+            .key(requested_art.base_art.thumbnail_key)
+            .build()
+            .unwrap(),
+    );
+
+    // now, KILL
+    s3_client.delete_objects()
+        .bucket(&state.config.s3_public_bucket)
+        .delete(aws_sdk_s3::types::Delete::builder()
+        .set_objects(
+            Some(files_to_delete))
+            .build()
+            .unwrap()
+        )
+        .send()
+        .await
+        .map_err(|err|
+            {
+                eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {:?}", &requested_art.base_art.id, &requested_art.base_art.title, err);
+                RootErrors::InternalServerError
+            }
+        )?;
+
+    // Now that everything else is complete, nuke the page from the DB.
+    const DELETION_QUERY: &str = "DELETE FROM art WHERE id=$1";
+    db_connection
+        .execute(DELETION_QUERY, &[&requested_art.base_art.id])
+        .await
+        .unwrap();
+
+    // Yay! The page is deleted! :)
+    let mut not_found_but_204 =
+        RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)).into_response();
+    *not_found_but_204.status_mut() = axum::http::StatusCode::NO_CONTENT;
+    Ok(not_found_but_204)
 }

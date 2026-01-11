@@ -38,8 +38,11 @@ pub async fn story_page(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
+    let db_connection = state.db_pool.get().await.unwrap();
+    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
     if let Some(requested_story) =
-        structs::PageStory::get_by_slug(&story_slug, state.db_pool.get().await.unwrap()).await
+        structs::PageStory::get_by_slug(&story_slug, &db_connection).await
     {
         // TODO: Sanitize custom_css.
         // TODO: Properly clean style. Clean both using the same ammonia settings!
@@ -76,6 +79,6 @@ pub async fn story_page(
             content: &converted_story,
         }))
     } else {
-        Err(RootErrors::NotFound(original_uri, cookie_jar))
+        Err(RootErrors::NotFound(original_uri, cookie_jar, requesting_user))
     }
 }

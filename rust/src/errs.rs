@@ -12,13 +12,13 @@ use tower_cookies::Cookies;
 #[derive(Debug)]
 pub enum RootErrors {
     /// User asked for something that the server doesn't recognize.
-    NotFound(Uri, Cookies),
+    NotFound(Uri, Cookies, Option<User>),
     /// Part of my code ate shit and it's not the user's fault.
     InternalServerError,
     /// My code took too long to respond.
     RequestTimeout,
     /// Part of my code ate shit and it *is* the user's fault.
-    BadRequest(Uri, Cookies, String),
+    BadRequest(Uri, Cookies, Option<User>, String),
     /// The user tried doing an action requiring to be logged in, and they aren't.
     Unauthorized,
     /// The user is logged in, and they don't have the permissions to do what they were doing.
@@ -28,14 +28,14 @@ pub enum RootErrors {
 impl IntoResponse for RootErrors {
     fn into_response(self) -> Response {
         match self {
-            Self::NotFound(original_uri, cookie_jar) => page_not_found().into_response(),
+            Self::NotFound(original_uri, cookie_jar, logged_in_user) => page_not_found(original_uri, cookie_jar, logged_in_user).into_response(),
             Self::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Html::from(INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone()),
             )
                 .into_response(),
             Self::RequestTimeout => request_timeout().into_response(),
-            Self::BadRequest(original_uri, cookie_jar, elaboration) => {
+            Self::BadRequest(original_uri, cookie_jar, logged_in_user, elaboration) => {
                 bad_request(elaboration).into_response()
             }
             Self::Unauthorized => unauthorized().into_response(),
@@ -58,12 +58,12 @@ struct PageNotFound {
     original_uri: Uri,
 }
 
-fn page_not_found() -> (StatusCode, Html<String>) {
+fn page_not_found(original_uri: Uri, _cookie_jar: tower_cookies::Cookies, logged_in_user: Option<User>) -> (StatusCode, Html<String>) {
     (
         StatusCode::NOT_FOUND,
         PageNotFound {
-            user: None,
-            original_uri: Uri::from_static("/"),
+            user: logged_in_user,
+            original_uri,
         }
         .render()
         .unwrap_or(String::from(

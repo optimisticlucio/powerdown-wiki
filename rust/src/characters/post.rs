@@ -14,14 +14,16 @@ use std::error::Error;
 use std::path::Path;
 use tower_cookies::Cookies;
 
+// TODO: Redo this entire function.
 #[axum::debug_handler]
 pub async fn add_character(
     State(state): State<ServerState>,
-
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, RootErrors> {
+    todo!();
+
     let mut page_character_builder = PageCharacterBuilder::default();
     let mut base_character_builder = BaseCharacterBuilder::default();
 
@@ -38,6 +40,7 @@ pub async fn add_character(
                 return Err(RootErrors::BadRequest(
                     http::Uri::from_static("/"),
                     Cookies::default(),
+                    None,
                     "Recieved a field with no name.".to_owned(),
                 ))
             }
@@ -57,7 +60,11 @@ pub async fn add_character(
                 let check_slug_is_valid = Regex::new("^[a-z0-9]+(?:-[a-z0-9]+)*$").unwrap();
 
                 if !check_slug_is_valid.is_match(&recieved_slug) {
-                    return Err(RootErrors::BadRequest(http::Uri::from_static("/"), Cookies::default(), "Slug has invalid formatting. Expecting lowercase, numbers, and single dashes between words.".to_owned()));
+                    return Err(RootErrors::BadRequest(
+                        http::Uri::from_static("/"),
+                        Cookies::default(),
+                        None,
+                        "Slug has invalid formatting. Expecting lowercase, numbers, and single dashes between words.".to_owned()));
                 }
 
                 base_character_builder.slug(recieved_slug);
@@ -67,6 +74,7 @@ pub async fn add_character(
                     Path::new(recieved_field.file_name().ok_or(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
+                        None,
                         "thumbnail lacked filename".to_string(),
                     ))?)
                     .extension()
@@ -126,6 +134,7 @@ pub async fn add_character(
                         RootErrors::BadRequest(
                             http::Uri::from_static("/"),
                             Cookies::default(),
+                            None,
                             format!("{}, SUBTITLES", parse_err.to_string()),
                         )
                     })?;
@@ -139,6 +148,7 @@ pub async fn add_character(
                     Path::new(recieved_field.file_name().ok_or(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
+                        None,
                         "page_img lacked filename".to_string(),
                     ))?)
                     .extension()
@@ -162,6 +172,7 @@ pub async fn add_character(
                     RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
+                        None,
                         err.body_text(),
                     )
                 })?;
@@ -208,6 +219,7 @@ pub async fn add_character(
                         RootErrors::BadRequest(
                             http::Uri::from_static("/"),
                             Cookies::default(),
+                            None,
                             format!("{}, INFOBOX", parse_err.to_string()),
                         )
                     })?;
@@ -261,6 +273,7 @@ pub async fn add_character(
                     return Err(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
+                        None,
                         "Birthday not in the MM-DD format.".to_owned(),
                     ));
                 }
@@ -273,6 +286,7 @@ pub async fn add_character(
                         RootErrors::BadRequest(
                             http::Uri::from_static("/"),
                             Cookies::default(),
+                            None,
                             "Birthday not in the MM-DD format.".to_owned(),
                         )
                     })?;
@@ -281,6 +295,7 @@ pub async fn add_character(
                     .ok_or(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
+                        None,
                         "Given a nonexistent date as a birthday.".to_owned(),
                     ))?;
 
@@ -291,6 +306,7 @@ pub async fn add_character(
                 return Err(RootErrors::BadRequest(
                     http::Uri::from_static("/"),
                     Cookies::default(),
+                    None,
                     format!("Invalid Field Recieved: {}", field_name),
                 ))
             }
@@ -301,6 +317,7 @@ pub async fn add_character(
         RootErrors::BadRequest(
             http::Uri::from_static("/"),
             Cookies::default(),
+            None,
             err.to_string(),
         )
     })?;
@@ -310,6 +327,7 @@ pub async fn add_character(
         RootErrors::BadRequest(
             http::Uri::from_static("/"),
             Cookies::default(),
+            None,
             err.to_string(),
         )
     })?;

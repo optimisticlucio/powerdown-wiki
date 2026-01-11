@@ -14,6 +14,7 @@ pub mod file_compression;
 
 pub use file_compression::compress_image_lossless;
 
+#[allow(dead_code)] // This is used by serde multiple times in the app, but the compiler can't tell. Don't delete this, jackass.
 pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
@@ -81,6 +82,7 @@ pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors
         http::status::StatusCode::BAD_REQUEST => RootErrors::BadRequest(
             http::Uri::from_static("/"),
             tower_cookies::Cookies::default(),
+            None,
             err.body_text(),
         ),
         _ => RootErrors::InternalServerError,
