@@ -355,7 +355,7 @@ pub async fn edit_art_put_request(
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
         }
-        ArtPostingSteps::UploadMetadata(mut sent_page_art) => {
+        ArtPostingSteps::UploadMetadata(sent_page_art) => {
             // First let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
                 return Err(RootErrors::BadRequest(
