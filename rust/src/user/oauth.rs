@@ -151,7 +151,7 @@ async fn oauth_process<
     // Did the user give us an authorization code?
     let authorization_code = match query.code {
         None => {
-            return Err(RootErrors::BAD_REQUEST(
+            return Err(RootErrors::BadRequest(
                 original_uri,
                 cookie_jar,
                 format!(
@@ -169,7 +169,7 @@ async fn oauth_process<
             "[OAUTH2; {}] Failed to build request client: {:?}",
             process_name_for_debug, err
         );
-        RootErrors::INTERNAL_SERVER_ERROR
+        RootErrors::InternalServerError
     })?;
 
     let response = access_token_request_client
@@ -191,7 +191,7 @@ async fn oauth_process<
                 process_name_for_debug,
                 err.to_string()
             );
-            RootErrors::INTERNAL_SERVER_ERROR
+            RootErrors::InternalServerError
         })?;
 
     let text_response = response.text().await.unwrap();
@@ -207,7 +207,7 @@ async fn oauth_process<
                 process_name_for_debug,
                 err.to_string()
             );
-            RootErrors::INTERNAL_SERVER_ERROR
+            RootErrors::InternalServerError
         })?;
 
     // Now we send another message: "Who tf is this person?"
@@ -218,7 +218,7 @@ async fn oauth_process<
                 "[OAUTH2; {}] Failed to build identification request client: {:?}",
                 process_name_for_debug, err
             );
-            RootErrors::INTERNAL_SERVER_ERROR
+            RootErrors::InternalServerError
         })?
         .get(provider.get_identification_url())
         .header("Authorization", format!("Bearer {}", &tokens.access_token))
@@ -231,7 +231,7 @@ async fn oauth_process<
                 process_name_for_debug,
                 err.to_string()
             );
-            RootErrors::INTERNAL_SERVER_ERROR
+            RootErrors::InternalServerError
         })?;
 
     let user_info: T = identify_request.json().await.map_err(|err| {
@@ -240,7 +240,7 @@ async fn oauth_process<
             process_name_for_debug,
             err.to_string()
         );
-        RootErrors::INTERNAL_SERVER_ERROR
+        RootErrors::InternalServerError
     })?;
 
     let user_id = get_user_id(&user_info);
@@ -261,13 +261,13 @@ async fn oauth_process<
         // If the user is logged in, some error is gonna be thrown.
         if let Some(logged_in_user) = logged_in_user {
             if logged_in_user == existing_user_with_connection {
-                Err(RootErrors::BAD_REQUEST(
+                Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
                     "You're already logged in, silly! You can't re-log-in!".to_string(),
                 ))
             } else {
-                Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
+                Err(RootErrors::BadRequest(original_uri, cookie_jar, "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
             }
         }
         // If the user isn't logged in, log in as usual.

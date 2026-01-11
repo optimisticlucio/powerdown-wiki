@@ -12,34 +12,34 @@ use tower_cookies::Cookies;
 #[derive(Debug)]
 pub enum RootErrors {
     /// User asked for something that the server doesn't recognize.
-    NOT_FOUND(Uri, Cookies),
+    NotFound(Uri, Cookies),
     /// Part of my code ate shit and it's not the user's fault.
-    INTERNAL_SERVER_ERROR,
+    InternalServerError,
     /// My code took too long to respond.
-    REQUEST_TIMEOUT,
+    RequestTimeout,
     /// Part of my code ate shit and it *is* the user's fault.
-    BAD_REQUEST(Uri, Cookies, String),
+    BadRequest(Uri, Cookies, String),
     /// The user tried doing an action requiring to be logged in, and they aren't.
-    UNAUTHORIZED,
+    Unauthorized,
     /// The user is logged in, and they don't have the permissions to do what they were doing.
-    FORBIDDEN,
+    Forbidden,
 }
 
 impl IntoResponse for RootErrors {
     fn into_response(self) -> Response {
         match self {
-            Self::NOT_FOUND(original_uri, cookie_jar) => page_not_found().into_response(),
-            Self::INTERNAL_SERVER_ERROR => (
+            Self::NotFound(original_uri, cookie_jar) => page_not_found().into_response(),
+            Self::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Html::from(INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone()),
             )
                 .into_response(),
-            Self::REQUEST_TIMEOUT => request_timeout().into_response(),
-            Self::BAD_REQUEST(original_uri, cookie_jar, elaboration) => {
+            Self::RequestTimeout => request_timeout().into_response(),
+            Self::BadRequest(original_uri, cookie_jar, elaboration) => {
                 bad_request(elaboration).into_response()
             }
-            Self::UNAUTHORIZED => unauthorized().into_response(),
-            Self::FORBIDDEN => forbidden().into_response(),
+            Self::Unauthorized => unauthorized().into_response(),
+            Self::Forbidden => forbidden().into_response(),
         }
     }
 }

@@ -31,11 +31,11 @@ pub async fn add_character(
     while let Some(recieved_field) = multipart
         .next_field()
         .await
-        .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| RootErrors::InternalServerError)?
     {
         let field_name = match recieved_field.name() {
             None => {
-                return Err(RootErrors::BAD_REQUEST(
+                return Err(RootErrors::BadRequest(
                     http::Uri::from_static("/"),
                     Cookies::default(),
                     "Recieved a field with no name.".to_owned(),
@@ -57,14 +57,14 @@ pub async fn add_character(
                 let check_slug_is_valid = Regex::new("^[a-z0-9]+(?:-[a-z0-9]+)*$").unwrap();
 
                 if !check_slug_is_valid.is_match(&recieved_slug) {
-                    return Err(RootErrors::BAD_REQUEST(http::Uri::from_static("/"), Cookies::default(), "Slug has invalid formatting. Expecting lowercase, numbers, and single dashes between words.".to_owned()));
+                    return Err(RootErrors::BadRequest(http::Uri::from_static("/"), Cookies::default(), "Slug has invalid formatting. Expecting lowercase, numbers, and single dashes between words.".to_owned()));
                 }
 
                 base_character_builder.slug(recieved_slug);
             }
             "thumbnail" => {
                 let user_given_file_extension =
-                    Path::new(recieved_field.file_name().ok_or(RootErrors::BAD_REQUEST(
+                    Path::new(recieved_field.file_name().ok_or(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
                         "thumbnail lacked filename".to_string(),
@@ -82,7 +82,7 @@ pub async fn add_character(
                 let img_file = recieved_field
                     .bytes()
                     .await
-                    .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                    .map_err(|_| RootErrors::InternalServerError)?;
 
                 let compressed_img_file = utils::compress_image_lossless(
                     img_file.to_vec(),
@@ -112,7 +112,7 @@ pub async fn add_character(
                             source = e.source();
                         }
 
-                        RootErrors::INTERNAL_SERVER_ERROR
+                        RootErrors::InternalServerError
                     })?;
                 base_character_builder.thumbnail_url(get_s3_object_url(
                     &state.config.s3_public_bucket,
@@ -123,7 +123,7 @@ pub async fn add_character(
                 let field_text = text_or_internal_err(recieved_field).await?;
                 let subtitle_array: Vec<String> =
                     serde_json::from_str(&field_text).map_err(|parse_err| {
-                        RootErrors::BAD_REQUEST(
+                        RootErrors::BadRequest(
                             http::Uri::from_static("/"),
                             Cookies::default(),
                             format!("{}, SUBTITLES", parse_err.to_string()),
@@ -136,7 +136,7 @@ pub async fn add_character(
             }
             "page_img" => {
                 let user_given_file_extension =
-                    Path::new(recieved_field.file_name().ok_or(RootErrors::BAD_REQUEST(
+                    Path::new(recieved_field.file_name().ok_or(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
                         "page_img lacked filename".to_string(),
@@ -159,7 +159,7 @@ pub async fn add_character(
                         &err.to_string()
                     );
 
-                    RootErrors::BAD_REQUEST(
+                    RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
                         err.body_text(),
@@ -193,7 +193,7 @@ pub async fn add_character(
                         source = e.source();
                     }
 
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?;
 
                 page_character_builder.page_img_url(get_s3_object_url(
@@ -205,7 +205,7 @@ pub async fn add_character(
                 let field_text = text_or_internal_err(recieved_field).await?;
                 let infobox_array: HashMap<String, String> = serde_json::from_str(&field_text)
                     .map_err(|parse_err| {
-                        RootErrors::BAD_REQUEST(
+                        RootErrors::BadRequest(
                             http::Uri::from_static("/"),
                             Cookies::default(),
                             format!("{}, INFOBOX", parse_err.to_string()),
@@ -258,7 +258,7 @@ pub async fn add_character(
                     || birthday_components[0].len() != 2
                     || birthday_components[1].len() != 2
                 {
-                    return Err(RootErrors::BAD_REQUEST(
+                    return Err(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
                         "Birthday not in the MM-DD format.".to_owned(),
@@ -270,7 +270,7 @@ pub async fn add_character(
                     .map(|date| date.parse::<u32>())
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|err| {
-                        RootErrors::BAD_REQUEST(
+                        RootErrors::BadRequest(
                             http::Uri::from_static("/"),
                             Cookies::default(),
                             "Birthday not in the MM-DD format.".to_owned(),
@@ -278,7 +278,7 @@ pub async fn add_character(
                     })?;
 
                 let birthday = chrono::NaiveDate::from_ymd_opt(0, birthday_u32[0], birthday_u32[1])
-                    .ok_or(RootErrors::BAD_REQUEST(
+                    .ok_or(RootErrors::BadRequest(
                         http::Uri::from_static("/"),
                         Cookies::default(),
                         "Given a nonexistent date as a birthday.".to_owned(),
@@ -288,7 +288,7 @@ pub async fn add_character(
             }
 
             _ => {
-                return Err(RootErrors::BAD_REQUEST(
+                return Err(RootErrors::BadRequest(
                     http::Uri::from_static("/"),
                     Cookies::default(),
                     format!("Invalid Field Recieved: {}", field_name),
@@ -298,7 +298,7 @@ pub async fn add_character(
     }
 
     let base_character = base_character_builder.build().map_err(|err| {
-        RootErrors::BAD_REQUEST(
+        RootErrors::BadRequest(
             http::Uri::from_static("/"),
             Cookies::default(),
             err.to_string(),
@@ -307,7 +307,7 @@ pub async fn add_character(
 
     page_character_builder.base_character(base_character);
     let page_character = page_character_builder.build().map_err(|err| {
-        RootErrors::BAD_REQUEST(
+        RootErrors::BadRequest(
             http::Uri::from_static("/"),
             Cookies::default(),
             err.to_string(),
@@ -320,7 +320,7 @@ pub async fn add_character(
             "CHARACTER POST ERR - Couldn't get DB connection for {}",
             &page_character.base_character.name
         );
-        RootErrors::INTERNAL_SERVER_ERROR
+        RootErrors::InternalServerError
     })?;
 
     // Let's build our query.
@@ -407,7 +407,7 @@ pub async fn add_character(
                 "[CHARACTER POST] Error in db query execution!\nQuery: {}\nError: {:?}",
                 query, err
             );
-            RootErrors::INTERNAL_SERVER_ERROR
+            RootErrors::InternalServerError
         })?;
 
     Ok(Redirect::to(&format!(

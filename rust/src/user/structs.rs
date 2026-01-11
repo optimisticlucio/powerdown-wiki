@@ -132,7 +132,7 @@ impl User {
             .db_pool
             .get()
             .await
-            .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+            .map_err(|_| RootErrors::InternalServerError)?;
         Ok(User::get_from_cookie_jar(&db_connection, &cookie_jar).await)
     }
 

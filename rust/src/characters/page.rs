@@ -77,7 +77,7 @@ pub async fn character_page(
             content: parsed_content.as_deref(),
         }))
     } else {
-        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
+        Err(RootErrors::NotFound(original_uri, cookie_jar))
     }
 }
 

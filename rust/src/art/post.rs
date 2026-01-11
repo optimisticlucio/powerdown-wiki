@@ -31,7 +31,7 @@ pub async fn add_art(
         ArtPostingSteps::UploadMetadata(page_art) => {
             // First let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
-                return Err(RootErrors::BAD_REQUEST(
+                return Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
                     err_explanation,
@@ -43,7 +43,7 @@ pub async fn add_art(
                 .db_pool
                 .get()
                 .await
-                .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                .map_err(|_| RootErrors::InternalServerError)?;
 
             // Let's build the query.
             let mut columns: Vec<String> = Vec::new();
@@ -69,7 +69,7 @@ pub async fn add_art(
 
             let temp_thumbnail_key = match Url::parse(&page_art.base_art.thumbnail_key) {
                 Err(err) => {
-                    return Err(RootErrors::BAD_REQUEST(
+                    return Err(RootErrors::BadRequest(
                         original_uri,
                         cookie_jar,
                         format!(
@@ -122,7 +122,7 @@ pub async fn add_art(
                 .await
                 .map_err(|err| {
                     eprintln!("[ART UPLOAD] Initial DB upload failed! {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?
                 .get(0);
 
@@ -144,7 +144,7 @@ pub async fn add_art(
                     "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {}",
                     err.to_string()
                 );
-                RootErrors::INTERNAL_SERVER_ERROR
+                RootErrors::InternalServerError
             })?;
 
             db_connection
@@ -158,7 +158,7 @@ pub async fn add_art(
                         "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {}",
                         err.to_string()
                     );
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?;
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
@@ -184,11 +184,7 @@ pub async fn add_art(
             // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
             let temp_file_keys = match temp_file_keys {
                 Err(err_string) => {
-                    return Err(RootErrors::BAD_REQUEST(
-                        original_uri,
-                        cookie_jar,
-                        err_string,
-                    ))
+                    return Err(RootErrors::BadRequest(original_uri, cookie_jar, err_string))
                 }
                 Ok(temp_keys) => temp_keys,
             };
@@ -205,7 +201,7 @@ pub async fn add_art(
                     .db_pool
                     .get()
                     .await
-                    .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                    .map_err(|_| RootErrors::InternalServerError)?;
                 let target_s3_folder = target_s3_folder.clone();
 
                 // tokio::spawn lets all the tasks run simultaneously, which is nice.
@@ -265,7 +261,7 @@ pub async fn add_art(
                     failed_uploads.join(", ")
                 );
 
-                return Err(RootErrors::INTERNAL_SERVER_ERROR);
+                return Err(RootErrors::InternalServerError);
             }
 
             // ---- Now that we finished, set the appropriate art state. ----
@@ -281,12 +277,12 @@ pub async fn add_art(
                         "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {}",
                         err.to_string()
                     );
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?;
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         }
-        _ => Err(RootErrors::BAD_REQUEST(
+        _ => Err(RootErrors::BadRequest(
             original_uri,
             cookie_jar,
             "invalid upload step".to_string(),
@@ -342,16 +338,16 @@ pub async fn edit_art_put_request(
         .db_pool
         .get()
         .await
-        .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| RootErrors::InternalServerError)?;
 
     let existing_art = match PageArt::get_by_slug(&db_connection, &art_slug).await {
-        None => return Err(RootErrors::NOT_FOUND(original_uri, cookie_jar)),
+        None => return Err(RootErrors::NotFound(original_uri, cookie_jar)),
         Some(existing_art) => existing_art,
     };
 
     // Who's asking to do this?
     let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
-        None => return Err(RootErrors::UNAUTHORIZED),
+        None => return Err(RootErrors::Unauthorized),
         Some(requesting_user) => requesting_user,
     };
 
@@ -367,7 +363,7 @@ pub async fn edit_art_put_request(
         ArtPostingSteps::UploadMetadata(mut sent_page_art) => {
             // First let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
-                return Err(RootErrors::BAD_REQUEST(
+                return Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
                     err_explanation,
@@ -445,7 +441,7 @@ pub async fn edit_art_put_request(
                         &existing_art.base_art.title,
                         err.to_string()
                     );
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?;
 
             // TODO - DELETE ANY REMOVED ART, AND MOVE THE NEW ART INTO PLACE
@@ -464,7 +460,7 @@ pub async fn edit_art_put_request(
                         existing_art.base_art.id,
                         err.to_string()
                     );
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?;
 
             Ok(Redirect::to(&format!("/art/{}", sent_page_art.base_art.slug)).into_response())
@@ -481,13 +477,13 @@ async fn give_user_presigned_s3_urls(
     state: &ServerState,
 ) -> Result<Response, RootErrors> {
     if requested_amount_of_urls < 1 {
-        Err(RootErrors::BAD_REQUEST(
+        Err(RootErrors::BadRequest(
             original_uri,
             cookie_jar,
             "art post must have at least one art piece".to_string(),
         ))
     } else if requested_amount_of_urls > 25 {
-        Err(RootErrors::BAD_REQUEST(
+        Err(RootErrors::BadRequest(
             original_uri,
             cookie_jar,
             "for the good of mankind, don't put that many art pieces in one post. split them up"
@@ -527,14 +523,14 @@ async fn give_user_presigned_s3_urls(
                 .await
                 .map_err(|err| {
                     eprintln!("[ART POST STAGE 1] Tokio Join Err! {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?
                 .map_err(|err| {
                     eprintln!(
                         "[ART POST STAGE 1] SDK presigned URL creation err! {}",
                         err.to_string()
                     );
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?;
 
             temp_keys_for_presigned.push(uri);

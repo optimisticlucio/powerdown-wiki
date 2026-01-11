@@ -11,7 +11,7 @@ pub async fn add_story(
         .db_pool
         .get()
         .await
-        .map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| RootErrors::InternalServerError)?;
 
     // Let's build our query.
     let (columns, values) =
@@ -37,7 +37,7 @@ pub async fn add_story(
                 "[STORY] Error in db query execution!\nQuery: {}\nError: {:?}",
                 query, err
             );
-            RootErrors::INTERNAL_SERVER_ERROR
+            RootErrors::InternalServerError
         })?;
 
     Ok(Redirect::to(&format!(

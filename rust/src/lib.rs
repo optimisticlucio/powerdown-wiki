@@ -54,9 +54,9 @@ pub fn router(state: ServerState) -> Router<()> {
 
 async fn root_error_handler(err: BoxError) -> impl IntoResponse {
     if err.is::<tower::timeout::error::Elapsed>() {
-        errs::RootErrors::REQUEST_TIMEOUT
+        errs::RootErrors::RequestTimeout
     } else {
-        errs::RootErrors::INTERNAL_SERVER_ERROR
+        errs::RootErrors::InternalServerError
     }
 }
 
@@ -64,5 +64,5 @@ async fn fallback(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> impl IntoResponse {
-    errs::RootErrors::NOT_FOUND(original_uri, cookie_jar)
+    errs::RootErrors::NotFound(original_uri, cookie_jar)
 }

@@ -76,7 +76,7 @@ pub async fn art_page(
             newer_art_url,
         }))
     } else {
-        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
+        Err(RootErrors::NotFound(original_uri, cookie_jar))
     }
 }
 
@@ -142,7 +142,7 @@ pub async fn delete_art_page(
 
             // If not, gtfo.
             if !user_can_delete_given_image {
-                return Err(RootErrors::BAD_REQUEST(
+                return Err(RootErrors::BadRequest(
                     original_uri,
                     cookie_jar,
                     "You do not have permission to delete this page.".to_string(),
@@ -181,7 +181,7 @@ pub async fn delete_art_page(
                 .map_err(|err|
                     {
                         eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {:?}", &requested_art.base_art.id, &requested_art.base_art.title, err);
-                        RootErrors::INTERNAL_SERVER_ERROR
+                        RootErrors::InternalServerError
                     }
                 )?;
 
@@ -194,17 +194,17 @@ pub async fn delete_art_page(
 
             // Yay! The page is deleted! :)
             let mut not_found_but_204 =
-                RootErrors::NOT_FOUND(original_uri, cookie_jar).into_response();
+                RootErrors::NotFound(original_uri, cookie_jar).into_response();
             *not_found_but_204.status_mut() = axum::http::StatusCode::NO_CONTENT;
             Ok(not_found_but_204)
         } else {
-            Err(RootErrors::BAD_REQUEST(
+            Err(RootErrors::BadRequest(
                 original_uri,
                 cookie_jar,
                 "Only logged-in users can delete pages.".to_string(),
             ))
         }
     } else {
-        Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
+        Err(RootErrors::NotFound(original_uri, cookie_jar))
     }
 }
