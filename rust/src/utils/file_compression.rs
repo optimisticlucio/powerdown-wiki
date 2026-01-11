@@ -19,14 +19,14 @@ pub fn compress_image_lossless(
                 .ok()
                 .and_then(|r| r.format())
         });
-    
+
     // Load the image
     let mut reader = ImageReader::new(Cursor::new(&image_bytes));
     if let Some(fmt) = format {
         reader.set_format(fmt);
     }
     let img = reader.decode()?;
-    
+
     // Determine if we can apply lossless compression
     match format {
         Some(ImageFormat::Jpeg) => {
@@ -45,7 +45,7 @@ pub fn compress_image_lossless(
         Some(ImageFormat::Png) => {
             // Re-compress PNG with maximum compression
             let compressed = compress_to_png_max(&img)?;
-            
+
             // Only return compressed version if it's actually smaller
             if compressed.len() < image_bytes.len() {
                 Ok(compressed)
@@ -53,7 +53,7 @@ pub fn compress_image_lossless(
                 Ok(image_bytes)
             }
         }
-        Some(ImageFormat::Bmp) | Some(ImageFormat::Tiff) 
+        Some(ImageFormat::Bmp) | Some(ImageFormat::Tiff)
         | Some(ImageFormat::Ico) | Some(ImageFormat::Pnm) | Some(ImageFormat::Tga)
         | Some(ImageFormat::Dds) | Some(ImageFormat::Hdr) | Some(ImageFormat::Farbfeld) => {
             // Convert to lossless WebP for better compression

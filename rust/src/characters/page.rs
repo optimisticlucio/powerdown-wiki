@@ -18,7 +18,7 @@ struct CharacterPage<'a> {
 
     creator: &'a str,
     tag: Option<&'a str>,
-    
+
     name: &'a str,
     subtitle: &'a str,
     infobox: Vec<InfoboxRow>,
@@ -46,7 +46,7 @@ pub async fn character_page(
                 original_uri,
 
                 retirement_reason: retirement_reason.as_deref(),
-                overlay_css: chosen_char.overlay_css.as_deref(), 
+                overlay_css: chosen_char.overlay_css.as_deref(),
                 custom_css: chosen_char.custom_css.as_deref(),
                 creator: &chosen_char.creator,
                 tag: chosen_char.tag.as_deref(),
@@ -68,7 +68,7 @@ pub async fn character_page(
 
 fn parse_character_page_contents(unparsed_contents: &str) -> Option<String> {
     let mut parsed_contents = markdown_to_html(unparsed_contents, &comrak::Options{
-        extension: comrak::ExtensionOptions { 
+        extension: comrak::ExtensionOptions {
             ..comrak::ExtensionOptions::default()
         },
         parse: comrak::ParseOptions {
@@ -76,7 +76,7 @@ fn parse_character_page_contents(unparsed_contents: &str) -> Option<String> {
         },
         render: comrak::RenderOptions {
             ..comrak::RenderOptions::default()
-        }    
+        }
     })
         .replace("<h1>", r#"</div> <h1> <span>"#)
         .replace("</h1>", r#"</span> </h1> <div class="text">"#);
@@ -91,6 +91,6 @@ fn parse_character_page_contents(unparsed_contents: &str) -> Option<String> {
             parsed_contents = parsed_contents.replacen("</div>", "", 1);
         }
     }
-    
+
     Some(parsed_contents)
 }

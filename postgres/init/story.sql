@@ -7,7 +7,7 @@ CREATE TABLE story (
     tagline text CHECK (TRIM(tagline) != ''),
     description text NOT NULL CHECK (TRIM(description) != ''),
     tags text[] NOT NULL DEFAULT ARRAY[]::text[],
-    
+
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
 
     creation_date date NOT NULL,
@@ -41,6 +41,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_row_value_last_updated AFTER INSERT OR UPDATE ON story 
+CREATE TRIGGER update_row_value_last_updated AFTER INSERT OR UPDATE ON story
     FOR EACH ROW  -- This apparently means every row *in the transaction.* Not like, every row. Gave me a heart attack.
     EXECUTE FUNCTION update_last_updated();

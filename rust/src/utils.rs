@@ -85,7 +85,7 @@ pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors
 pub async fn move_temp_s3_file(
         s3_client: aws_sdk_s3::Client,
         server_config: &crate::server_state::config::Config,
-        temp_file_key: &str, 
+        temp_file_key: &str,
         target_bucket_name: &str,
         target_file_key: &str
     ) -> Result<(), MoveTempS3FileErrs> {

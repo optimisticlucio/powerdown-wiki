@@ -52,7 +52,7 @@ struct PageNotFound {
 
 fn page_not_found() -> (StatusCode, Html<String>) {
     (
-        StatusCode::NOT_FOUND, 
+        StatusCode::NOT_FOUND,
         PageNotFound {
             user: None,
             original_uri: Uri::from_static("/")

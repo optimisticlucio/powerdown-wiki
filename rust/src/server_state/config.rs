@@ -11,7 +11,7 @@ pub struct Config {
 impl Config {
     /// Gets the relevant data from ENV and returns a new instance of Config.
     pub fn initialize() -> Self {
-        let s3_public_bucket = env::var("S3_PUBLIC_BUCKET_NAME").unwrap(); 
+        let s3_public_bucket = env::var("S3_PUBLIC_BUCKET_NAME").unwrap();
         let s3_sql_backup_bucket = env::var("S3_SQL_BACKUP_BUCKET_NAME").unwrap();
 
         Self {

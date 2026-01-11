@@ -85,7 +85,7 @@ impl BaseArt {
             RETURNING id", &[&random_page_slug]).await.unwrap();
 
         insert_operation_result.get(0) // id is int, which converts to i32.
-    } 
+    }
 
     /// Returns the proper URL for the thumbnail.
     pub fn get_thumbnail_url(&self) -> String {
@@ -116,10 +116,10 @@ impl PageArt {
 
                     (index, key)
                 }).collect::<Vec<_>>();
-        
+
         art_files.sort();
 
-        let art_keys = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>(); 
+        let art_keys = art_files.iter().map(|(_, x)| x.to_owned()).collect::<Vec<_>>();
 
         let uploading_user_id: Option<i32> = row.get("uploading_user_id");
         let uploading_user = if let Some(user_id) = uploading_user_id {
@@ -193,7 +193,7 @@ impl ArtSearchParameters {
         }
     }
 
-    /// Returns how the parameter section of a URL with these parameters should look like. 
+    /// Returns how the parameter section of a URL with these parameters should look like.
     pub fn to_uri_parameters(&self, include_page_number: bool) -> String {
         let mut parameters: Vec<String> = Vec::new();
 
@@ -231,7 +231,7 @@ impl ArtSearchParameters {
 
 impl Default for ArtSearchParameters {
     fn default() -> Self {
-        ArtSearchParameters { 
+        ArtSearchParameters {
             page: default_page_number(),
             tags: Vec::new(),
             is_nsfw: false,
@@ -247,11 +247,11 @@ where
 {
     // Expected format is a list of lowercase, numbers, and dashes, with a comma delimiter.
     let s = String::deserialize(deserializer)?;
-    
+
     if s.is_empty() {
         return Ok(Vec::new());
     }
-    
+
     Ok(s.split(',')
         .map(|item| item.trim().to_string())
         .filter(|item| !item.is_empty())

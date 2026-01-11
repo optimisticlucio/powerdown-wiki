@@ -55,7 +55,7 @@ impl BaseStory {
     pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<Self> {
         // TODO: Limit search
         let story_row = db_connection.query_one(
-            "SELECT * FROM story WHERE page_slug=$1", 
+            "SELECT * FROM story WHERE page_slug=$1",
             &[&slug]).await.ok()?;
 
         Some(Self::from_db_row(&story_row))
@@ -90,7 +90,7 @@ impl BaseStory {
         requested_rows.iter().map(Self::from_db_row).collect()
     }
 
-    /// Returns the total amount of stories currently in the db. 
+    /// Returns the total amount of stories currently in the db.
     pub async fn get_total_amount(db_connection: Object<Manager>, search_params: &StorySearchParameters) -> Result<i64, Box<dyn std::error::Error>> {
         let mut query_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
@@ -101,7 +101,7 @@ impl BaseStory {
         let row = db_connection
             .query_one(&query, &query_params)
             .await?;
-        
+
         let count: i64 = row.get(0);
         Ok(count)
     }
@@ -111,7 +111,7 @@ impl PageStory {
     /// Returns the page info of a single story, found by their page slug. If no such story exists, returns None.
     pub async fn get_by_slug(slug: &str, db_connection: Object<Manager>) -> Option<Self> {
         let story_row = db_connection.query_one(
-            "SELECT * FROM story WHERE page_slug=$1", 
+            "SELECT * FROM story WHERE page_slug=$1",
             &[&slug]).await.ok()?;
 
         Some(Self::from_db_row(&story_row))
@@ -146,7 +146,7 @@ fn default_page_number() -> i64 {
 }
 
 impl StorySearchParameters {
-    /// Returns how the parameter section of a URL with these parameters should look like. 
+    /// Returns how the parameter section of a URL with these parameters should look like.
     pub fn to_uri_parameters(&self, include_page_number: bool) -> String {
         let mut parameters: Vec<String> = Vec::new();
 

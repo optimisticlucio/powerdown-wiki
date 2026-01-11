@@ -38,7 +38,7 @@ CREATE TABLE art_file (
     belongs_to int NOT NULL
         REFERENCES art(id)
         ON DELETE CASCADE,
-    
+
     s3_key text NOT NULL, -- Points to the public bucket key
     internal_order int NOT NULL, -- Whether this image is the first, second, third, etc, in the given post.
 

@@ -73,7 +73,7 @@ pub async fn login_page(
 struct LoginTemplate<'a> {
     user: Option<User>,
     original_uri: Uri,
-    
+
     discord_oauth_url: &'a str,
     google_oauth_url: &'a str,
     github_oauth_url: &'a str,

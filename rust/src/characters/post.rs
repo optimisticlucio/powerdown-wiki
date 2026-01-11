@@ -13,8 +13,8 @@ use crate::utils::{self, get_s3_object_url, text_or_internal_err};
 
 #[axum::debug_handler]
 pub async fn add_character(
-    State(state): State<ServerState>, 
-    
+    State(state): State<ServerState>,
+
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
     mut multipart: Multipart,
@@ -32,10 +32,10 @@ pub async fn add_character(
         };
 
         match field_name {
-            "name" => { 
+            "name" => {
                 base_character_builder.name(text_or_internal_err(recieved_field).await?);
             }
-            "slug" => { 
+            "slug" => {
                 let recieved_slug = text_or_internal_err(recieved_field)
                         .await?
                         .trim().to_owned();
@@ -48,7 +48,7 @@ pub async fn add_character(
 
                 base_character_builder.slug(recieved_slug);
             }
-            "thumbnail" => { 
+            "thumbnail" => {
                 let user_given_file_extension = Path::new(recieved_field.file_name()
                     .ok_or(RootErrors::BAD_REQUEST(http::Uri::from_static("/"), Cookies::default(), "thumbnail lacked filename".to_string()))?).extension().unwrap().to_str().unwrap().to_string();
 
@@ -65,27 +65,27 @@ pub async fn add_character(
                         .send().await.map_err(|err| {
                             println!("INTERNAL ERROR! thumbnail upload for temp_id char {}", temp_character_id);
                             println!("Error: {}", err);
-                            
+
                             // Print the full error chain
                             let mut source = err.source();
                             while let Some(e) = source {
                                 println!("  Caused by: {}", e);
                                 source = e.source();
                             }
-                            
+
                             RootErrors::INTERNAL_SERVER_ERROR
-                        })?; 
+                        })?;
                 base_character_builder.thumbnail_url(get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name));
             }
-            "subtitles" => { 
+            "subtitles" => {
                 let field_text = text_or_internal_err(recieved_field).await?;
                 let subtitle_array: Vec<String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(http::Uri::from_static("/"), Cookies::default(), format!("{}, SUBTITLES",parse_err.to_string())))?;
                 page_character_builder.subtitles(subtitle_array);
             }
-            "creator" => { 
-                page_character_builder.creator(text_or_internal_err(recieved_field).await?); 
+            "creator" => {
+                page_character_builder.creator(text_or_internal_err(recieved_field).await?);
             }
-            "page_img" => { 
+            "page_img" => {
                 let user_given_file_extension = Path::new(recieved_field.file_name()
                     .ok_or(RootErrors::BAD_REQUEST(http::Uri::from_static("/"), Cookies::default(), "page_img lacked filename".to_string()))?).extension().unwrap().to_str().unwrap().to_string();
 
@@ -104,24 +104,24 @@ pub async fn add_character(
                         .bucket(&state.config.s3_public_bucket)
                         .key(&s3_file_name)
                         .body(compressed_img_file.into());
-                
+
                 image_upload.send().await.map_err(|err| {
                     println!("INTERNAL ERROR! thumbnail upload for temp_id char {}", temp_character_id);
                     println!("Error: {}", err);
-                    
+
                     // Print the full error chain
                     let mut source = err.source();
                     while let Some(e) = source {
                         println!("  Caused by: {}", e);
                         source = e.source();
                     }
-                    
+
                     RootErrors::INTERNAL_SERVER_ERROR
-                })?; 
+                })?;
 
                 page_character_builder.page_img_url(get_s3_object_url(&state.config.s3_public_bucket, &s3_file_name));
             }
-            "infobox" => { 
+            "infobox" => {
                 let field_text = text_or_internal_err(recieved_field).await?;
                 let infobox_array: HashMap<String, String> = serde_json::from_str(&field_text).map_err(|parse_err| RootErrors::BAD_REQUEST(http::Uri::from_static("/"), Cookies::default(), format!("{}, INFOBOX",parse_err.to_string())))?;
                 page_character_builder.infobox(infobox_array.iter().map(|(title, desc)| InfoboxRow::new(title.to_owned(), desc.to_owned())).collect());
@@ -172,7 +172,7 @@ pub async fn add_character(
 
                 base_character_builder.birthday(Some(birthday));
             }
-            
+
             _ => return Err(RootErrors::BAD_REQUEST(http::Uri::from_static("/"), Cookies::default(), format!("Invalid Field Recieved: {}", field_name)))
         }
     }

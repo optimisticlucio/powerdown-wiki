@@ -22,14 +22,14 @@ pub async fn add_story(State(state): State<ServerState>, Json(recieved_story): J
         RootErrors::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Redirect::to(&format!("/stories/{}", recieved_story.base_story.slug))) 
+    Ok(Redirect::to(&format!("/stories/{}", recieved_story.base_story.slug)))
 }
 
 async fn set_columns_and_values_for_sql_query<'a>
-        (page_story: &'a PageStory, 
-        mut columns: Vec<String>, 
+        (page_story: &'a PageStory,
+        mut columns: Vec<String>,
         mut values: Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>)
-        -> 
+        ->
         (Vec<String>, Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>)
     {
     columns.push("page_slug".to_owned());
