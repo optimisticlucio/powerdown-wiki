@@ -42,7 +42,7 @@ lazy_static! {
 }
 
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "404.html")]
 struct PageNotFound {
     user: Option<User>,
@@ -51,7 +51,7 @@ struct PageNotFound {
 
 fn page_not_found() -> (StatusCode, Html<String>) {
     (
-        StatusCode::NOT_FOUND, 
+        StatusCode::NOT_FOUND,
         PageNotFound {
             user: None,
             original_uri: Uri::from_static("/")

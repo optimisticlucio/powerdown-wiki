@@ -125,7 +125,7 @@ impl BaseCharacter {
             RETURNING id", &[&random_page_slug]).await.unwrap();
 
         insert_operation_result.get(0) // id is int, which converts to i32.
-    } 
+    }
 }
 
 impl PartialEq for BaseCharacter {
@@ -154,7 +154,7 @@ impl PageCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
     pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<PageCharacter> {
         let character_row = db_connection.query_one(
-            "SELECT * FROM character WHERE page_slug=$1", 
+            "SELECT * FROM character WHERE page_slug=$1",
             &[&slug]).await.ok()?;
 
         Some(Self::from_db_row(&character_row))
@@ -203,7 +203,7 @@ impl PartialOrd for PageCharacter {
 }
 
 impl Eq for PageCharacter {
-    
+
 }
 
 impl Ord for PageCharacter {

@@ -45,7 +45,7 @@ pub async fn user_page(
     )
 }
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "user/user_page.html")]
 struct UserPageTemplate {
     user: Option<User>,
@@ -68,12 +68,12 @@ pub async fn login_page(
     }))
 }
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "user/login.html")]
 struct LoginTemplate<'a> {
     user: Option<User>,
     original_uri: Uri,
-    
+
     discord_oauth_url: &'a str,
     google_oauth_url: &'a str,
     github_oauth_url: &'a str,

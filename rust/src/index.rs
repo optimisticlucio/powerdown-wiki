@@ -38,12 +38,12 @@ lazy_static! {
     ];
 }
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "index.html")]
 struct FrontpageTemplate<'a> {
     user: Option<User>,
     original_uri: Uri,
-    
+
     buttons: &'static Vec<FrontpageItem>,
     random_quote: &'a str,
     random_ad: &'a str,
@@ -57,11 +57,11 @@ async fn homepage(
     cookie_jar: tower_cookies::Cookies
     ) -> Result<Response, RootErrors> {
     let random_subtitle = {
-        let statement = "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;"; 
+        let statement = "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;";
 
         match state.db_pool.get().await {
             // TODO: Turn this unwrap into something that handles error better.
-            Ok(db_connection) => 
+            Ok(db_connection) =>
                 db_connection.query(statement, &[]).await.unwrap()
                     .get(0).unwrap()
                     .get(0),

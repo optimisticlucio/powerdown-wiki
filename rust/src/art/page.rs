@@ -8,13 +8,13 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use aws_sdk_s3::{types::ObjectIdentifier};
 
-#[derive(Template)] 
+#[derive(Template)]
 #[template(path = "art/page.html")]
 struct ArtPage<'a> {
     user: Option<User>,
     original_uri: Uri,
     user_search_params: &'a structs::ArtSearchParameters,
-    
+
     // Whether or not the user has the permissions to edit the page.
     user_can_edit_page: bool,
 
@@ -57,7 +57,7 @@ pub async fn art_page(
 
         Ok(template_to_response(
             ArtPage {
-                user, 
+                user,
                 original_uri,
                 user_search_params: &query_params,
 
@@ -74,7 +74,7 @@ pub async fn art_page(
                 newer_art_url,
             }
         ))
-    }   
+    }
     else {
         Err(RootErrors::NOT_FOUND(original_uri, cookie_jar))
     }
@@ -86,13 +86,13 @@ async fn get_older_and_newer_art_slugs(slug: &str, params: &structs::ArtSearchPa
     let mut sql_params: Vec<&(dyn ToSql + Sync)>= vec![&slug];
 
     // This query uses LAG and LEAD to get the previous and next page slugs, ordered by creation date first, and the page slug second.
-    let query = 
+    let query =
     format!(
-        r#"SELECT 
+        r#"SELECT
             previous_slug,
             next_slug
         FROM (
-            SELECT 
+            SELECT
                 page_slug,
                 LAG(page_slug) OVER (ORDER BY creation_date, page_slug) AS previous_slug,
                 LEAD(page_slug) OVER (ORDER BY creation_date, page_slug) AS next_slug
@@ -114,7 +114,7 @@ async fn get_older_and_newer_art_slugs(slug: &str, params: &structs::ArtSearchPa
         if !err.to_string().contains("number of rows") {
             println!("DB Errored!\nQuery={}\nErr={}", query, err.to_string());
         }
-        
+
         (None, None)
     }
 }
@@ -160,7 +160,7 @@ pub async fn delete_art_page(
                 )
                 .send()
                 .await
-                .map_err(|err| 
+                .map_err(|err|
                     {
                         eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {:?}", &requested_art.base_art.id, &requested_art.base_art.title, err);
                         RootErrors::INTERNAL_SERVER_ERROR
