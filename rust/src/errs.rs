@@ -28,7 +28,9 @@ pub enum RootErrors {
 impl IntoResponse for RootErrors {
     fn into_response(self) -> Response {
         match self {
-            Self::NotFound(original_uri, cookie_jar, logged_in_user) => page_not_found(original_uri, cookie_jar, logged_in_user).into_response(),
+            Self::NotFound(original_uri, cookie_jar, logged_in_user) => {
+                page_not_found(original_uri, cookie_jar, logged_in_user).into_response()
+            }
             Self::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Html::from(INTERNAL_SERVER_ERROR_PAGE_CONTENT.clone()),
@@ -58,7 +60,11 @@ struct PageNotFound {
     original_uri: Uri,
 }
 
-fn page_not_found(original_uri: Uri, _cookie_jar: tower_cookies::Cookies, logged_in_user: Option<User>) -> (StatusCode, Html<String>) {
+fn page_not_found(
+    original_uri: Uri,
+    _cookie_jar: tower_cookies::Cookies,
+    logged_in_user: Option<User>,
+) -> (StatusCode, Html<String>) {
     (
         StatusCode::NOT_FOUND,
         PageNotFound {

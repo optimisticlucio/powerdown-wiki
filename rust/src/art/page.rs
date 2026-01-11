@@ -1,5 +1,10 @@
 use super::structs;
-use crate::{errs::RootErrors, user::{User, UsermadePost}, utils::template_to_response, ServerState};
+use crate::{
+    errs::RootErrors,
+    user::{User, UsermadePost},
+    utils::template_to_response,
+    ServerState,
+};
 use askama::Template;
 use aws_sdk_s3::types::ObjectIdentifier;
 use axum::{
@@ -53,8 +58,6 @@ pub async fn art_page(
         let (older_art_url, newer_art_url) =
             get_older_and_newer_art_slugs(&art_slug, &query_params, &db_connection).await;
         let art_urls = requested_art.get_art_urls();
-
-        
 
         let user_can_edit_page: bool = user
             .as_ref()
@@ -140,13 +143,19 @@ pub async fn delete_art_page(
     let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
         // If the user isn't logged in, kick them out.
         None => return Err(RootErrors::Unauthorized),
-        Some(user) => user
+        Some(user) => user,
     };
 
     let requested_art = match structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         // If the requested art doesn't exist, also kick them out.
-        None => return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user))),
-        Some(art) => art
+        None => {
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ))
+        }
+        Some(art) => art,
     };
 
     // If the user cant modify this art... you get the idea.

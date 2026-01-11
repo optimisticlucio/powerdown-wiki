@@ -1,5 +1,9 @@
 use axum::{
-    BoxError, Router, error_handling::HandleErrorLayer, extract::{OriginalUri, State}, response::{IntoResponse, Redirect}, routing::get
+    error_handling::HandleErrorLayer,
+    extract::{OriginalUri, State},
+    response::{IntoResponse, Redirect},
+    routing::get,
+    BoxError, Router,
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;
@@ -64,5 +68,9 @@ async fn fallback(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<RootErrors, RootErrors> {
     let requesting_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
-    Ok(errs::RootErrors::NotFound(original_uri, cookie_jar, requesting_user))
+    Ok(errs::RootErrors::NotFound(
+        original_uri,
+        cookie_jar,
+        requesting_user,
+    ))
 }
