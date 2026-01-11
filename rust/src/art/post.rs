@@ -282,11 +282,6 @@ pub async fn add_art(
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         }
-        _ => Err(RootErrors::BadRequest(
-            original_uri,
-            cookie_jar,
-            "invalid upload step".to_string(),
-        )),
     }
 }
 
