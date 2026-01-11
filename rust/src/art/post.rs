@@ -89,6 +89,7 @@ pub async fn add_art(
                 values.push(description);
             }
 
+            // Safe bc we're not inserting anything the user did. Everything user-inputted is passed as values later.
             let query = format!(
                 "INSERT INTO art ({}) VALUES ({}) RETURNING id;",
                 columns.join(","),
@@ -329,6 +330,7 @@ pub async fn edit_art_put_request (
                 values.push(&sent_page_art.description);
             }
 
+            // Safe bc nothing user-written is passed into the string. User values are in `values`
             let query = format!(
                 "UPDATE art ({}) VALUES ({}) WHERE id={};",
                 columns.join(","),

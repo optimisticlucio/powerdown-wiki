@@ -49,6 +49,7 @@ impl BaseArt {
 
         let query_where = search_parameters.get_postgres_where(&mut query_parameters);
 
+        // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
         let query = format!("SELECT * FROM art {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2", query_where);
 
         let requested_art_rows = db_connection.query(

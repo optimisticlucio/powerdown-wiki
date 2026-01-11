@@ -12,6 +12,7 @@ pub async fn add_story(State(state): State<ServerState>, Json(recieved_story): J
     // Let's build our query.
     let (columns, values) = set_columns_and_values_for_sql_query(&recieved_story, Vec::new(), Vec::new()).await;
 
+    // Safe; all the user-given info is in values and not formatted.
     let query = format!("INSERT INTO story ({}) VALUES ({});",
             columns.join(","),
             columns.iter().enumerate().map(|(i, _)| format!("${}",i+1)).collect::<Vec<String>>().join(","),

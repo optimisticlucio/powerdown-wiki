@@ -116,6 +116,7 @@ pub async fn get_total_amount_of_art(db_connection: &Object<Manager>, search_par
 
     let query_where = search_params.get_postgres_where(&mut query_params);
 
+    // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
     let query = format!("SELECT COUNT(page_slug) FROM art {}", query_where);
 
     let row = db_connection
