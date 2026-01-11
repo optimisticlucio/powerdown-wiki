@@ -8,7 +8,7 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use aws_sdk_s3::{types::ObjectIdentifier};
 
-#[derive(Template)]
+#[derive(Debug, Template)]
 #[template(path = "art/page.html")]
 struct ArtPage<'a> {
     user: Option<User>,

@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer};
 use rand::{distr::Alphanumeric, Rng};
 use crate::user::User;
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct BaseArt {
     #[serde(skip)]
     pub id: i32,
@@ -27,7 +27,7 @@ fn default_art_state() -> ArtState {
     ArtState::Public
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PageArt {
     #[serde(flatten)]
     pub base_art: BaseArt,
@@ -142,7 +142,7 @@ impl PageArt {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ArtSearchParameters {
     #[serde(default = "default_page_number")]
     pub page: i64,

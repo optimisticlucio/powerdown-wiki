@@ -22,7 +22,7 @@ pub fn router() -> Router<ServerState> {
             .route_with_tsr("/{story_slug}", get(page::story_page))
 }
 
-#[derive(Template)]
+#[derive(Debug, Template)]
 #[template(path = "stories/index.html")]
 struct StoryIndex {
         user: Option<User>,

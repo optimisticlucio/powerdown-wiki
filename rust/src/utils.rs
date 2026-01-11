@@ -18,7 +18,7 @@ pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     #[serde(untagged)]
     enum StringOrVec {
         Single(String),

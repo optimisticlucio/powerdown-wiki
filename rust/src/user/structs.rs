@@ -27,7 +27,7 @@ const USER_DEFAULT_PFPS: [&str; 9] =
     "/static/img/user/default_pfps/delphi.jpg",
 ];
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct User {
     pub id: i32,
     pub user_type: UserType,
@@ -46,7 +46,7 @@ pub enum UserType {
 }
 
 /// A struct representing the permissions we give each user type. Should only be accessed using the .perms() function, and never constructed.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct UserPermissions {
     /// Whether the given user type can post art to the art section.
     pub can_post_art: bool,
@@ -64,6 +64,7 @@ pub struct UserPermissions {
     pub can_modify_others_content: bool,
 }
 
+#[derive(Debug)]
 pub struct UserSession {
     pub user: User,
     pub creation_time: DateTime<Utc>,
@@ -76,6 +77,7 @@ pub struct UserSession {
 static USER_SESSION_MAX_LENGTH: Duration = Duration::days(30);
 
 /// A struct representing an association between a given user and an OAuth2 provider, will probably only use for login methods.
+#[derive(Debug)]
 pub struct OAuth2Association {
     /// The user ID, or any equivalent thereof, this given user has on the provider's database.
     pub provider_user_id: String,

@@ -4,7 +4,7 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Builder, Serialize, Deserialize)]
+#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
 pub struct BaseStory {
     #[serde(default)]
     pub id: i32,
@@ -17,7 +17,7 @@ pub struct BaseStory {
     pub is_hidden: bool
 }
 
-#[derive(Clone, Builder, Serialize, Deserialize)]
+#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
 pub struct PageStory {
     #[serde(flatten)]
     pub base_story: BaseStory,
@@ -133,7 +133,7 @@ impl PageStory {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct StorySearchParameters {
     #[serde(default = "default_page_number")]
     pub page: i64,

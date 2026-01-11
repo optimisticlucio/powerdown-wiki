@@ -8,6 +8,7 @@ use askama::{Template};
 use crate::user::User;
 use tower_cookies::Cookies;
 
+#[derive(Debug)]
 pub enum RootErrors {
     /// User asked for something that the server doesn't recognize.
     NOT_FOUND(Uri, Cookies),
@@ -42,7 +43,7 @@ lazy_static! {
 }
 
 
-#[derive(Template)]
+#[derive(Debug, Template)]
 #[template(path = "404.html")]
 struct PageNotFound {
     user: Option<User>,

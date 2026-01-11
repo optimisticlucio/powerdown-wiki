@@ -1,6 +1,6 @@
 use std::env;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Config {
     // You have to pass the bucket names around unless you want to make a wrapper struct for buckets,
     // which, frankly, I don't want to do.

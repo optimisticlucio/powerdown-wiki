@@ -17,7 +17,7 @@ pub fn router() -> Router<ServerState> {
         .route_with_tsr("/{character_slug}", get(page::character_page))
 }
 
-#[derive(Template)]
+#[derive(Debug, Template)]
 #[template(path = "characters/index.html")]
 struct CharacterIndex<'a> {
     user: Option<User>,

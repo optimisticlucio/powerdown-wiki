@@ -8,7 +8,7 @@ use rand::{distr::Alphanumeric, Rng};
 
 // TODO: Get character ritual info
 
-#[derive(Clone, Builder)]
+#[derive(Debug, Clone, Builder)]
 pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     #[builder(default)]
     db_id: i32, // The internal ID. Shouldn't be shown to user.
@@ -25,7 +25,7 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
     pub birthday: Option<chrono::NaiveDate>,
 }
 
-#[derive(Clone, Builder)]
+#[derive(Debug, Clone, Builder)]
 pub struct PageCharacter { // Info relevant to character page
     pub base_character: BaseCharacter,
 
@@ -51,7 +51,7 @@ pub struct PageCharacter { // Info relevant to character page
     pub page_contents: Option<String>
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct RitualCharacter {
     pub base_character: BaseCharacter,
 

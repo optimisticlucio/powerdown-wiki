@@ -45,7 +45,7 @@ pub async fn user_page(
     )
 }
 
-#[derive(Template)]
+#[derive(Debug, Template)]
 #[template(path = "user/user_page.html")]
 struct UserPageTemplate {
     user: Option<User>,
@@ -68,7 +68,7 @@ pub async fn login_page(
     }))
 }
 
-#[derive(Template)]
+#[derive(Debug, Template)]
 #[template(path = "user/login.html")]
 struct LoginTemplate<'a> {
     user: Option<User>,
