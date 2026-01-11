@@ -1,21 +1,20 @@
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use askama::Template;
-use aws_sdk_s3::presigning::PresigningConfig;
-use axum::extract::{OriginalUri, State, Path};
-use axum::{Json, http};
-use axum::response::{IntoResponse, Response, Redirect};
-use http::Uri;
-use rand::distr::SampleString;
-use url::Url;
+use super::structs::ArtState;
 use crate::art::structs::PageArt;
 use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response};
-use crate::{ServerState, errs::RootErrors};
-use super::{structs::{BaseArt, ArtState}};
-use rand::{distr::Alphanumeric, Rng};
-use tokio::task::JoinSet;
+use crate::{errs::RootErrors, ServerState};
+use askama::Template;
+use aws_sdk_s3::presigning::PresigningConfig;
+use axum::extract::{OriginalUri, Path, State};
+use axum::response::{IntoResponse, Redirect, Response};
+use axum::{http, Json};
+use http::Uri;
+use rand::distr::Alphanumeric;
+use rand::distr::SampleString;
 use serde::{self, Deserialize, Serialize};
+use std::time::Duration;
+use tokio::task::JoinSet;
+use url::Url;
 
 /// Post Request Handler for art category.
 #[axum::debug_handler]
@@ -24,19 +23,27 @@ pub async fn add_art(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
     Json(posting_step): Json<ArtPostingSteps>,
-    ) -> Result<Response, RootErrors> {
+) -> Result<Response, RootErrors> {
     match posting_step {
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
-        },
+        }
         ArtPostingSteps::UploadMetadata(page_art) => {
             // First let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
-                return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, err_explanation))
+                return Err(RootErrors::BadRequest(
+                    original_uri,
+                    cookie_jar,
+                    err_explanation,
+                ));
             }
 
             // Makes sense? Good. Our job now.
-            let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+            let db_connection = state
+                .db_pool
+                .get()
+                .await
+                .map_err(|_| RootErrors::InternalServerError)?;
 
             // Let's build the query.
             let mut columns: Vec<String> = Vec::new();
@@ -61,11 +68,22 @@ pub async fn add_art(
             columns.push("thumbnail".into());
 
             let temp_thumbnail_key = match Url::parse(&page_art.base_art.thumbnail_key) {
-                Err(err) => return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, format!("Invalid Thumbnail Url: {}", &page_art.base_art.thumbnail_key))),
+                Err(err) => {
+                    return Err(RootErrors::BadRequest(
+                        original_uri,
+                        cookie_jar,
+                        format!(
+                            "Invalid Thumbnail Url: {}",
+                            &page_art.base_art.thumbnail_key
+                        ),
+                    ))
+                }
                 Ok(parsed_thumbnail_url) => parsed_thumbnail_url
-                    .path().trim_start_matches("/")
-                    .trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
-                    .to_owned()
+                    .path()
+                    .trim_start_matches("/")
+                    .trim_start_matches(&state.config.s3_public_bucket)
+                    .trim_start_matches("/")
+                    .to_owned(),
             };
 
             values.push(&temp_thumbnail_key);
@@ -93,32 +111,54 @@ pub async fn add_art(
             let query = format!(
                 "INSERT INTO art ({}) VALUES ({}) RETURNING id;",
                 columns.join(","),
-                (1..values.len() + 1).map(|i| format!("${i}")).collect::<Vec<_>>().join(",")
+                (1..values.len() + 1)
+                    .map(|i| format!("${i}"))
+                    .collect::<Vec<_>>()
+                    .join(",")
             );
 
-            let art_id: i32 = db_connection.query_one(&query, &values).await
+            let art_id: i32 = db_connection
+                .query_one(&query, &values)
+                .await
                 .map_err(|err| {
                     eprintln!("[ART UPLOAD] Initial DB upload failed! {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?
                 .get(0);
-
 
             // ---- We have the ID? process the thumbnail and update. ----
             let target_s3_folder = format!("art/{art_id}");
 
             let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
 
-            utils::move_temp_s3_file(state.s3_client.clone(), &state.config, &temp_thumbnail_key, &state.config.s3_public_bucket, &target_thumbnail_key).await
-                            .map_err(|err|{
-                                eprintln!("[ART UPLOAD] Converting thumbnail of art {art_id} failed, {}", err.to_string());
-                                RootErrors::INTERNAL_SERVER_ERROR
-                            })?;
+            utils::move_temp_s3_file(
+                state.s3_client.clone(),
+                &state.config,
+                &temp_thumbnail_key,
+                &state.config.s3_public_bucket,
+                &target_thumbnail_key,
+            )
+            .await
+            .map_err(|err| {
+                eprintln!(
+                    "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {}",
+                    err.to_string()
+                );
+                RootErrors::InternalServerError
+            })?;
 
-            db_connection.execute("UPDATE art SET thumbnail=$1 WHERE id=$2", &[&target_thumbnail_key, &art_id])
-                .await.map_err(|err|{
-                    eprintln!("[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+            db_connection
+                .execute(
+                    "UPDATE art SET thumbnail=$1 WHERE id=$2",
+                    &[&target_thumbnail_key, &art_id],
+                )
+                .await
+                .map_err(|err| {
+                    eprintln!(
+                        "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {}",
+                        err.to_string()
+                    );
+                    RootErrors::InternalServerError
                 })?;
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
@@ -127,16 +167,25 @@ pub async fn add_art(
             let mut art_upload_tasks = JoinSet::new();
 
             // The names of the files we're supposed to create, incase the upload fails.
-            let temp_file_keys = page_art.art_keys.iter().map(|given_art_key| {
-                Ok(Url::parse(&given_art_key)
-                .map_err(|_| format!("Invalid Art Url: {}", &given_art_key))?
-                .path().trim_start_matches("/").trim_start_matches(&state.config.s3_public_bucket).trim_start_matches("/")
-                .to_owned())
-            }).collect::<Result<Vec<String>,String>>();
+            let temp_file_keys = page_art
+                .art_keys
+                .iter()
+                .map(|given_art_key| {
+                    Ok(Url::parse(&given_art_key)
+                        .map_err(|_| format!("Invalid Art Url: {}", &given_art_key))?
+                        .path()
+                        .trim_start_matches("/")
+                        .trim_start_matches(&state.config.s3_public_bucket)
+                        .trim_start_matches("/")
+                        .to_owned())
+                })
+                .collect::<Result<Vec<String>, String>>();
 
             // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
             let temp_file_keys = match temp_file_keys {
-                Err(err_string) =>  return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, err_string)),
+                Err(err_string) => {
+                    return Err(RootErrors::BadRequest(original_uri, cookie_jar, err_string))
+                }
                 Ok(temp_keys) => temp_keys,
             };
 
@@ -148,62 +197,93 @@ pub async fn add_art(
                 let s3_client = state.s3_client.clone();
                 let public_bucket_key = state.config.s3_public_bucket.clone();
                 let config = state.config.clone();
-                let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+                let db_connection = state
+                    .db_pool
+                    .get()
+                    .await
+                    .map_err(|_| RootErrors::InternalServerError)?;
                 let target_s3_folder = target_s3_folder.clone();
 
                 // tokio::spawn lets all the tasks run simultaneously, which is nice.
                 art_upload_tasks.spawn(async move {
-                        let file_key = format!("{target_s3_folder}/{}", s3_key.split_terminator("/").last().unwrap());
+                    let file_key = format!(
+                        "{target_s3_folder}/{}",
+                        s3_key.split_terminator("/").last().unwrap()
+                    );
 
-                        utils::move_temp_s3_file(s3_client, &config, &s3_key, &public_bucket_key, &file_key).await
-                            .map_err(|err| err.to_string())?;
+                    utils::move_temp_s3_file(
+                        s3_client,
+                        &config,
+                        &s3_key,
+                        &public_bucket_key,
+                        &file_key,
+                    )
+                    .await
+                    .map_err(|err| err.to_string())?;
 
-                        let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
-                        values.push(&art_id);
-                        values.push(&index);
-                        values.push(&file_key);
+                    let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+                    values.push(&art_id);
+                    values.push(&index);
+                    values.push(&file_key);
 
-                        db_connection.execute(query, &values).await
-                            .map_err(|err| err.to_string())
-                    });
+                    db_connection
+                        .execute(query, &values)
+                        .await
+                        .map_err(|err| err.to_string())
+                });
             }
 
             // Now collect everything that ran async, make sure nothing fucked up.
             let art_upload_results = art_upload_tasks.join_all().await;
 
-            let failed_uploads: Vec<_> = art_upload_results.into_iter()
+            let failed_uploads: Vec<_> = art_upload_results
+                .into_iter()
                 .filter_map(|result| result.err())
                 .collect();
 
             if !failed_uploads.is_empty() {
-                let file_keys_to_delete: Vec<String> = temp_file_keys.iter().map(|key|
-                    format!("{target_s3_folder}/{}", key.split_terminator("/").last().unwrap())
-                    ).collect();
+                let file_keys_to_delete: Vec<String> = temp_file_keys
+                    .iter()
+                    .map(|key| {
+                        format!(
+                            "{target_s3_folder}/{}",
+                            key.split_terminator("/").last().unwrap()
+                        )
+                    })
+                    .collect();
 
                 // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES.
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 
-                eprintln!("[ART POST] Failed to move files from temp to permanent location! [{}]",
-                        failed_uploads.join(", "));
+                eprintln!(
+                    "[ART POST] Failed to move files from temp to permanent location! [{}]",
+                    failed_uploads.join(", ")
+                );
 
-                return Err(RootErrors::INTERNAL_SERVER_ERROR)
+                return Err(RootErrors::InternalServerError);
             }
 
             // ---- Now that we finished, set the appropriate art state. ----
 
-            db_connection.execute("UPDATE art SET post_state=$1 WHERE id=$2", &[&ArtState::Public, &art_id])
-                .await.map_err(|err|{
-                    eprintln!("[ART UPLOAD] Setting post state of id {art_id} to public failed?? {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+            db_connection
+                .execute(
+                    "UPDATE art SET post_state=$1 WHERE id=$2",
+                    &[&ArtState::Public, &art_id],
+                )
+                .await
+                .map_err(|err| {
+                    eprintln!(
+                        "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {}",
+                        err.to_string()
+                    );
+                    RootErrors::InternalServerError
                 })?;
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
-        },
-        _ => Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "invalid upload step".to_string()))
+        }
     }
 }
-
 
 /// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload art to the site.
 #[derive(Debug, Deserialize)]
@@ -211,10 +291,10 @@ pub async fn add_art(
 pub enum ArtPostingSteps {
     #[serde(rename = "1")]
     RequestPresignedURLs {
-        art_amount: u8 // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
+        art_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
     },
 
-    #[serde(rename="2")]
+    #[serde(rename = "2")]
     UploadMetadata(PageArt),
 }
 
@@ -235,35 +315,35 @@ pub async fn art_posting_page(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
-    ) -> Result<Response, RootErrors> {
-    Ok (
-        template_to_response(
-            ArtPostingPage {
-                user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
-                original_uri
-            }
-        )
-    )
+) -> Result<Response, RootErrors> {
+    Ok(template_to_response(ArtPostingPage {
+        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        original_uri,
+    }))
 }
 
-pub async fn edit_art_put_request (
+pub async fn edit_art_put_request(
     Path(art_slug): Path<String>,
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
     Json(posting_step): Json<ArtPostingSteps>,
 ) -> Result<Response, RootErrors> {
-    let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
 
     let existing_art = match PageArt::get_by_slug(&db_connection, &art_slug).await {
-        None => return Err(RootErrors::NOT_FOUND(original_uri, cookie_jar)),
-        Some(existing_art) => existing_art
+        None => return Err(RootErrors::NotFound(original_uri, cookie_jar)),
+        Some(existing_art) => existing_art,
     };
 
     // Who's asking to do this?
     let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
-        None => return Err(RootErrors::UNAUTHORIZED),
-        Some(requesting_user) => requesting_user
+        None => return Err(RootErrors::Unauthorized),
+        Some(requesting_user) => requesting_user,
     };
 
     // If they don't have permissions to do this, shoot back HTTP 403.
@@ -274,11 +354,15 @@ pub async fn edit_art_put_request (
     match posting_step {
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
-        },
-        ArtPostingSteps::UploadMetadata(mut sent_page_art) => {
+        }
+        ArtPostingSteps::UploadMetadata(sent_page_art) => {
             // First let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
-                return Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, err_explanation))
+                return Err(RootErrors::BadRequest(
+                    original_uri,
+                    cookie_jar,
+                    err_explanation,
+                ));
             }
 
             // TODO - MOVE TEMP ART SENT OVER TO PERMANENT STORAGE
@@ -334,25 +418,44 @@ pub async fn edit_art_put_request (
             let query = format!(
                 "UPDATE art ({}) VALUES ({}) WHERE id={};",
                 columns.join(","),
-                (1..values.len() + 1).map(|i| format!("${i}")).collect::<Vec<_>>().join(","),
-                format!("${}",values.len() + 2)
+                (1..values.len() + 1)
+                    .map(|i| format!("${i}"))
+                    .collect::<Vec<_>>()
+                    .join(","),
+                format!("${}", values.len() + 2)
             );
 
             values.push(&existing_art.base_art.id);
-            db_connection.execute(&query, &values).await
+            db_connection
+                .execute(&query, &values)
+                .await
                 .map_err(|err| {
-                    eprintln!("[ART UPLOAD] Updating metadata of art id {}, named \"{}\", failed. {}", &existing_art.base_art.id, &existing_art.base_art.title, err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    eprintln!(
+                        "[ART UPLOAD] Updating metadata of art id {}, named \"{}\", failed. {}",
+                        &existing_art.base_art.id,
+                        &existing_art.base_art.title,
+                        err.to_string()
+                    );
+                    RootErrors::InternalServerError
                 })?;
 
             // TODO - DELETE ANY REMOVED ART, AND MOVE THE NEW ART INTO PLACE
 
             // ---- Now that we finished, set the appropriate art state. ----
 
-            db_connection.execute("UPDATE art SET post_state=$1 WHERE id=$2", &[&ArtState::Public, &existing_art.base_art.id])
-                .await.map_err(|err|{
-                    eprintln!("[ART UPLOAD] Setting post state of id {} to public failed?? {}", existing_art.base_art.id, err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+            db_connection
+                .execute(
+                    "UPDATE art SET post_state=$1 WHERE id=$2",
+                    &[&ArtState::Public, &existing_art.base_art.id],
+                )
+                .await
+                .map_err(|err| {
+                    eprintln!(
+                        "[ART UPLOAD] Setting post state of id {} to public failed?? {}",
+                        existing_art.base_art.id,
+                        err.to_string()
+                    );
+                    RootErrors::InternalServerError
                 })?;
 
             Ok(Redirect::to(&format!("/art/{}", sent_page_art.base_art.slug)).into_response())
@@ -362,18 +465,28 @@ pub async fn edit_art_put_request (
 
 /// Given an amount of urls requested by the user, sends the user back the appropriate amount of new temp S3 presigned URLs. May also request an extra url for the thumbnail.
 async fn give_user_presigned_s3_urls(
-        requested_amount_of_urls: u8,
-        including_thumbnail: bool,
-        original_uri: Uri,
-        cookie_jar: tower_cookies::Cookies,
-        state: &ServerState)
-    -> Result<Response,RootErrors> {
+    requested_amount_of_urls: u8,
+    including_thumbnail: bool,
+    original_uri: Uri,
+    cookie_jar: tower_cookies::Cookies,
+    state: &ServerState,
+) -> Result<Response, RootErrors> {
     if requested_amount_of_urls < 1 {
-        Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "art post must have at least one art piece".to_string()))
+        Err(RootErrors::BadRequest(
+            original_uri,
+            cookie_jar,
+            "art post must have at least one art piece".to_string(),
+        ))
     } else if requested_amount_of_urls > 25 {
-        Err(RootErrors::BAD_REQUEST(original_uri, cookie_jar, "for the good of mankind, don't put that many art pieces in one post. split them up".to_string()))
+        Err(RootErrors::BadRequest(
+            original_uri,
+            cookie_jar,
+            "for the good of mankind, don't put that many art pieces in one post. split them up"
+                .to_string(),
+        ))
     } else {
-        let amount_of_presigned_urls_needed = requested_amount_of_urls + if including_thumbnail {1} else {0}; // The art, plus the thumbnail.
+        let amount_of_presigned_urls_needed =
+            requested_amount_of_urls + if including_thumbnail { 1 } else { 0 }; // The art, plus the thumbnail.
 
         let temp_key_tasks: Vec<_> = (0..amount_of_presigned_urls_needed)
             .map(|_| {
@@ -385,30 +498,34 @@ async fn give_user_presigned_s3_urls(
                     let temp_art_key = format!("temp/art/{}", random_key);
 
                     // get s3 to open a presigned URL for the temp key.
-                    s3_client.put_object()
+                    s3_client
+                        .put_object()
                         .bucket(public_bucket_key)
                         .key(temp_art_key)
                         .presigned(
-                            PresigningConfig::expires_in(Duration::from_secs(300)).unwrap() // Five minutes to upload. May be too much?
+                            PresigningConfig::expires_in(Duration::from_secs(300)).unwrap(), // Five minutes to upload. May be too much?
                         )
                         .await
                         .map(|x| x.uri().to_string())
                 })
-
             })
             .collect();
 
         let mut temp_keys_for_presigned = Vec::new();
 
         for task in temp_key_tasks {
-            let uri = task.await
+            let uri = task
+                .await
                 .map_err(|err| {
                     eprintln!("[ART POST STAGE 1] Tokio Join Err! {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    RootErrors::InternalServerError
                 })?
                 .map_err(|err| {
-                    eprintln!("[ART POST STAGE 1] SDK presigned URL creation err! {}", err.to_string());
-                    RootErrors::INTERNAL_SERVER_ERROR
+                    eprintln!(
+                        "[ART POST STAGE 1] SDK presigned URL creation err! {}",
+                        err.to_string()
+                    );
+                    RootErrors::InternalServerError
                 })?;
 
             temp_keys_for_presigned.push(uri);
@@ -416,9 +533,14 @@ async fn give_user_presigned_s3_urls(
 
         // Send back the urls as a json.
         let response = serde_json::to_string(&PresignedUrlsResponse {
-            thumbnail_presigned_url: if including_thumbnail {temp_keys_for_presigned.pop()} else {None},
-            art_presigned_urls: temp_keys_for_presigned
-        }).unwrap();
+            thumbnail_presigned_url: if including_thumbnail {
+                temp_keys_for_presigned.pop()
+            } else {
+                None
+            },
+            art_presigned_urls: temp_keys_for_presigned,
+        })
+        .unwrap();
 
         Ok(response.into_response())
     }

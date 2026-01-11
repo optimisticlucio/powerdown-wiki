@@ -1,38 +1,59 @@
-use axum::extract::multipart::Field;
-use axum::extract::{Json, Multipart, OriginalUri, Path, State};
+use super::structs::PageStory;
+use crate::{RootErrors, ServerState};
+use axum::extract::{Json, State};
 use axum::response::{IntoResponse, Redirect};
-use http::Uri;
-use crate::{ServerState, RootErrors};
-use super::structs::{BaseStoryBuilder, PageStoryBuilder, PageStory};
-use crate::utils::text_or_internal_err;
 
-pub async fn add_story(State(state): State<ServerState>, Json(recieved_story): Json<PageStory>) -> Result<impl IntoResponse, RootErrors> {
-    let db_connection = state.db_pool.get().await.map_err(|_| RootErrors::INTERNAL_SERVER_ERROR)?;
+pub async fn add_story(
+    State(state): State<ServerState>,
+    Json(recieved_story): Json<PageStory>,
+) -> Result<impl IntoResponse, RootErrors> {
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
 
     // Let's build our query.
-    let (columns, values) = set_columns_and_values_for_sql_query(&recieved_story, Vec::new(), Vec::new()).await;
+    let (columns, values) =
+        set_columns_and_values_for_sql_query(&recieved_story, Vec::new(), Vec::new()).await;
 
     // Safe; all the user-given info is in values and not formatted.
-    let query = format!("INSERT INTO story ({}) VALUES ({});",
-            columns.join(","),
-            columns.iter().enumerate().map(|(i, _)| format!("${}",i+1)).collect::<Vec<String>>().join(","),
-        );
+    let query = format!(
+        "INSERT INTO story ({}) VALUES ({});",
+        columns.join(","),
+        columns
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", i + 1))
+            .collect::<Vec<String>>()
+            .join(","),
+    );
 
-    db_connection.execute(&query, &values).await.map_err(|err| {
-        println!("[STORY] Error in db query execution!\nQuery: {}\nError: {:?}", query, err);
-        RootErrors::INTERNAL_SERVER_ERROR
-    })?;
+    db_connection
+        .execute(&query, &values)
+        .await
+        .map_err(|err| {
+            println!(
+                "[STORY] Error in db query execution!\nQuery: {}\nError: {:?}",
+                query, err
+            );
+            RootErrors::InternalServerError
+        })?;
 
-    Ok(Redirect::to(&format!("/stories/{}", recieved_story.base_story.slug)))
+    Ok(Redirect::to(&format!(
+        "/stories/{}",
+        recieved_story.base_story.slug
+    )))
 }
 
-async fn set_columns_and_values_for_sql_query<'a>
-        (page_story: &'a PageStory,
-        mut columns: Vec<String>,
-        mut values: Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>)
-        ->
-        (Vec<String>, Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>)
-    {
+async fn set_columns_and_values_for_sql_query<'a>(
+    page_story: &'a PageStory,
+    mut columns: Vec<String>,
+    mut values: Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>,
+) -> (
+    Vec<String>,
+    Vec<&'a (dyn tokio_postgres::types::ToSql + Sync)>,
+) {
     columns.push("page_slug".to_owned());
     values.push(&page_story.base_story.slug);
 

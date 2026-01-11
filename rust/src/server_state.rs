@@ -26,11 +26,11 @@ impl ServerState {
         ServerState {
             db_pool,
             s3_client,
-            config
+            config,
         }
     }
 
-    async fn initialize_db() -> Pool<Manager>{
+    async fn initialize_db() -> Pool<Manager> {
         let mut db_config = deadpool_postgres::Config::new();
 
         db_config.manager = Some(ManagerConfig {
@@ -41,7 +41,9 @@ impl ServerState {
         db_config.password = env::var("POSTGRES_PASSWORD").ok();
         db_config.user = env::var("POSTGRES_USER").ok();
 
-        let db_pool = db_config.create_pool(Some(deadpool::Runtime::Tokio1), NoTls).unwrap();
+        let db_pool = db_config
+            .create_pool(Some(deadpool::Runtime::Tokio1), NoTls)
+            .unwrap();
 
         db_pool
     }

@@ -1,18 +1,18 @@
-use image::{DynamicImage, ImageEncoder, ImageFormat, ImageReader};
-use image::codecs::png::{PngEncoder, CompressionType, FilterType};
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use image::{DynamicImage, ImageEncoder, ImageFormat, ImageReader};
 use std::io::Cursor;
 
 pub fn compress_image_lossless(
     image_bytes: Vec<u8>,
-    extension: Option<&str>
+    extension: Option<&str>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Try to determine format from extension first, then fall back to guessing
     let format = extension
-        .and_then(
-            |ext| ImageFormat::from_mime_type(ext)
+        .and_then(|ext| {
+            ImageFormat::from_mime_type(ext)
                 .or(ImageFormat::from_extension(ext.trim_start_matches('.')))
-        )
+        })
         .or_else(|| {
             ImageReader::new(Cursor::new(&image_bytes))
                 .with_guessed_format()
@@ -53,9 +53,14 @@ pub fn compress_image_lossless(
                 Ok(image_bytes)
             }
         }
-        Some(ImageFormat::Bmp) | Some(ImageFormat::Tiff)
-        | Some(ImageFormat::Ico) | Some(ImageFormat::Pnm) | Some(ImageFormat::Tga)
-        | Some(ImageFormat::Dds) | Some(ImageFormat::Hdr) | Some(ImageFormat::Farbfeld) => {
+        Some(ImageFormat::Bmp)
+        | Some(ImageFormat::Tiff)
+        | Some(ImageFormat::Ico)
+        | Some(ImageFormat::Pnm)
+        | Some(ImageFormat::Tga)
+        | Some(ImageFormat::Dds)
+        | Some(ImageFormat::Hdr)
+        | Some(ImageFormat::Farbfeld) => {
             // Convert to lossless WebP for better compression
             let compressed = compress_to_webp_lossless(&img)?;
             Ok(compressed)
@@ -79,23 +84,20 @@ fn compress_to_webp_lossless(img: &DynamicImage) -> Result<Vec<u8>, Box<dyn std:
         img.as_bytes(),
         img.width(),
         img.height(),
-        img.color().into()
+        img.color().into(),
     )?;
     Ok(output)
 }
 
 fn compress_to_png_max(img: &DynamicImage) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
-    let encoder = PngEncoder::new_with_quality(
-        &mut output,
-        CompressionType::Best,
-        FilterType::Adaptive
-    );
+    let encoder =
+        PngEncoder::new_with_quality(&mut output, CompressionType::Best, FilterType::Adaptive);
     encoder.write_image(
         img.as_bytes(),
         img.width(),
         img.height(),
-        img.color().into()
+        img.color().into(),
     )?;
     Ok(output)
 }

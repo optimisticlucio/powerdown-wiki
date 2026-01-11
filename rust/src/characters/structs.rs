@@ -1,15 +1,16 @@
 use chrono;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
-use postgres::Row;
-use postgres_types::{FromSql, ToSql, Type};
 use derive_builder::Builder;
+use postgres::Row;
+use postgres_types::{FromSql, ToSql};
 use rand::{distr::Alphanumeric, Rng};
 
 // TODO: Get character ritual info
 
 #[derive(Debug, Clone, Builder)]
-pub struct BaseCharacter { // Info relevant to absolute most uses of a character
+pub struct BaseCharacter {
+    // Info relevant to absolute most uses of a character
     #[builder(default)]
     db_id: i32, // The internal ID. Shouldn't be shown to user.
     #[builder(default = false)]
@@ -26,7 +27,8 @@ pub struct BaseCharacter { // Info relevant to absolute most uses of a character
 }
 
 #[derive(Debug, Clone, Builder)]
-pub struct PageCharacter { // Info relevant to character page
+pub struct PageCharacter {
+    // Info relevant to character page
     pub base_character: BaseCharacter,
 
     #[builder(default = None)]
@@ -48,7 +50,7 @@ pub struct PageCharacter { // Info relevant to character page
     #[builder(default = None)]
     pub custom_css: Option<String>,
     #[builder(default = None)]
-    pub page_contents: Option<String>
+    pub page_contents: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +58,7 @@ pub struct RitualCharacter {
     pub base_character: BaseCharacter,
 
     pub power_name: String,
-    pub power_description: String
+    pub power_description: String,
 }
 
 #[derive(Debug, FromSql, ToSql, Clone)]
@@ -68,10 +70,7 @@ pub struct InfoboxRow {
 
 impl InfoboxRow {
     pub fn new(title: String, description: String) -> Self {
-        Self {
-            title,
-            description
-        }
+        Self { title, description }
     }
 }
 
@@ -79,9 +78,10 @@ impl BaseCharacter {
     /// Gets BaseCharacter for all characters in the database.
     pub async fn get_all_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Select only what's necessary to speed it up.
-        let character_rows = db_connection.query(
-            "SELECT * FROM character ORDER BY short_name",
-            &[]).await.unwrap();
+        let character_rows = db_connection
+            .query("SELECT * FROM character ORDER BY short_name", &[])
+            .await
+            .unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()
     }
@@ -115,7 +115,11 @@ impl BaseCharacter {
     /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
     /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
     pub async fn get_unused_id(db_connection: Object<Manager>) -> i32 {
-        let random_page_slug: String = rand::rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
+        let random_page_slug: String = rand::rng()
+            .sample_iter(&Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
 
         // There's a very slight chance this operation panics on correct behaviour
         // bc it uses random strings. It should probably be fine, but I should fix this someday.
@@ -140,9 +144,7 @@ impl PartialOrd for BaseCharacter {
     }
 }
 
-impl Eq for BaseCharacter {
-
-}
+impl Eq for BaseCharacter {}
 
 impl Ord for BaseCharacter {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -152,10 +154,14 @@ impl Ord for BaseCharacter {
 
 impl PageCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
-    pub async fn get_by_slug(slug: String, db_connection: Object<Manager>) -> Option<PageCharacter> {
-        let character_row = db_connection.query_one(
-            "SELECT * FROM character WHERE page_slug=$1",
-            &[&slug]).await.ok()?;
+    pub async fn get_by_slug(
+        slug: String,
+        db_connection: Object<Manager>,
+    ) -> Option<PageCharacter> {
+        let character_row = db_connection
+            .query_one("SELECT * FROM character WHERE page_slug=$1", &[&slug])
+            .await
+            .ok()?;
 
         Some(Self::from_db_row(&character_row))
     }
@@ -185,7 +191,7 @@ impl PageCharacter {
             overlay_css: row.get("overlay_css"),
             custom_css: row.get("custom_css"),
             page_contents: row.get("page_text"),
-            tag: row.get("relevant_tag")
+            tag: row.get("relevant_tag"),
         }
     }
 }
@@ -202,9 +208,7 @@ impl PartialOrd for PageCharacter {
     }
 }
 
-impl Eq for PageCharacter {
-
-}
+impl Eq for PageCharacter {}
 
 impl Ord for PageCharacter {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {

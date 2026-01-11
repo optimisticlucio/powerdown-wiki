@@ -1,12 +1,15 @@
+use crate::{characters, ServerState};
+use crate::{test_data, user::User, utils, RootErrors};
+use askama::Template;
 use axum::{
-    Router, extract::{OriginalUri, State}, response::{Html, Response}, routing::get};
-use askama::{Template};
+    extract::{OriginalUri, State},
+    response::Response,
+    routing::get,
+    Router,
+};
 use http::Uri;
-use rand::seq::IndexedRandom;
-use crate::{RootErrors, test_data, user::User, utils};
 use lazy_static::lazy_static;
-use crate::{ServerState, characters};
-
+use rand::seq::IndexedRandom;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(homepage))
@@ -16,7 +19,7 @@ pub fn router() -> Router<ServerState> {
 struct FrontpageItem {
     pub name: &'static str,
     pub url: &'static str,
-    pub image_url: &'static str
+    pub image_url: &'static str,
 }
 
 lazy_static! {
@@ -34,7 +37,8 @@ lazy_static! {
         FrontpageItem {
             name: "Stories",
             url: "/stories",
-            image_url: "https://powerdown.wiki/assets/img/art-archive/thumbnails/master-tactics.png"
+            image_url:
+                "https://powerdown.wiki/assets/img/art-archive/thumbnails/master-tactics.png"
         }
     ];
 }
@@ -49,16 +53,17 @@ struct FrontpageTemplate<'a> {
     random_quote: &'a str,
     random_ad: &'a str,
     birthday_characters: Vec<characters::BaseCharacter>,
-    today_date: &'a str
+    today_date: &'a str,
 }
 
 async fn homepage(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
-    cookie_jar: tower_cookies::Cookies
-    ) -> Result<Response, RootErrors> {
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
     let random_subtitle = {
-        let statement = "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;";
+        let statement =
+            "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;";
 
         match state.db_pool.get().await {
             // TODO: Turn this unwrap into something that handles error better.
@@ -70,7 +75,9 @@ async fn homepage(
         }
     };
 
-    let birthday_characters = characters::BaseCharacter::get_birthday_characters(state.db_pool.get().await.unwrap()).await;
+    let birthday_characters =
+        characters::BaseCharacter::get_birthday_characters(state.db_pool.get().await.unwrap())
+            .await;
 
     Ok(utils::template_to_response(FrontpageTemplate {
         user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
@@ -78,8 +85,10 @@ async fn homepage(
 
         buttons: &FRONTPAGE_ITEMS,
         random_quote: &random_subtitle,
-        random_ad: &test_data::get_frontpage_ads().choose(&mut rand::rng()).unwrap(),
+        random_ad: &test_data::get_frontpage_ads()
+            .choose(&mut rand::rng())
+            .unwrap(),
         birthday_characters,
-        today_date: &utils::format_date_to_human_readable(chrono::Local::now().into())
+        today_date: &utils::format_date_to_human_readable(chrono::Local::now().into()),
     }))
 }
