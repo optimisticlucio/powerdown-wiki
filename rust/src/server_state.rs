@@ -36,8 +36,8 @@ impl ServerState {
         db_config.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });
-        db_config.dbname = Some("powerdown_db".to_owned()); // Hardcoded in docker-compose
-        db_config.host = Some("postgres".to_owned()); // The postgres docker container's name.
+        db_config.dbname = env::var("POSTGRES_DATABASE").ok();
+        db_config.host = env::var("POSTGRES_HOST").ok();
         db_config.password = env::var("POSTGRES_PASSWORD").ok();
         db_config.user = env::var("POSTGRES_USER").ok();
 
