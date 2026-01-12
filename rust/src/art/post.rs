@@ -25,10 +25,10 @@ pub async fn add_art(
     Json(posting_step): Json<ArtPostingSteps>,
 ) -> Result<Response, RootErrors> {
     let db_connection = state
-                .db_pool
-                .get()
-                .await
-                .map_err(|_| RootErrors::InternalServerError)?;
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
@@ -81,8 +81,7 @@ pub async fn add_art(
                         requesting_user,
                         format!(
                             "Invalid Thumbnail Url: {}, {:?}",
-                            &page_art.base_art.thumbnail_key,
-                            err
+                            &page_art.base_art.thumbnail_key, err
                         ),
                     ))
                 }
@@ -192,7 +191,12 @@ pub async fn add_art(
             // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
             let temp_file_keys = match temp_file_keys {
                 Err(err_string) => {
-                    return Err(RootErrors::BadRequest(original_uri, cookie_jar, requesting_user, err_string))
+                    return Err(RootErrors::BadRequest(
+                        original_uri,
+                        cookie_jar,
+                        requesting_user,
+                        err_string,
+                    ))
                 }
                 Ok(temp_keys) => temp_keys,
             };
@@ -350,7 +354,13 @@ pub async fn edit_art_put_request(
     };
 
     let existing_art = match PageArt::get_by_slug(&db_connection, &art_slug).await {
-        None => return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user))),
+        None => {
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ))
+        }
         Some(existing_art) => existing_art,
     };
 

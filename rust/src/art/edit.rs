@@ -35,6 +35,10 @@ pub async fn edit_art_page(
             title: requested_art.base_art.title,
         }))
     } else {
-        Err(RootErrors::NotFound(original_uri, cookie_jar, requesting_user))
+        Err(RootErrors::NotFound(
+            original_uri,
+            cookie_jar,
+            requesting_user,
+        ))
     }
 }
