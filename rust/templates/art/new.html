@@ -2,7 +2,7 @@
 
 {% block title %}Create New Art{% endblock %}
 
-{% block customhead %}<script src="/static/js/art-page-upload.js" ></script>{% endblock %}
+{% block customhead %}<script src="/static/js/art-page-upload.js" defer></script>{% endblock %}
 
 {% block content %}
 <h1>Upload New Art Whoa</h1>
@@ -10,18 +10,37 @@
 <label for="postTitle">Post Title:</label>
 <input type="text" id="postTitle" required minLength="1"/>
 
+</br>
+
+<label for="postSlug">Post URL: (if empty, I'll just copy the title)</label>
+<input type="text" id="postSlug" minLength="1"/>
+
+</br>
+
+<label for="postThumbnail">Thumbnail:</label>
+<input type="file" id="postThumbnail" required accept=".png,.jpg,.jpeg,.gif,.webp"/> 
+
+</br>
+
 <label for="postCreationDate">Creation Date:</label>
 <input type="date" id="postCreationDate" required min="2016-01-01"/>
 
+</br>
+
 <label for="postIsNsfw">Post is NSFW: <input type="checkbox" id="postIsNsfw" /></label>
+
+</br>
 
 <label for="postArtists">Artists (If multiple, separate with commas!) : </label>
 <input type="text" id="postArtists" required minLength="1"/>
 
+</br>
+
 <label for="postTags">Tags (If multiple, separate with commas!) : </label>
 <input type="text" id="postTags"/>
 
-<p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage"/> </br>
+<p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage(event)"/> </br>
+
 <div id="postImages">
 </div>
 

@@ -14,7 +14,7 @@ pub struct BaseArt {
     pub creators: Vec<String>,
     pub thumbnail_key: String,
     pub slug: String,
-    #[serde(default)]
+    #[serde(skip)]
     pub has_video: bool,
     #[serde(default)]
     pub is_nsfw: bool,

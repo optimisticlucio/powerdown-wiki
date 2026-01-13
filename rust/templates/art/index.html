@@ -50,5 +50,9 @@
         </a>
         {% endfor -%}
     </div>
+
+    {% if user.is_some() %}
+    <a href="/art/new">Upload new art!</a>
+    {% endif %}
 </div>
 {% endblock %}
