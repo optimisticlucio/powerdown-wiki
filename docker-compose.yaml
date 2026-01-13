@@ -29,7 +29,7 @@ services:
     image: postgres:16
     shm_size: 256mb # Needs at least 128mb.
     environment:
-      POSTGRES_DATABASE: powerdown_db
+      POSTGRES_DB: powerdown_db
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: "Asia/Jerusalem"
