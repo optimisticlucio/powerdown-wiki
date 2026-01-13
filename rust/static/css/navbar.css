@@ -44,8 +44,8 @@ nav {
     }
 
     .profile-pic {
-        width: 2em;
-        height: 2em;
+        height: 3.25em;
+        aspect-ratio: 1/1;
         border: 0.2ch solid black;
     }
 }

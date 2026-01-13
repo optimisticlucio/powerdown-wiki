@@ -27,20 +27,33 @@ async function attemptNewArtUpload() {
   // Posting needs to be done in two phases - we ask for S3 presigned URLs to upload our images to,
   // and after that, we send all of the relevant metadata to the server. 
 
-  const s3UrlsRequestResponse = await fetch("/art/new", {
+  const messageToSend = {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
-      step: 1,
+      step: "1",
       art_amount: postImages.length
     })
-  });
+  };
+
+  console.log(`SENT: ${JSON.stringify(messageToSend)}`)
+
+  const s3UrlsRequestResponse = await fetch("/art/new", messageToSend);
 
   // TODO - Handle an error here.
 
   // A valid request should return a json with "thumbnail_presigned_url" which is one url, 
   // and "art_presigned_urls" which is a list.
 
-  const s3Urls = JSON.parse(s3UrlsRequestResponse);
+  let s3Urls = await s3UrlsRequestResponse.json();
+
+  console.log(`RECIEVED: ${JSON.stringify(s3Urls)}`);
+
+  // TODO: Remove this conversion once we go live, it's only here bc we're working with localStack instead of a live server.
+  s3Urls.thumbnail_presigned_url = s3Urls.thumbnail_presigned_url.replace("host.docker.internal", "localhost.localstack.cloud");
+  s3Urls.art_presigned_urls = s3Urls.art_presigned_urls.map((presigned_url) => presigned_url.replace("host.docker.internal", "localhost.localstack.cloud"));
 
   const thumbnailURLattempt = await fetch(s3Urls.thumbnail_presigned_url, {
     method: 'PUT',
@@ -54,14 +67,22 @@ async function attemptNewArtUpload() {
 
   // TODO - Send other files to S3, add their S3 URLs to postInfo.
 
-  // Now that it's all on S3, send the final result!
-  const finalUploadRequest = await fetch("/art/new", {
+  const finalMessageToSend = {
     method: "POST",
-    body: JSON.stringify({
-      step: 2,
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: {
+      step: "2",
       ...postInfo
-    })
-  });
+    }
+  };
+
+  console.log(`SENDING: ${JSON.stringify(finalMessageToSend)}`);
+
+  // Now that it's all on S3, send the final result!
+  const finalUploadRequest = await fetch("/art/new", finalMessageToSend
+  );
 
   // TODO: Show to the user the response. In the meanwhile, the console will do.
   console.log(`UPLOAD COMPLETE! Result : ${JSON.stringify(finalUploadRequest)} `)
