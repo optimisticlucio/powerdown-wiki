@@ -33,6 +33,10 @@ These variables aren't *required*, as they have default values incase they're mi
 
 Each variable will have its default value listed in parantheses.
 
+#### General
+
+- `DEBUG`: If this is set to *anything*, it triggers debug mode. Currently, it only adds a giant banner on the site saying "THIS IS A TEST SITE". Obviously this should be unset in production.
+
 #### Bucket Names
 
 The various bucket names in S3 for storing the PD-related data. Because every bucket name is unique, you will probably need to change some of these.
