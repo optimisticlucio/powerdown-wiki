@@ -1,0 +1,13 @@
+.footer {
+    width: 100%;
+    position: absolute;
+    bottom: 0px;
+    padding: 0.5ch;
+
+    &.debug {
+        color: red;
+        background-color: yellow;
+        font-weight: bold;
+        text-align: center;
+    }
+}

@@ -151,6 +151,10 @@ pub async fn add_art(
                     "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {}",
                     err.to_string()
                 );
+
+                // Delete the processing art before returning error.
+                let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+
                 RootErrors::InternalServerError
             })?;
 
@@ -165,6 +169,10 @@ pub async fn add_art(
                         "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {}",
                         err.to_string()
                     );
+
+                    // Delete the processing art before returning error.
+                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+
                     RootErrors::InternalServerError
                 })?;
 
@@ -191,6 +199,9 @@ pub async fn add_art(
             // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
             let temp_file_keys = match temp_file_keys {
                 Err(err_string) => {
+                    // Delete the processing art before returning error.
+                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+
                     return Err(RootErrors::BadRequest(
                         original_uri,
                         cookie_jar,
@@ -289,6 +300,10 @@ pub async fn add_art(
                         "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {}",
                         err.to_string()
                     );
+
+                    // Delete the processing art before returning error.
+                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+
                     RootErrors::InternalServerError
                 })?;
 

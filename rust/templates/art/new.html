@@ -7,6 +7,10 @@
 {% block content %}
 <h1>Upload New Art Whoa</h1>
 
+<div id="errorDisplay" style="color:red;">
+</div>
+
+
 <label for="postTitle">Post Title:</label>
 <input type="text" id="postTitle" required minLength="1"/>
 
@@ -18,7 +22,7 @@
 </br>
 
 <label for="postThumbnail">Thumbnail:</label>
-<input type="file" id="postThumbnail" required accept=".png,.jpg,.jpeg,.gif,.webp"/> 
+<input type="file" id="postThumbnail" required accept="image/*"/> 
 
 </br>
 
@@ -31,18 +35,23 @@
 
 </br>
 
-<label for="postArtists">Artists (If multiple, separate with commas!) : </label>
+<label for="postArtists">Artists (If multiple, separate with commas!): </label>
 <input type="text" id="postArtists" required minLength="1"/>
 
 </br>
 
-<label for="postTags">Tags (If multiple, separate with commas!) : </label>
+<label for="postTags">Tags (If multiple, separate with commas!): </label>
 <input type="text" id="postTags"/>
 
 <p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage(event)"/> </br>
 
 <div id="postImages">
 </div>
+
+<label for="postDescription">Post Description: </label>
+<textarea id="postDescription"> </textarea>
+
+</br>
 
 <button class="light" onclick="attemptNewArtUpload()">Upload Art</button>
 {% endblock %}

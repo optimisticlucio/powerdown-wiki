@@ -50,20 +50,12 @@ nav {
     }
 }
 
-@media screen and (max-width: 1100px) {
+@media screen and (max-width: 800px) {
     nav {
         font-size: 1.1em;
 
         .title {
             display: none;
-        }
-
-        .right {
-            display: none;
-        }
-
-        .left {
-            margin: auto;
         }
     }
 }

@@ -18,10 +18,11 @@ async function attemptNewArtUpload() {
     creators: document.getElementById("postArtists").value.split(","),
     slug: document.getElementById("postSlug").value || postTitle.toLowerCase().replaceAll(" ","-"),
     tags: document.getElementById("postTags").value.split(","),
+    description: document.getElementById("postDescription").value,
   };
 
   const postImages = [...filesInImageContainer];
-  const postThumbnail = document.getElementById("postThumbnail").value
+  const postThumbnail = document.getElementById("postThumbnail").files[0]
 
   // We have all of our data, sexcellent.
   // Posting needs to be done in two phases - we ask for S3 presigned URLs to upload our images to,
@@ -55,7 +56,13 @@ async function attemptNewArtUpload() {
   s3Urls.thumbnail_presigned_url = s3Urls.thumbnail_presigned_url.replace("host.docker.internal", "localhost.localstack.cloud");
   s3Urls.art_presigned_urls = s3Urls.art_presigned_urls.map((presigned_url) => presigned_url.replace("host.docker.internal", "localhost.localstack.cloud"));
 
-  const thumbnailURLattempt = await fetch(s3Urls.thumbnail_presigned_url, {
+  postInfo.thumbnail_key = s3Urls.thumbnail_presigned_url;
+  postInfo.art_keys = s3Urls.art_presigned_urls;
+
+
+  // Alright, let's try uploading everything to S3.
+
+  const thumbnailURLattempt = fetch(s3Urls.thumbnail_presigned_url, {
     method: 'PUT',
     body: postThumbnail,
     headers: {
@@ -63,29 +70,47 @@ async function attemptNewArtUpload() {
     }
   });
 
-  postInfo.thumbnail_key = s3Urls.thumbnail_presigned_url;
+  const artUploadAttempts = s3Urls.art_presigned_urls.map(
+    (presignedUrl, index) => fetch(presignedUrl, {
+      method: 'PUT',
+      body: postImages[index],
+      headers: {
+        'Content-Type': postImages[index].type
+      }
+    })
+  )
 
-  // TODO - Send other files to S3, add their S3 URLs to postInfo.
+  await Promise.all([thumbnailURLattempt, ...artUploadAttempts]);
+
+  //TODO - Check for Errors.
 
   const finalMessageToSend = {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: {
+    body: JSON.stringify({
       step: "2",
       ...postInfo
-    }
+    })
   };
 
   console.log(`SENDING: ${JSON.stringify(finalMessageToSend)}`);
 
   // Now that it's all on S3, send the final result!
-  const finalUploadRequest = await fetch("/art/new", finalMessageToSend
-  );
+  const finalUploadRequest = await fetch("/art/new", finalMessageToSend);
 
   // TODO: Show to the user the response. In the meanwhile, the console will do.
   console.log(`UPLOAD COMPLETE! Result : ${JSON.stringify(finalUploadRequest)} `)
+
+  // ERROR! Bubble it up to user.
+  if (finalUploadRequest.status >= 400 && finalUploadRequest.status < 600) {
+    document.getElementById("errorDisplay").innerHTML = `<b>ERROR ${finalUploadRequest.status}, ${finalUploadRequest.statusText}:</b> ${finalUploadRequest.body}`;
+  }
+  // If there's a redirect, follow it, it means the upload was successful.
+  else if (finalUploadRequest.redirected) {
+    window.location.href = finalUploadRequest.url;
+  }
 }
 
 // Ran when the user selects a new file to be added to the image section.
