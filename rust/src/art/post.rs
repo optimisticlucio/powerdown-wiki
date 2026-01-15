@@ -333,9 +333,12 @@ struct PresignedUrlsResponse {
 
 #[derive(Debug, Template)]
 #[template(path = "art/new.html")]
-struct ArtPostingPage {
-    user: Option<User>,
-    original_uri: Uri,
+pub struct ArtPostingPage {
+    pub user: Option<User>,
+    pub original_uri: Uri,
+
+    /// Incase we're editing an existing page, pass the pageart here.
+    pub art_being_modified: Option<PageArt>,
 }
 
 pub async fn art_posting_page(
@@ -346,6 +349,8 @@ pub async fn art_posting_page(
     Ok(template_to_response(ArtPostingPage {
         user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
         original_uri,
+
+        art_being_modified: None,
     }))
 }
 

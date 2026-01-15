@@ -7,15 +7,6 @@ use axum::{
 };
 use http::Uri;
 
-#[derive(Debug, Template)]
-#[template(path = "art/edit.html")]
-struct EditArtPage {
-    user: Option<User>,
-    original_uri: Uri,
-
-    title: String,
-}
-
 pub async fn edit_art_page(
     Path(art_slug): Path<String>,
     State(state): State<ServerState>,
@@ -28,11 +19,11 @@ pub async fn edit_art_page(
     if let Some(requested_art) =
         structs::PageArt::get_by_slug(&state.db_pool.get().await.unwrap(), &art_slug).await
     {
-        Ok(template_to_response(EditArtPage {
+        Ok(template_to_response(super::post::ArtPostingPage {
             user: requesting_user,
             original_uri,
 
-            title: requested_art.base_art.title,
+            art_being_modified: Some(requested_art)
         }))
     } else {
         Err(RootErrors::NotFound(

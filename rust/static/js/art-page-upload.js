@@ -1,6 +1,10 @@
 // @tscheck 
+
+
 const imageContainer = document.getElementById("postImages");
-let filesInImageContainer = []; // An array holding the files that are in the image container.
+
+// An array holding the files that are in the image container.
+let filesInImageContainer = (filesInImageContainer === undefined) ? [] : filesInImageContainer; 
 
 // Incase someone exists and enters the page - clear out the image container, just to be sure.
 imageContainer.innerHTML = '';
@@ -41,7 +45,7 @@ async function attemptNewArtUpload() {
 
   console.log(`SENT: ${JSON.stringify(messageToSend)}`)
 
-  const s3UrlsRequestResponse = await fetch("/art/new", messageToSend);
+  const s3UrlsRequestResponse = await fetch(".", messageToSend);
 
   // TODO - Handle an error here.
 
