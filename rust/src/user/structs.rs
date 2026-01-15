@@ -81,7 +81,7 @@ pub struct OAuth2Association {
     pub provider: Oauth2Provider,
 }
 
-#[derive(FromSql, ToSql, Debug)]
+#[derive(FromSql, ToSql, Debug, PartialEq)]
 #[postgres(name = "oauth_provider", rename_all = "snake_case")]
 pub enum Oauth2Provider {
     Discord,
