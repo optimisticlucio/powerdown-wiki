@@ -1,4 +1,5 @@
 use crate::characters::{BaseCharacter, PageCharacter};
+use crate::user::User;
 use crate::utils::{self, get_s3_object_url, text_or_internal_err, PostingSteps};
 use crate::{
     characters::structs::{BaseCharacterBuilder, InfoboxRow, PageCharacterBuilder},
@@ -441,5 +442,28 @@ pub async fn add_character(
     cookie_jar: tower_cookies::Cookies,
     Json(posting_step): Json<PostingSteps<PageCharacter>>
 ) -> Result<Response, RootErrors> {
-    todo!()
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
+
+    // Who's trying to do this?
+    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+    // TODO: Disable uploading by non-logged in users after uploading the static site backlog.
+
+    if requesting_user.as_ref().is_some_and(|user| !user.user_type.permissions().can_post_characters) {
+        return Err(RootErrors::Forbidden);
+    }
+
+    match posting_step {
+        PostingSteps::RequestPresignedURLs { art_amount } => {
+            // TODO - Ensure it's an amount of art that makes sense. Right now the only variable is whether a page has a logo in it.
+            todo!()
+        }
+        PostingSteps::UploadMetadata(recieved_page_character) => {
+            todo!()
+        }
+    }
 }

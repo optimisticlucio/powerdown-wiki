@@ -3,12 +3,15 @@ use std::{env, fmt};
 
 use crate::errs::RootErrors;
 use askama::Template;
+use aws_sdk_s3::presigning::PresigningConfig;
 use axum::body::Body;
 use axum::extract::multipart::Field;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
 use serde::de::Deserializer;
 use serde::Deserialize;
+use rand::distr::{Alphanumeric, SampleString};
+use std::time::Duration;
 
 pub mod file_compression;
 
@@ -163,9 +166,61 @@ impl Error for MoveTempS3FileErrs {}
 pub enum PostingSteps<T> {
     #[serde(rename = "1")]
     RequestPresignedURLs {
+        #[serde(default)]
         art_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
     },
 
     #[serde(rename = "2")]
     UploadMetadata(T),
+}
+
+/// Returns a list of [amount_of_presigned_urls_needed] presigned URLs from S3.
+pub async fn get_temp_s3_presigned_urls(
+    state: &crate::ServerState,
+    amount_of_presigned_urls_needed: u32,
+    s3_temp_folder_name: &str
+) -> Result<Vec<String>,String> {
+    let temp_key_tasks: Vec<_> = (0..amount_of_presigned_urls_needed)
+        .map(|_| {
+            let s3_client = state.s3_client.clone();
+            let public_bucket_key = state.config.s3_public_bucket.clone();
+            let s3_temp_folder_name = s3_temp_folder_name.to_string();
+
+            tokio::spawn(async move {
+                let random_key = Alphanumeric.sample_string(&mut rand::rng(), 64);
+                let temp_art_key = format!("temp/{s3_temp_folder_name}/{random_key}");
+
+                // get s3 to open a presigned URL for the temp key.
+                s3_client
+                    .put_object()
+                    .bucket(public_bucket_key)
+                    .key(temp_art_key)
+                    .presigned(
+                        PresigningConfig::expires_in(Duration::from_secs(300)).unwrap(), // Five minutes to upload. May be too much?
+                    )
+                    .await
+                    .map(|x| x.uri().to_string())
+            })
+        })
+        .collect();
+
+    let mut temp_keys_for_presigned = Vec::new();
+
+    for task in temp_key_tasks {
+        let uri = task
+            .await
+            .map_err(|err| {
+                format!("Tokio Join Err! {:?}", err)
+            })?
+            .map_err(|err| {
+                format!(
+                    "[ART POST STAGE 1] SDK presigned URL creation err! {:?}",
+                    err
+                )
+            })?;
+
+        temp_keys_for_presigned.push(uri);
+    }
+
+    Ok(temp_keys_for_presigned)
 }

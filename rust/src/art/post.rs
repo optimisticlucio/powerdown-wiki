@@ -40,8 +40,6 @@ pub async fn add_art(
         return Err(RootErrors::Forbidden);
     }
 
-    // TODO: Validate user making the request is allowed to upload images.
-
     match posting_step {
         PostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
@@ -560,48 +558,11 @@ async fn give_user_presigned_s3_urls(
         let amount_of_presigned_urls_needed =
             requested_amount_of_urls + if including_thumbnail { 1 } else { 0 }; // The art, plus the thumbnail.
 
-        let temp_key_tasks: Vec<_> = (0..amount_of_presigned_urls_needed)
-            .map(|_| {
-                let s3_client = state.s3_client.clone();
-                let public_bucket_key = state.config.s3_public_bucket.clone();
-
-                tokio::spawn(async move {
-                    let random_key = Alphanumeric.sample_string(&mut rand::rng(), 64);
-                    let temp_art_key = format!("temp/art/{}", random_key);
-
-                    // get s3 to open a presigned URL for the temp key.
-                    s3_client
-                        .put_object()
-                        .bucket(public_bucket_key)
-                        .key(temp_art_key)
-                        .presigned(
-                            PresigningConfig::expires_in(Duration::from_secs(300)).unwrap(), // Five minutes to upload. May be too much?
-                        )
-                        .await
-                        .map(|x| x.uri().to_string())
-                })
-            })
-            .collect();
-
-        let mut temp_keys_for_presigned = Vec::new();
-
-        for task in temp_key_tasks {
-            let uri = task
-                .await
-                .map_err(|err| {
-                    eprintln!("[ART POST STAGE 1] Tokio Join Err! {}", err.to_string());
-                    RootErrors::InternalServerError
-                })?
-                .map_err(|err| {
-                    eprintln!(
-                        "[ART POST STAGE 1] SDK presigned URL creation err! {}",
-                        err.to_string()
-                    );
-                    RootErrors::InternalServerError
-                })?;
-
-            temp_keys_for_presigned.push(uri);
-        }
+        let mut temp_keys_for_presigned = utils::get_temp_s3_presigned_urls(state, amount_of_presigned_urls_needed.into(), "art")
+            .await.map_err(|err| {
+                eprintln!("[ART POST STEP 1] {}", err);
+                RootErrors::InternalServerError
+            })?;
 
         // Send back the urls as a json.
         let response = serde_json::to_string(&PresignedUrlsResponse {
