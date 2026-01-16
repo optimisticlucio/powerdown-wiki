@@ -1,13 +1,13 @@
-use crate::characters::BaseCharacter;
-use crate::utils::{self, get_s3_object_url, text_or_internal_err};
+use crate::characters::{BaseCharacter, PageCharacter};
+use crate::utils::{self, get_s3_object_url, text_or_internal_err, PostingSteps};
 use crate::{
     characters::structs::{BaseCharacterBuilder, InfoboxRow, PageCharacterBuilder},
     errs::RootErrors,
     ServerState,
 };
 use axum::extract::{Multipart, OriginalUri, State};
-use axum::http;
-use axum::response::{IntoResponse, Redirect};
+use axum::{http, Json};
+use axum::response::{IntoResponse, Redirect, Response};
 use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;
@@ -16,7 +16,7 @@ use tower_cookies::Cookies;
 
 // TODO: Redo this entire function.
 #[axum::debug_handler]
-pub async fn add_character(
+pub async fn add_character_old(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
@@ -432,4 +432,14 @@ pub async fn add_character(
         "/characters/{}",
         &page_character.base_character.slug
     )))
+}
+
+#[axum::debug_handler]
+pub async fn add_character(
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+    Json(posting_step): Json<PostingSteps<PageCharacter>>
+) -> Result<Response, RootErrors> {
+    todo!()
 }

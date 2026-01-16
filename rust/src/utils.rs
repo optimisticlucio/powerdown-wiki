@@ -155,3 +155,17 @@ impl fmt::Display for MoveTempS3FileErrs {
 }
 
 impl Error for MoveTempS3FileErrs {}
+
+/// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload
+/// various post types to the site, such as art or characters.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "step")]
+pub enum PostingSteps<T> {
+    #[serde(rename = "1")]
+    RequestPresignedURLs {
+        art_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
+    },
+
+    #[serde(rename = "2")]
+    UploadMetadata(T),
+}

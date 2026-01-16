@@ -1,14 +1,13 @@
 use super::structs::ArtState;
 use crate::art::structs::PageArt;
 use crate::user::{User, UsermadePost};
-use crate::utils::{self, template_to_response};
+use crate::utils::{self, template_to_response, PostingSteps};
 use crate::{errs::RootErrors, ServerState};
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
-use chrono::NaiveDate;
 use http::Uri;
 use rand::distr::Alphanumeric;
 use rand::distr::SampleString;
@@ -24,7 +23,7 @@ pub async fn add_art(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
-    Json(posting_step): Json<ArtPostingSteps>,
+    Json(posting_step): Json<PostingSteps<PageArt>>,
 ) -> Result<Response, RootErrors> {
     let db_connection = state
         .db_pool
@@ -35,13 +34,19 @@ pub async fn add_art(
     // Who's trying to do this?
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
+    // TODO: Disable uploading by non-logged in users after uploading the static site backlog.
+
+    if requesting_user.as_ref().is_some_and(|user| !user.user_type.permissions().can_post_art) {
+        return Err(RootErrors::Forbidden);
+    }
+
     // TODO: Validate user making the request is allowed to upload images.
 
     match posting_step {
-        ArtPostingSteps::RequestPresignedURLs { art_amount } => {
+        PostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
         }
-        ArtPostingSteps::UploadMetadata(mut page_art) => {
+        PostingSteps::UploadMetadata(mut page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
             sanitize_recieved_page_art(&mut page_art);
 
@@ -326,19 +331,6 @@ pub async fn add_art(
     }
 }
 
-/// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload art to the site.
-#[derive(Debug, Deserialize)]
-#[serde(tag = "step")]
-pub enum ArtPostingSteps {
-    #[serde(rename = "1")]
-    RequestPresignedURLs {
-        art_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
-    },
-
-    #[serde(rename = "2")]
-    UploadMetadata(PageArt),
-}
-
 #[derive(Debug, Serialize)]
 struct PresignedUrlsResponse {
     thumbnail_presigned_url: Option<String>,
@@ -377,7 +369,7 @@ pub async fn edit_art_put_request(
     State(state): State<ServerState>,
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
-    Json(posting_step): Json<ArtPostingSteps>,
+    Json(posting_step): Json<PostingSteps<PageArt>>,
 ) -> Result<Response, RootErrors> {
     let db_connection = state
         .db_pool
@@ -408,10 +400,10 @@ pub async fn edit_art_put_request(
     }
 
     match posting_step {
-        ArtPostingSteps::RequestPresignedURLs { art_amount } => {
+        PostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
         }
-        ArtPostingSteps::UploadMetadata(mut sent_page_art) => {
+        PostingSteps::UploadMetadata(mut sent_page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
             sanitize_recieved_page_art(&mut sent_page_art);
 

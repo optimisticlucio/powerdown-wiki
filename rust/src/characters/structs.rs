@@ -5,10 +5,11 @@ use derive_builder::Builder;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
 use rand::{distr::Alphanumeric, Rng};
+use serde::Deserialize;
 
 // TODO: Get character ritual info
 
-#[derive(Debug, Clone, Builder)]
+#[derive(Debug, Clone, Builder, Deserialize)]
 pub struct BaseCharacter {
     // Info relevant to absolute most uses of a character
     #[builder(default)]
@@ -26,7 +27,7 @@ pub struct BaseCharacter {
     pub birthday: Option<chrono::NaiveDate>,
 }
 
-#[derive(Debug, Clone, Builder)]
+#[derive(Debug, Clone, Builder, Deserialize)]
 pub struct PageCharacter {
     // Info relevant to character page
     pub base_character: BaseCharacter,
@@ -61,7 +62,7 @@ pub struct RitualCharacter {
     pub power_description: String,
 }
 
-#[derive(Debug, FromSql, ToSql, Clone)]
+#[derive(Debug, FromSql, ToSql, Clone, Deserialize)]
 #[postgres(name = "infobox_row")]
 pub struct InfoboxRow {
     pub title: String,
