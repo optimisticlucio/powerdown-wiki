@@ -58,7 +58,9 @@
 
     <div class="upload-data"> 
         {% if user_can_edit_page %}
-            <a href="./edit">Edit Page</a>
+            {% let current_path = original_uri.path() %}
+
+            <a href="{{current_path}}/edit">Edit Page</a>
         {% endif %}
     </div>
 </div>

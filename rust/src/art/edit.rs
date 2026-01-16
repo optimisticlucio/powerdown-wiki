@@ -19,11 +19,16 @@ pub async fn edit_art_page(
     if let Some(requested_art) =
         structs::PageArt::get_by_slug(&state.db_pool.get().await.unwrap(), &art_slug).await
     {
+        // Remove the end bit, so it talks to /{art_slug} instead of /{art_slug}/edit
+        let current_path = original_uri.path();
+        let target_button_url = current_path[..current_path.rfind("/").unwrap()].to_string();
+        
         Ok(template_to_response(super::post::ArtPostingPage {
             user: requesting_user,
             original_uri,
 
-            art_being_modified: Some(requested_art)
+            art_being_modified: Some(requested_art),
+            target_button_url: Some(target_button_url),
         }))
     } else {
         Err(RootErrors::NotFound(

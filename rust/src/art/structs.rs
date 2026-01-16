@@ -32,6 +32,7 @@ pub struct PageArt {
     pub base_art: BaseArt,
     #[serde(default)]
     pub description: Option<String>,
+    #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
     pub art_keys: Vec<String>,

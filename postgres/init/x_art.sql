@@ -14,11 +14,18 @@ CREATE TABLE art (
     --TODO: I should have a "last modification date" for my own usage. How to make it update on read?
     --TODO: I should write whoever's been the last person to change this. NULL means it was sysadmin (me).
     title text NOT NULL CHECK (TRIM(title) != ''),
-    creators text[] NOT NULL CONSTRAINT has_creators CHECK (array_length(creators, 1) > 0), 
+    creators text[] NOT NULL CONSTRAINT has_creators CHECK (
+        array_length(creators, 1) > 0 AND -- At least one creator
+        NOT ('' = ANY(creators)) AND -- None of the creators are ''
+        array_position(creators, NULL) IS NULL -- None of the creators are null
+        ), 
 
     thumbnail text NOT NULL, -- Assumed to be the key of the thumbnail in the public bucket.
 
-    tags text[] NOT NULL DEFAULT ARRAY[]::text[],
+    tags text[] NOT NULL DEFAULT ARRAY[]::text[] CHECK (
+        NOT ('' = ANY(tags)) AND -- None of the tags are ''
+        array_position(tags, NULL) IS NULL -- None of the tags are null
+    ),
 
     description text CHECK (TRIM(description) != ''),
 

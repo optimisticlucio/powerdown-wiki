@@ -1,6 +1,6 @@
 .footer {
     width: 100%;
-    position: absolute;
+    position: fixed;
     bottom: 0px;
     padding: 0.5ch;
 

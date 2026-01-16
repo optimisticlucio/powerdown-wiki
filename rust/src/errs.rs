@@ -89,13 +89,13 @@ fn request_timeout() -> impl IntoResponse {
 fn bad_request(elaboration: String) -> impl IntoResponse {
     (
         StatusCode::BAD_REQUEST,
-        format!("Bad request: {}", elaboration),
+        elaboration,
     )
 }
 
 fn unauthorized() -> impl IntoResponse {
     (StatusCode::UNAUTHORIZED,
-    format!("Unauthorized! If you see this, you tried doing some action that needs to be logged in without being logged in. Log in dickhead. Also, if you see this, tell lucio to update this shit page."))
+    format!("If you see this, you tried doing some action that needs to be logged in without being logged in. Log in dickhead."))
 }
 
 fn forbidden() -> impl IntoResponse {

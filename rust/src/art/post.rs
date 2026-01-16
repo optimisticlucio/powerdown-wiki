@@ -8,10 +8,12 @@ use aws_sdk_s3::presigning::PresigningConfig;
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
+use chrono::NaiveDate;
 use http::Uri;
 use rand::distr::Alphanumeric;
 use rand::distr::SampleString;
 use serde::{self, Deserialize, Serialize};
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::task::JoinSet;
 use url::Url;
@@ -39,8 +41,11 @@ pub async fn add_art(
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
         }
-        ArtPostingSteps::UploadMetadata(page_art) => {
-            // First let's make sure what we were given is even logical
+        ArtPostingSteps::UploadMetadata(mut page_art) => {
+            // Let's fix up some values that the user may have passed incorrectly.
+            sanitize_recieved_page_art(&mut page_art);
+
+            // Now, let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
                 return Err(RootErrors::BadRequest(
                     original_uri,
@@ -95,8 +100,11 @@ pub async fn add_art(
 
             values.push(&temp_thumbnail_key);
 
-            columns.push("tags".into());
-            values.push(&page_art.tags);
+            
+            if !page_art.tags.is_empty() {
+                columns.push("tags".into());
+                values.push(&page_art.tags);
+            }
 
             columns.push("is_nsfw".into());
             values.push(&page_art.base_art.is_nsfw);
@@ -108,10 +116,16 @@ pub async fn add_art(
                 values.push(&uploading_user.as_ref().unwrap().id);
             }
 
-            if let Some(description) = &page_art.description {
-                // TODO: SANITIZE
-                columns.push("description".into());
-                values.push(description);
+            let sanitized_description = page_art.description.map(|description| {
+                // TODO: SANITIZE FOR HTML/COMMONMARK INJECTION
+                description.trim().to_string()
+            }).filter(|description| !description.is_empty());
+
+            if let Some(description) = &sanitized_description {
+                if description.trim().is_empty() {
+                    columns.push("description".into());
+                    values.push(description);
+                }
             }
 
             // Safe bc we're not inserting anything the user did. Everything user-inputted is passed as values later.
@@ -339,6 +353,9 @@ pub struct ArtPostingPage {
 
     /// Incase we're editing an existing page, pass the pageart here.
     pub art_being_modified: Option<PageArt>,
+
+    /// The URL to which our upload button will be talking to. If empty, messages the current URI.
+    pub target_button_url: Option<String>,
 }
 
 pub async fn art_posting_page(
@@ -351,6 +368,7 @@ pub async fn art_posting_page(
         original_uri,
 
         art_being_modified: None,
+        target_button_url: None
     }))
 }
 
@@ -393,8 +411,11 @@ pub async fn edit_art_put_request(
         ArtPostingSteps::RequestPresignedURLs { art_amount } => {
             give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
         }
-        ArtPostingSteps::UploadMetadata(sent_page_art) => {
-            // First let's make sure what we were given is even logical
+        ArtPostingSteps::UploadMetadata(mut sent_page_art) => {
+            // Let's fix up some values that the user may have passed incorrectly.
+            sanitize_recieved_page_art(&mut sent_page_art);
+
+            // Now let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
                 return Err(RootErrors::BadRequest(
                     original_uri,
@@ -404,7 +425,7 @@ pub async fn edit_art_put_request(
                 ));
             }
 
-            // TODO - MOVE TEMP ART SENT OVER TO PERMANENT STORAGE
+            // TODO: Check validity of art URLs. Don't move them yet, just ensure the user isn't fucking with us.
 
             // Now that everything is uploaded properly, let's start modifying what needs to be changed.
             let mut columns: Vec<String> = Vec::new();
@@ -443,11 +464,6 @@ pub async fn edit_art_put_request(
                 values.push(&sent_page_art.base_art.is_nsfw);
             }
 
-            if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
-                columns.push("thumbnail".into());
-                values.push(&sent_page_art.base_art.thumbnail_key);
-            }
-
             if sent_page_art.description != existing_art.description {
                 columns.push("description".into());
                 values.push(&sent_page_art.description);
@@ -455,13 +471,12 @@ pub async fn edit_art_put_request(
 
             // Safe bc nothing user-written is passed into the string. User values are in `values`
             let query = format!(
-                "UPDATE art ({}) VALUES ({}) WHERE id={};",
-                columns.join(","),
-                (1..values.len() + 1)
-                    .map(|i| format!("${i}"))
+                "UPDATE art SET {} WHERE id={};",
+                columns.iter().enumerate()
+                    .map(|(index, value)| format!("{}=${}", value, index+1))
                     .collect::<Vec<_>>()
                     .join(","),
-                format!("${}", values.len() + 2)
+                format!("${}", columns.len() + 1)
             );
 
             values.push(&existing_art.base_art.id);
@@ -470,22 +485,44 @@ pub async fn edit_art_put_request(
                 .await
                 .map_err(|err| {
                     eprintln!(
-                        "[ART UPLOAD] Updating metadata of art id {}, named \"{}\", failed. {}",
+                        "[ART UPLOAD] Updating metadata of art id {}, named \"{}\", failed. {:?} \nQUERY:{}\nPARAMS:{:?}",
                         &existing_art.base_art.id,
                         &existing_art.base_art.title,
-                        err.to_string()
+                        err,
+                        &query,
+                        &values
                     );
                     RootErrors::InternalServerError
                 })?;
 
             // TODO - DELETE ANY REMOVED ART, AND MOVE THE NEW ART INTO PLACE
 
-            // ---- Now that we finished, set the appropriate art state. ----
+            // ---- Now that we finished, set the appropriate art state, and maybe update the thumbnail ----
+
+            let mut columns: Vec<String> = Vec::new();
+            let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+            
+            columns.push("post_state".into());
+            values.push(&ArtState::Public);
+
+            if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
+                columns.push("thumbnail".into());
+                values.push(&sent_page_art.base_art.thumbnail_key);
+            }
+
+            values.push(&existing_art.base_art.id);
+
+            let update_query = format!("UPDATE art SET {} WHERE id={};",
+                columns.iter().enumerate()
+                    .map(|(index, value)| format!("{}=${}", value, index+1))
+                    .collect::<Vec<_>>()
+                    .join(","),
+                format!("${}", columns.len() + 1));
 
             db_connection
                 .execute(
-                    "UPDATE art SET post_state=$1 WHERE id=$2",
-                    &[&ArtState::Public, &existing_art.base_art.id],
+                    &update_query,
+                    &values,
                 )
                 .await
                 .map_err(|err| {
@@ -592,10 +629,85 @@ async fn give_user_presigned_s3_urls(
 /// Given a user-created Page Art, validates that it makes sense. If it doesn't, returns a readable explanation why.
 fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String> {
     if recieved_page_art.art_keys.is_empty() {
-        return Err("No Art Keys Given".to_owned());
+        return Err("Art page needs to have art in it".to_owned());
     }
 
-    // TODO: Validate all of the given values make sense.
+    if recieved_page_art.base_art.creators.is_empty() {
+        return Err("No artists given".to_owned());
+    }
+
+    if recieved_page_art.base_art.title.is_empty() {
+        return Err("Title mustn't be empty.".to_owned());
+    }
+
+    const INVALID_ART_PAGE_TITLES: [&str; 2] = ["new", ""];
+    if INVALID_ART_PAGE_TITLES.contains(&recieved_page_art.base_art.title.as_str()) {
+        return Err("Invalid page title".to_owned());
+    }
+
+    if recieved_page_art.creation_date > chrono::offset::Local::now().date_naive() {
+        return Err("Art can't be made in the future.".to_owned());
+    }
+
+    if recieved_page_art.base_art.thumbnail_key.is_empty() {
+        return Err("Art must have thumbnail".to_owned());
+    }
 
     Ok(())
+}
+
+/// Given a Page Art, cleans up any invalid or nonsensical values, such as empty strings for artist names.
+/// NOTE: Does not make sure the values make _logical_ sense, only that we don't deal with trivially incorrect data.
+fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt) {
+    // Clean up any empty tags
+    recieved_page_art.tags = recieved_page_art.tags.iter().filter_map(|tag| {
+        // SAFETY: The code doesn't pass the tags directly anywhere and are filtered by askama,
+        // as they never have any parsing-relevant info in them. Well, _shouldn't_ have.
+        // Therefore we don't need to sanitize them here.
+        let trimmed_tag = tag.trim();
+        
+        if trimmed_tag.is_empty() {
+            None
+        }
+        else {
+            Some(trimmed_tag.to_string())
+        }
+    }).collect();
+
+    // Clean up any empty artist names.
+    recieved_page_art.base_art.creators = recieved_page_art.base_art.creators.iter().filter_map(|creator_name| {
+        // SAFETY: artist names are never passed with the "| safe" tag to askama, assumed to be dangerous anyways.
+        let trimmed_name = creator_name.trim();
+        
+        if trimmed_name.is_empty() {
+            None
+        }
+        else {
+            Some(trimmed_name.to_string())
+        }
+    }).collect();
+
+    // Get only the keys from the URLs the user gave us.
+    // We don't need to raise an error if the host is wrong bc if the host is wrong, the key _has_ got to be wrong too.
+    // If the host is wrong but the key is correct I legitimately have no idea what the fuck the user is doing.
+
+    /// Returns Some(String) if the key was successfully cleaned. None if the key is empty or otherwise invalid.
+    fn clean_passed_key(passed_url: &String) -> Option<String> {
+        let parsed_url = Uri::from_str(passed_url).ok()?;
+            let key = parsed_url.path();
+
+            if key.is_empty() {
+                None
+            } else {
+                Some(key.to_string())
+            }
+    }
+
+    recieved_page_art.art_keys = recieved_page_art.art_keys
+        .iter()
+        .filter_map(clean_passed_key)
+        .collect();
+
+    // If this is invalid, it returns an empty string. I know, not great, is handled by the verification function.
+    recieved_page_art.base_art.thumbnail_key = clean_passed_key(&recieved_page_art.base_art.thumbnail_key).unwrap_or_default();
 }

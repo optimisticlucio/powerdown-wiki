@@ -5,59 +5,60 @@
 {% block customhead %}<script src="/static/js/art-page-upload.js" defer></script>{% endblock %}
 
 {% block content %}
-<h1>Upload New Art Whoa</h1>
+<div class="wrapper upload" style="text-align: left">
+    <h1>Upload New Art Whoa</h1>
 
-<div id="errorDisplay" style="color:red;">
+    <div id="errorDisplay" style="color:red;">
+    </div>
+
+    <label for="postTitle">Post Title:</label>
+    <input type="text" id="postTitle" required minLength="1"
+        {%- if let Some(page_art) = art_being_modified %} value="{{page_art.base_art.title}}" {% endif %}/>
+
+    </br>
+
+    <label for="postSlug">Post URL: (if empty, I'll just copy the title)</label>
+    <input type="text" id="postSlug"
+        {%- if let Some(page_art) = art_being_modified %} value="{{page_art.base_art.slug}}" {% endif %}/>
+
+    </br>
+
+    <label for="postThumbnail">Thumbnail:</label>
+    <input type="file" id="postThumbnail" required accept="image/*"/> 
+
+    </br>
+
+    <label for="postCreationDate">Creation Date:</label>
+    <input type="date" id="postCreationDate" required min="2016-01-01"
+        {%- if let Some(page_art) = art_being_modified %} value="{{page_art.creation_date}}" {% endif %}/>
+
+    </br>
+
+    <label for="postIsNsfw">Post is NSFW: <input type="checkbox" id="postIsNsfw"
+        {%- if let Some(page_art) = art_being_modified %}{% if page_art.base_art.is_nsfw %} checked {% endif %}{% endif %}/></label>
+
+    </br>
+
+    <label for="postArtists">Artists (If multiple, separate with commas!): </label>
+    <input type="text" id="postArtists" required minLength="1"
+        {%- if let Some(page_art) = art_being_modified %} value="{{page_art.base_art.creators | join(", ")}}" {% endif %}/>
+
+    </br>
+
+    <label for="postTags">Tags (If multiple, separate with commas!): </label>
+    <input type="text" id="postTags"
+        {%- if let Some(page_art) = art_being_modified %} value="{{page_art.tags | join(", ")}}" {% endif %}/>
+
+    <p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage(event)"/> </br>
+
+    <div id="postImages">
+    </div>
+
+    <label for="postDescription">Post Description: </label>
+    <textarea id="postDescription">{%- if let Some(page_art) = art_being_modified %}{%- if let Some(description) = page_art.description %}{{description}}{% endif %}{% endif %}</textarea>
+
+    </br>
+
+    <button class="light" onclick="attemptNewArtUpload({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Upload Art</button>
 </div>
-
-
-<label for="postTitle">Post Title:</label>
-<input type="text" id="postTitle" required minLength="1"
-    {%- if let Some(page_art) = art_being_modified %} placeholder="{{page_art.base_art.title}}" {% endif %}/>
-
-</br>
-
-<label for="postSlug">Post URL: (if empty, I'll just copy the title)</label>
-<input type="text" id="postSlug" minLength="1"
-    {%- if let Some(page_art) = art_being_modified %} placeholder="{{page_art.base_art.slug}}" {% endif %}/>
-
-</br>
-
-<label for="postThumbnail">Thumbnail:</label>
-<input type="file" id="postThumbnail" required accept="image/*"/> 
-
-</br>
-
-<label for="postCreationDate">Creation Date:</label>
-<input type="date" id="postCreationDate" required min="2016-01-01"
-    {%- if let Some(page_art) = art_being_modified %} placeholder="{{page_art.creation_date}}" {% endif %}/>
-
-</br>
-
-<label for="postIsNsfw">Post is NSFW: <input type="checkbox" id="postIsNsfw"
-    {%- if let Some(page_art) = art_being_modified %}{% if page_art.base_art.is_nsfw %} checked {% endif %}{% endif %}/></label>
-
-</br>
-
-<label for="postArtists">Artists (If multiple, separate with commas!): </label>
-<input type="text" id="postArtists" required minLength="1"
-    {%- if let Some(page_art) = art_being_modified %} placeholder="{{page_art.base_art.creators | join(", ")}}" {% endif %}/>
-
-</br>
-
-<label for="postTags">Tags (If multiple, separate with commas!): </label>
-<input type="text" id="postTags"
-    {%- if let Some(page_art) = art_being_modified %} placeholder="{{page_art.tags | join(", ")}}" {% endif %}/>
-
-<p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage(event)"/> </br>
-
-<div id="postImages">
-</div>
-
-<label for="postDescription">Post Description: </label>
-<textarea id="postDescription">{%- if let Some(page_art) = art_being_modified %}{%- if let Some(description) = page_art.description %}{{description}}{% endif %}{% endif %}</textarea>
-
-</br>
-
-<button class="light" onclick="attemptNewArtUpload()">Upload Art</button>
 {% endblock %}
