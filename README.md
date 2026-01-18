@@ -17,6 +17,8 @@ If these are missing when you run docker compose is made, you *will* get a crash
 
 - `WEBSITE_URL`: The URL of the website people are visiting. Needed for stuff like OAuth2 redirect URLs. Do not include trailing slash.
 
+- `S3_URL`: The URL of the S3 website where we're storing all the files. Needed to... well, show people files.
+
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: The user and password used when creating the postgres DB. Given to both the rust app and the postgres container.
 
 - `AWS_ENDPOINT_URL`, `AWS_ACCESS_KEY`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`: Information regarding the location and login data for AWS services, so we can use S3 buckets to store images and video and somesuch. *During development, point this at a LocalStack instance.*

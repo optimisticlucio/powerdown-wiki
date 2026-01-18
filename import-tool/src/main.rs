@@ -18,8 +18,8 @@ This tool should be used regularly in testing and only {} on the final site.
     //let path_to_root = select_main_folder(); TODO: Uncomment if given to someone else
     let path_to_root = PathBuf::from("E:/Documents/Coding/unbridled-confidence/pd-archive"); 
     
-    //let server_url = select_server_url().await; TODO: Uncomment once we go live!
-    let server_url = Url::parse("http://localhost:8080").unwrap();
+    let server_url = select_server_url().await; // TODO: Uncomment once we go live!
+    //let server_url = Url::parse("http://localhost:8080").unwrap();
 
     select_import_type(&path_to_root, &server_url).await;
 }

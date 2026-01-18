@@ -74,8 +74,8 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 /// Returns the public-facing URL for an S3 object, given its key and bucket.
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
     // TODO - This is a lot of processing for a hotpath. Gotta be a better way to do this shit.
-    let website_uri = Uri::from_str(&env::var("WEBSITE_URL").unwrap()).unwrap();
-    format!("{}://{}:4566/{}/{}", website_uri.scheme_str().unwrap() ,website_uri.host().unwrap(), bucket_name, file_key)
+    let website_uri = Uri::from_str(&env::var("S3_URL").unwrap()).unwrap();
+    format!("{}://{}/{}/{}", website_uri.scheme_str().unwrap() ,website_uri.authority().unwrap(), bucket_name, file_key)
 }
 
 /// Returns the public-facing URL for an S3 object in the public bucket.
@@ -214,11 +214,18 @@ pub async fn get_temp_s3_presigned_urls(
     }
 
     // When doing development, these point to the relative URL of the docker container, which is.. not good.
-    let website_uri = Uri::from_str(&env::var("WEBSITE_URL").unwrap()).unwrap();
-    // Right now the S3 container being used is localstack, so I'm hardcoding that name.
+    let s3_website_uri = Uri::from_str(&env::var("S3_URL").unwrap()).unwrap(); 
     temp_keys_for_presigned = temp_keys_for_presigned
         .iter()
-        .map(|presigned_url| presigned_url.replace("localstack", &website_uri.host().unwrap()))
+        .map(|presigned_url| {
+            let presigned_uri = Uri::from_str(presigned_url).unwrap();
+            let corrected_uri = Uri::builder()
+                .authority(s3_website_uri.authority().unwrap().clone())
+                .scheme(s3_website_uri.scheme().unwrap().clone())
+                .path_and_query(presigned_uri.path_and_query().unwrap().clone())
+                .build().unwrap();
+            corrected_uri.to_string()
+        })
         .collect();
 
     Ok(temp_keys_for_presigned)
