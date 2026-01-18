@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
 use owo_colors::{ OwoColorize};
 use rand::seq::IndexedRandom;
-use crate::utils;
+use crate::utils::{self, PresignedUrlsResponse};
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     let post_url = server_url.join("art/new").unwrap();
@@ -233,19 +233,20 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
             .map_err(|err| format!("THUMBNAIL READ ERR: {}", err.to_string()))?;
 
     let presigned_url_request = reqwest::Client::new().post(server_url.to_owned())
-        .json(&ArtPostingSteps::RequestPresignedURLs {
-            art_amount: frontmatter.img_files.len() as u8
+        .json(&utils::PostingSteps::<PostArt>::RequestPresignedURLs {
+            art_amount: frontmatter.img_files.len() as u8 + 1
         })
         .send().await
         .map_err(|err| format!("Presigned Request Failed: {}", err.to_string()))?;
 
-    let presigned_url_response: PresignedUrlsResponse = presigned_url_request.json().await.map_err(|err| format!("Response mapping failed: {}", err.to_string()))?;
+    let mut presigned_url_response: PresignedUrlsResponse = presigned_url_request.json().await.map_err(|err| format!("Response mapping failed: {}", err.to_string()))?;
 
     // Upload thumbnail.
-    utils::send_to_presigned_url(&presigned_url_response.thumbnail_presigned_url, thumbnail_img_bytes).await
+    let thumbnail_url = presigned_url_response.presigned_urls.pop().unwrap();
+    utils::send_to_presigned_url(&thumbnail_url, thumbnail_img_bytes).await
         .map_err(|err| format!("Thumbnail Upload Err: {}", err.to_string()))?;
 
-    for (index, target_url) in presigned_url_response.art_presigned_urls.iter().enumerate() {
+    for (index, target_url) in presigned_url_response.presigned_urls.iter().enumerate() {
         let img_relative_path = frontmatter.img_files.get(index).unwrap();
 
         let img_file_path = root_path.join("src/assets/img/art-archive").join(img_relative_path.trim_start_matches("/"));
@@ -259,8 +260,8 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     let post_art = PostArt {
         title: frontmatter.title,
         creators: frontmatter.artists,
-        thumbnail_key: presigned_url_response.thumbnail_presigned_url,
-        art_keys: presigned_url_response.art_presigned_urls.clone(),
+        thumbnail_key: thumbnail_url,
+        art_keys: presigned_url_response.presigned_urls.clone(),
         slug: art_slug,
         is_nsfw: frontmatter.tags.contains(&"nsfw".to_owned()),
         description: if file_content.is_empty() { None } else { Some(file_content) },
@@ -269,7 +270,7 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     };
 
     reqwest::Client::new().post(server_url.to_owned())
-        .json(&ArtPostingSteps::UploadMetadata(post_art))
+        .json(&utils::PostingSteps::UploadMetadata(post_art))
         .send().await
         .map_err(|err| format!("Art Post Push Failed: {}", err.to_string()))
 }
@@ -307,26 +308,7 @@ enum Format {
     Video
 }
 
-/// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload art to the site.
-#[derive(Serialize)]
-#[serde(tag = "step")]
-enum ArtPostingSteps {
-    #[serde(rename = "1")]
-    RequestPresignedURLs {
-        art_amount: u8 // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
-    },
-
-    #[serde(rename="2")] 
-    UploadMetadata(PostArt),
-}
-
-#[derive(Deserialize)]
-struct PresignedUrlsResponse {
-    thumbnail_presigned_url: String,
-    art_presigned_urls: Vec<String>,
-}
-
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct PostArt {
     pub title: String,
     pub creators: Vec<String>,

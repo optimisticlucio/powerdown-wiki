@@ -1,0 +1,35 @@
+{% extends "base-template.html" %}
+
+{% block title %}Create New Art{% endblock %}
+
+{% block customhead %}<script src="/static/js/character-page-upload.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper upload" style="text-align: left">
+    <h1>Upload New Character Cool</h1>
+
+    <div id="errorDisplay" style="color:red;">
+    </div>
+
+    <label for="characterName">First Name / Title (Penny <s>Nelson</s>, <s>Dr.</s> Goldman):</label>
+    <input type="text" id="characterName" required minLength="1"
+        {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.name}}" {% endif %}/>
+    </br>
+
+    <label for="characterSlug">Page URL (if empty, I'll just copy the name):</label>
+    <input type="text" id="characterSlug"
+        {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.slug}}" {% endif %}/>
+
+    </br>
+
+    <label for="characterThumbnail">Thumbnail:</label>
+    <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
+
+    <div id="characterThumbnail">
+    </div>
+
+    </br>
+
+    <button class="light" onclick="attemptNewCharacterUpload({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Upload Art</button>
+</div>
+{% endblock %}

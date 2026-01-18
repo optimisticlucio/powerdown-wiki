@@ -1,14 +1,12 @@
-use std::{fs, path::{Path, PathBuf}, sync::Arc};
-use reqwest::{multipart, Response, Url};
+use std::{fs, path::{Path, PathBuf}};
+use chrono::NaiveDate;
+use reqwest::{Response, Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
 use indexmap::IndexMap;
 use owo_colors::{ OwoColorize};
-use futures::{stream, StreamExt};
-use tokio::sync::Mutex;
-use indicatif::ProgressBar;
 use rand::seq::IndexedRandom;
-use crate::utils;
+use crate::utils::{self, PresignedUrlsResponse};
 
 pub async fn select_import_options(root_path: &Path, server_url: &Url) {
     let post_url = server_url.join("characters/new").unwrap();
@@ -148,55 +146,65 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
     let page_img_bytes = fs::read(root_path.join("src/assets/img").join(frontmatter.character_img_file.trim_start_matches("/")))
             .map_err(|err| format!("PAGE IMG READ ERR: {}", err.to_string()))?;
 
-    // Set the required fields for the post request
-    let mut post_request = reqwest::multipart::Form::new()
-        .text("name", frontmatter.character_title.clone())
-        .text("creator", frontmatter.character_author)
-        .text("slug", character_slug.clone())
-        .text("relevant_tag", character_slug.clone())
-        .part("thumbnail", multipart::Part::bytes(thumbnail_img_bytes).file_name(thumbnail_img_filename).mime_str("image/png").unwrap())
-        .part("page_img", multipart::Part::bytes(page_img_bytes).file_name(page_img_filename))
-        .text("subtitles", serde_json::to_string(&frontmatter.character_subtitle).map_err(|err| format!("Subtitle JSON Err: {}", err.to_string()))?)
-        .text("infobox", serde_json::to_string(&frontmatter.infobox_data).map_err(|err| format!("Infobox JSON Err: {}", err.to_string()))?)
-        ;
+    // TODO: HANDLE LOGO
 
-    if let Some(overlay_css) = frontmatter.overlay_css {
-        post_request = post_request.text("overlay_css", overlay_css);
-    }
+    let page_contents = file_content.trim();
+    let page_contents = if page_contents.is_empty() {
+        None
+    } else { Some(page_contents.to_string())};
 
-    if !file_content.trim().is_empty() {
-        post_request = post_request.text("page_contents", file_content);
-    }
+    // Ok we have all the info we need, let's request the presigned URLs for whatever we need.
+    // It's the thumbnail, page image, and maybe a logo.
+    let art_amount = 2 + if frontmatter.logo_file.is_some() {1} else {0};
 
-    if frontmatter.hide_character {
-        post_request = post_request.text("is_hidden", "true");
-    }
+    let presigned_url_request = reqwest::Client::new().post(server_url.to_owned())
+        .json(&utils::PostingSteps::<PageCharacter>::RequestPresignedURLs {
+            art_amount
+        })
+        .send().await
+        .map_err(|err| format!("Presigned Request Failed: {}", err.to_string()))?;
 
-    if let Some(retirement_reason) = frontmatter.archival_reason {
-        post_request = post_request.text("retirement_reason", retirement_reason);
-    }
+    let mut presigned_url_response: PresignedUrlsResponse = presigned_url_request
+        .json()
+        .await
+        .map_err(|err| format!("Response mapping failed: {}", err.to_string()))?;
 
-    if let Some(logo) = frontmatter.logo_file {
-        post_request = post_request.text("logo", format!("https://powerdown.wiki/assets/img/characters/logos/{}", logo));
-    }
-    
-    if frontmatter.is_main_character {
-        post_request = post_request.text("is_main_character", "true");
-    }
+    // Upload thumbnail.
+    let thumbnail_key = presigned_url_response.presigned_urls.pop().unwrap();
+    utils::send_to_presigned_url(&thumbnail_key, thumbnail_img_bytes).await
+        .map_err(|err| format!("Thumbnail Upload Err: {}", err.to_string()))?;
 
-    if let Some(inpage_character_name) = frontmatter.inpage_character_title {
-        post_request = post_request.text("long_name", inpage_character_name);
-    }
+    // Upload page art.
+    let page_img_key = presigned_url_response.presigned_urls.pop().unwrap();
+    utils::send_to_presigned_url(&page_img_key, page_img_bytes).await
+        .map_err(|err| format!("Thumbnail Upload Err: {}", err.to_string()))?;
 
-    if let Some(birthday) = frontmatter.birthday {
-        post_request = post_request.text("birthday", birthday);
-    }
+    // Good, we're ready to send.
+    let post_character = PageCharacter {
+        name: frontmatter.character_title.clone(),
+        creator: frontmatter.character_author,
+        slug: character_slug.clone(),
+        is_hidden: frontmatter.hide_character,
+        tag: Some(character_slug.clone()),
+        thumbnail_key,
+        page_img_key,
+        subtitles: frontmatter.character_subtitle,
+        infobox: frontmatter.infobox_data.iter().map(|(a,b)| InfoboxRow { title: a.clone(), description: b.clone() }).collect(),
+        is_main_character: frontmatter.is_main_character,
+        birthday: frontmatter.birthday
+            .map(|birthday_in_mm_dd| NaiveDate::parse_from_str(&format!("2000-{}", birthday_in_mm_dd), "%Y-%m-%d").unwrap()),
+        overlay_css: frontmatter.overlay_css,
+        custom_css: None,
+        long_name: frontmatter.inpage_character_title,
+        retirement_reason: frontmatter.archival_reason,
+        logo_url: Some("TODO".to_string()),
+        page_contents
+    };
 
-    let request = reqwest::Client::new().post(server_url.to_owned())
-        .multipart(post_request);
-
-    // Send the post request and hope for the best.
-    return request.send().await.map_err(|err| format!("Info Send Err: {}", err.to_string()));
+    reqwest::Client::new().post(server_url.to_owned())
+        .json(&utils::PostingSteps::UploadMetadata(post_character))
+        .send().await
+        .map_err(|err| format!("Character Post Push Failed: {:?}", err))
 }
 
 #[derive(Deserialize, Serialize)]
@@ -232,3 +240,29 @@ struct CharacterFrontmatter {
     // TODO: Handle ritual stuff
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PageCharacter {
+    pub is_hidden: bool,
+    pub is_main_character: bool,
+    pub slug: String,
+    pub name: String,
+    pub thumbnail_key: String,
+    pub birthday: Option<chrono::NaiveDate>,
+    pub long_name: Option<String>,
+    pub subtitles: Vec<String>,
+    pub creator: String,
+    pub retirement_reason: Option<String>,
+    pub tag: Option<String>, 
+    pub logo_url: Option<String>,
+    pub page_img_key: String,
+    pub infobox: Vec<InfoboxRow>,
+    pub overlay_css: Option<String>,
+    pub custom_css: Option<String>,
+    pub page_contents: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct InfoboxRow {
+    pub title: String,
+    pub description: String,
+}

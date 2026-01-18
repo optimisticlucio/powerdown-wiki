@@ -1,14 +1,39 @@
 // @tscheck 
 
+// Image files here are represented with an object, bc we need to discriminate between images
+// already uploaded to the DB and those that are not. they all have the "state" property,
+// which can be "uploaded" or "local". "local" means there's another property named "file"
+// pointing to the local file that needs to be updated. "uploaded" means there's another
+// property called "key" pointing to the image's current URL.
 
 const imageContainer = document.getElementById("postImages");
+const thumbnailContainer = document.getElementById("postThumbnail");
 
-// An array holding the files that are in the image container.
-let filesInImageContainer = []; 
+// Initialize only if not already defined in the page
+if (typeof filesInImageContainer === 'undefined') {
+  // An array holding the files that are in the image container.
+    filesInImageContainer = [];
+}
+if (typeof thumbnailObject === 'undefined') {
+    thumbnailObject = {};
+}
 
-// Incase someone exists and enters the page - clear out the image container, just to be sure.
+// Incase someone exits and enters the page, to ensure there aren't visual/logic discrepancies - clear out the image and thumbnail containers.
 imageContainer.innerHTML = '';
+thumbnailContainer.innerHTML = '';
 
+// Now we render whatever is in the files and object variables.
+filesInImageContainer.forEach( (givenImage) => {
+  const img = document.createElement('img');
+  img.src = givenImage.key;
+  imageContainer.appendChild(img);
+})
+// If thumbnail object isn't empty.
+if (Object.keys(thumbnailObject).length > 0) {
+  const img = document.createElement('img');
+  img.src = thumbnailObject.key;
+  thumbnailContainer.appendChild(img);
+}
 
 // Checks the page validity of /art/new. If valid, sends new art to the site.
 async function attemptNewArtUpload(targetUrl = window.location.pathname) {
@@ -31,11 +56,8 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     slug: document.getElementById("postSlug").value || postTitle.toLowerCase().replaceAll(" ","-"),
   };
 
-  const postImages = [...filesInImageContainer];
-  const postThumbnail = document.getElementById("postThumbnail").files[0];
-
   // Most values are checked by the server, but thumbnail is not checked before being sent to s3. So let's make sure it's set.
-  if (!postThumbnail) {
+  if (!thumbnailObject) {
     document.getElementById("errorDisplay").innerHTML = `<b>ERROR:</b> Thumbnail wasn't selected.`;
   }
 
@@ -52,11 +74,14 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     postInfo.tags = tags;
   }
 
-  // For some reason, invalid dates gives a very weird serde error, so let's notify the user 
+  // TODO: Check for valid calendar date and throw error if invalid bc server returns a weird serde if that's missing.
 
   // We have all of our data, sexcellent.
   // Posting needs to be done in two phases - we ask for S3 presigned URLs to upload our images to,
   // and after that, we send all of the relevant metadata to the server. 
+
+  // Let's check how many images we need to send.
+  let amountOfArtToUpload = filesInImageContainer.filter((object) => object.state == "local").length + (thumbnailObject.state == "local" ? 1 : 0);
 
   const messageToSend = {
     method: "POST",
@@ -66,7 +91,7 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     credentials: "same-origin",
     body: JSON.stringify({
       step: "1",
-      art_amount: postImages.length
+      art_amount: amountOfArtToUpload
     })
   };
 
@@ -81,44 +106,63 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     return;
   }
 
-  // A valid request should return a json with "thumbnail_presigned_url" which is one url, 
-  // and "art_presigned_urls" which is a list.
+  // A valid request should return a json with a list of "presigned_urls".
 
   let s3Urls = await s3UrlsRequestResponse.json();
 
   console.log(`RECIEVED: ${JSON.stringify(s3Urls)}`);
 
   // TODO: Remove this conversion once we go live, it's only here bc we're working with localStack instead of a live server.
-  s3Urls.thumbnail_presigned_url = s3Urls.thumbnail_presigned_url.replace("host.docker.internal", "localhost.localstack.cloud");
-  s3Urls.art_presigned_urls = s3Urls.art_presigned_urls.map((presigned_url) => presigned_url.replace("host.docker.internal", "localhost.localstack.cloud"));
-
-  postInfo.thumbnail_key = s3Urls.thumbnail_presigned_url;
-  postInfo.art_keys = s3Urls.art_presigned_urls;
-
+  s3Urls.presigned_urls = s3Urls.presigned_urls.map((presigned_url) => presigned_url.replace("host.docker.internal", "localhost.localstack.cloud"));
 
   // Alright, let's try uploading everything to S3.
+  // Put everything in a list so we can run them in parallel later.
+  let listOfUploadFunctions = [];
 
-  const thumbnailURLattempt = fetch(s3Urls.thumbnail_presigned_url, {
-    method: 'PUT',
-    body: postThumbnail,
-    headers: {
-      'Content-Type': postThumbnail.type
-    }
-  });
+  if (thumbnailObject.state == "local") {
+    // Upload thumbnail to server, then reassign the appropriate values.
+    let thumbnailKey = s3Urls.presigned_urls.pop();
+    listOfUploadFunctions.push((async () => {
+      await fetch(thumbnailKey, {
+        method: 'PUT',
+        body: thumbnailObject.file,
+        headers: {
+          'Content-Type': thumbnailObject.file.type
+        }
+      })
+      // TODO - check for errors.
 
-  const artUploadAttempts = s3Urls.art_presigned_urls.map(
-    (presignedUrl, index) => fetch(presignedUrl, {
-      method: 'PUT',
-      body: postImages[index],
-      headers: {
-        'Content-Type': postImages[index].type
-      }
-    })
-  )
+      thumbnailObject.state = "uploaded";
+      thumbnailObject.key = thumbnailKey;
+    })()); 
+  }
 
-  await Promise.all([thumbnailURLattempt, ...artUploadAttempts]);
+  listOfUploadFunctions.push(...filesInImageContainer
+  .filter((imageObject) => imageObject.state == "local")
+  .map((imageObject, index) => {
+    const urlToUpload = s3Urls.presigned_urls[index];
+    
+    return (async () => {  
+      await fetch(urlToUpload, {
+        method: 'PUT',
+        body: imageObject.file,
+        headers: {
+          'Content-Type': imageObject.file.type
+        }
+      });
 
-  //TODO - Check for Errors.
+      // TODO: Check for errors
+
+      imageObject.state = "uploaded";
+      imageObject.key = urlToUpload;
+    })();
+  }
+));
+
+  await Promise.all(listOfUploadFunctions);
+
+  postInfo.thumbnail_key = thumbnailObject.key;
+  postInfo.art_keys = filesInImageContainer.map((imageObject) => imageObject.key);
 
   const finalMessageToSend = {
     method: "POST",
@@ -160,7 +204,10 @@ function addNewImage(event) {
 
   if (file) {
     // Put it in the list
-    filesInImageContainer.push(file);
+    filesInImageContainer.push({
+      state: "local",
+      file: file
+    });
 
     // Now, make the user see the new file listed.
     const reader = new FileReader();
@@ -169,10 +216,41 @@ function addNewImage(event) {
       // Create an img element
       const img = document.createElement('img');
       img.src = e.target.result; // This is the base64 data URL
-      img.style.maxWidth = '500px'; 
       
       // Add it to the page
       imageContainer.appendChild(img);
+    };
+    
+    reader.readAsDataURL(file); // Read as data URL for images
+    event.target.value = '';
+  }
+}
+
+// Ran when the user selects a thumbnail.
+function setThumbnail(event) {
+  const file = event.target.files[0];
+
+  // We assume it's one of the allowed filetypes. If you broke it, not my fuckin problem, this is the client.
+
+  if (file) {
+    // Whatever was the old thumbnail doesn't matter anymore.
+    thumbnailObject = {
+      state: "local",
+      file: file
+    };
+
+    // Now, make the user see the new thumbnail listed.
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      // Create an img element
+      const img = document.createElement('img');
+      img.src = e.target.result; // This is the base64 data URL
+      
+      // Clear out any existing thumbnail visual.
+      thumbnailContainer.innerHTML='';
+      // Add it to the page
+      thumbnailContainer.appendChild(img);
     };
     
     reader.readAsDataURL(file); // Read as data URL for images

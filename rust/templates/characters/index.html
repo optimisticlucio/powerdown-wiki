@@ -10,7 +10,7 @@
     {% if birthday_characters.len() > 0 %}
     <div class="wrapper dark birthday">
         {% for character in birthday_characters %}
-        <img src="{{character.thumbnail_url}}">
+        <img src="{{crate::utils::get_s3_public_object_url(character.thumbnail_key)}}">
         {% endfor %}
         <div>
             <h1>Happy Birthday to {{ birthday_character_names }}!</h1>
@@ -27,7 +27,7 @@
         {% endif %}
         {% for character in active_characters %}
         <a href="/characters/{{ character.slug }}" class="character-box">
-            <img class="character-icon" src="{{ character.thumbnail_url }}">
+            <img class="character-icon" src="{{ crate::utils::get_s3_public_object_url(character.thumbnail_key) }}">
             <p>
                 {{ character.name }}
             </p>
@@ -42,7 +42,7 @@
             <div class="character-grid">
                 {% for character in retired_characters %}
                 <a href="/characters/{{ character.slug }}" class="character-box">
-                    <img class="character-icon" src="{{ character.thumbnail_url }}">
+                    <img class="character-icon" src="{{ crate::utils::get_s3_public_object_url(character.thumbnail_key) }}">
                     <p>
                         {{character.name}}
                     </p>

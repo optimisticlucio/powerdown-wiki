@@ -17,10 +17,10 @@ CREATE TABLE character (
     relevant_tag text CHECK (TRIM(relevant_tag) != ''),
     creator text NOT NULL,
 
-    thumbnail text NOT NULL , -- Assumed to be a URL
+    thumbnail text NOT NULL , -- Assumed to be an S3 key
 
     infobox infobox_row[] NOT NULL DEFAULT ARRAY[]::infobox_row[],
-    page_image text NOT NULL, -- Assumed to be a URL
+    page_image text NOT NULL, -- Assumed to be an S3 key
     logo text, -- Assumed to be a URL
     overlay_css text CHECK (TRIM(overlay_css) != ''), -- Everything here goes inside a <style>.overlay { }</style> 
     custom_css text CHECK (TRIM(custom_css) != ''), -- If you wanna do something fancier than just edit overlay.

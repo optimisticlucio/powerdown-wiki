@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::{env, fmt};
 
+use crate::ServerState;
 use crate::errs::RootErrors;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
@@ -9,13 +10,13 @@ use axum::extract::multipart::Field;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
 use serde::de::Deserializer;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use rand::distr::{Alphanumeric, SampleString};
 use std::time::Duration;
+use http::Uri;
+use std::str::FromStr;
 
 pub mod file_compression;
-
-pub use file_compression::compress_image_lossless;
 
 #[allow(dead_code)] // This is used by serde multiple times in the app, but the compiler can't tell. Don't delete this, jackass.
 pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
@@ -72,24 +73,14 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 
 /// Returns the public-facing URL for an S3 object, given its key and bucket.
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
-    format!("http://localhost:4566/{}/{}", bucket_name, file_key)
+    // TODO - This is a lot of processing for a hotpath. Gotta be a better way to do this shit.
+    let website_uri = Uri::from_str(&env::var("WEBSITE_URL").unwrap()).unwrap();
+    format!("{}://{}:4566/{}/{}", website_uri.scheme_str().unwrap() ,website_uri.host().unwrap(), bucket_name, file_key)
 }
 
 /// Returns the public-facing URL for an S3 object in the public bucket.
 pub fn get_s3_public_object_url(file_key: &str) -> String {
     get_s3_object_url(&env::var("S3_PUBLIC_BUCKET_NAME").unwrap(), file_key)
-}
-
-pub async fn text_or_internal_err(field: Field<'_>) -> Result<String, RootErrors> {
-    field.text().await.map_err(|err| match err.status() {
-        http::status::StatusCode::BAD_REQUEST => RootErrors::BadRequest(
-            http::Uri::from_static("/"),
-            tower_cookies::Cookies::default(),
-            None,
-            err.body_text(),
-        ),
-        _ => RootErrors::InternalServerError,
-    })
 }
 
 /// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key.
@@ -222,5 +213,36 @@ pub async fn get_temp_s3_presigned_urls(
         temp_keys_for_presigned.push(uri);
     }
 
+    // When doing development, these point to the relative URL of the docker container, which is.. not good.
+    let website_uri = Uri::from_str(&env::var("WEBSITE_URL").unwrap()).unwrap();
+    // Right now the S3 container being used is localstack, so I'm hardcoding that name.
+    temp_keys_for_presigned = temp_keys_for_presigned
+        .iter()
+        .map(|presigned_url| presigned_url.replace("localstack", &website_uri.host().unwrap()))
+        .collect();
+
     Ok(temp_keys_for_presigned)
+}
+
+#[derive(Debug, Serialize)]
+/// A struct that should be sent as json to the user if they request presigned urls.
+pub struct PresignedUrlsResponse {
+    pub presigned_urls: Vec<String>,
+}
+
+/// Given a user-given key for the S3, returns Some(String) if the key was successfully cleaned. None if the key is empty or otherwise invalid.
+pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<String> {
+    let parsed_url = Uri::from_str(passed_url).ok()?;
+    let key = parsed_url.path();
+
+    if key.is_empty() {
+        None
+    } else {
+        Some(key
+            // To handle both [bucket_name].[domain]/[key] and [domain]/[bucket_name]/[key] cases
+            .trim_start_matches(&format!("/{}", state.config.s3_public_bucket))
+            .trim_start_matches("/")
+            .to_string()
+        )
+    }
 }

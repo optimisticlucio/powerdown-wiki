@@ -5,4 +5,10 @@
         outline: 2px solid red;
         border-radius: 5px;
     }
+
+    .imageHolder {
+        img {
+            max-width: 500px;
+        }
+    }
 }

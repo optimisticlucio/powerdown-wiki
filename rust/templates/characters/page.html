@@ -36,7 +36,7 @@
                     <div>
                         <h1>{{ name }}</h1>
                         {% if let Some(logo_path) = character_logo %}
-                            <img src="{{ logo_path }}">
+                            <img src="{{ crate::utils::get_s3_public_object_url(logo_path) }}">
                         {% endif %}
                     </div>
                     <h2 id="character-subtitle">{{ subtitle }}</h2>
@@ -53,7 +53,7 @@
                 </div>
             </div>
             <div class="right">
-                <img src="{{ page_img }}">
+                <img src="{{ crate::utils::get_s3_public_object_url(page_img) }}">
                 <p>
                     Creator: {{ creator }}
                 </p>

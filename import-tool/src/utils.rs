@@ -117,7 +117,7 @@ pub async fn run_multiple_imports<'a, F, Fut>(
 
 pub async fn send_to_presigned_url(target_url: &str, file: Vec<u8>) -> Result<Response, reqwest::Error> {
     let corrected_url = if target_url.starts_with("http://host.docker.internal:4566/") {
-        format!("http://localhost.localstack.cloud:4566/{}", target_url.trim_start_matches("http://host.docker.internal:4566/"))
+        format!("http://localstack:4566/{}", target_url.trim_start_matches("http://host.docker.internal:4566/"))
     } else { target_url.to_string() };
 
     let content_type = if let Some(kind) = infer::get(&file) {
@@ -132,4 +132,25 @@ pub async fn send_to_presigned_url(target_url: &str, file: Vec<u8>) -> Result<Re
         .body(file)
         .send()
         .await
+}
+
+#[derive(Debug, Deserialize)]
+/// A struct that should be sent as json to the user if they request presigned urls.
+pub struct PresignedUrlsResponse {
+    pub presigned_urls: Vec<String>,
+}
+
+/// Struct for reading the "steps" that a user (well, their client) needs to take to successfully upload
+/// various post types to the site, such as art or characters.
+#[derive(Debug, Serialize)]
+#[serde(tag = "step")]
+pub enum PostingSteps<T> {
+    #[serde(rename = "1")]
+    RequestPresignedURLs {
+        #[serde(default)]
+        art_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
+    },
+
+    #[serde(rename = "2")]
+    UploadMetadata(T),
 }

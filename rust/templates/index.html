@@ -51,7 +51,7 @@
             </div>
             {%- for character in birthday_characters -%}
             <div class="wrapper birthday">
-                <img class="character-icon" src="{{ character.thumbnail_url }}" />
+                <img class="character-icon" src="{{ crate::utils::get_s3_public_object_url(character.thumbnail_key) }}" />
                 {%- if loop.first -%}
                 <div>
                     <p>Today is {{ today_date }}!</p>

@@ -40,3 +40,20 @@ services:
     # TODO: Delete the temporary volumes out once finished with development.
     tmpfs:
       - /var/lib/postgresql/data
+    
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - DEBUG=${DEBUG:-0}
+      - PERSISTENCE=0 # Change this once the server is prod ready.
+      - DISABLE_CORS_CHECKS=1 # TODO: Fix the cors issue when uploading art.
+    volumes:
+      - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh"  # Auto-run on ready
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    tmpfs:
+      - /var/lib/localstack

@@ -6,6 +6,24 @@
 
 {% block content %}
 <div class="wrapper upload" style="text-align: left">
+    {%- if let Some(page_art) = art_being_modified -%}
+    <script>
+        let thumbnailObject = {
+            state: "uploaded",
+            key: "{{ crate::utils::get_s3_public_object_url(page_art.base_art.thumbnail_key) }}"
+        }
+        let filesInImageContainer = [
+            {% for art_key in page_art.art_keys -%}
+            { 
+                state: "uploaded",
+                key: "{{crate::utils::get_s3_public_object_url(art_key)}}"
+            }
+            {% if !loop.last %},{% endif %}
+            {% endfor %}
+        ];
+    </script>
+    {%- endif -%}
+
     <h1>Upload New Art Whoa</h1>
 
     <div id="errorDisplay" style="color:red;">
@@ -24,7 +42,10 @@
     </br>
 
     <label for="postThumbnail">Thumbnail:</label>
-    <input type="file" id="postThumbnail" required accept="image/*"/> 
+    <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
+
+    <div id="postThumbnail" class="imageHolder">
+    </div>
 
     </br>
 
@@ -49,9 +70,9 @@
     <input type="text" id="postTags"
         {%- if let Some(page_art) = art_being_modified %} value="{{page_art.tags | join(", ")}}" {% endif %}/>
 
-    <p>Images:</p> <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" onchange="addNewImage(event)"/> </br>
+    <p>Images:</p> <input type="file" accept="image/*" onchange="addNewImage(event)"/> </br>
 
-    <div id="postImages">
+    <div id="postImages" class="imageHolder">
     </div>
 
     <label for="postDescription">Post Description: </label>

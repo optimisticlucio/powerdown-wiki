@@ -9,48 +9,49 @@ use serde::Deserialize;
 
 // TODO: Get character ritual info
 
-#[derive(Debug, Clone, Builder, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
+/// Info relevant to absolute most uses of a character
 pub struct BaseCharacter {
-    // Info relevant to absolute most uses of a character
-    #[builder(default)]
-    db_id: i32, // The internal ID. Shouldn't be shown to user.
-    #[builder(default = false)]
+    #[serde(skip)]
+    pub db_id: i32, // The internal ID. Shouldn't be shown to user.
+    #[serde(default)]
     pub is_hidden: bool,
-    #[builder(default = false)] // In some cases relies on a diff value.
+    #[serde(skip)] // This should be learned by reference to other values
     pub is_archived: bool,
-    #[builder(default = false)]
+    #[serde(default)]
     pub is_main_character: bool,
     pub slug: String,
     pub name: String,
-    pub thumbnail_url: String,
-    #[builder(default = None)]
+    pub thumbnail_key: String,
+    #[serde(default)]
     pub birthday: Option<chrono::NaiveDate>,
 }
 
-#[derive(Debug, Clone, Builder, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
+/// Info relevant only to the page usage of a character
 pub struct PageCharacter {
-    // Info relevant to character page
+    #[serde(flatten)]
     pub base_character: BaseCharacter,
 
-    #[builder(default = None)]
+    #[serde(default)]
     pub long_name: Option<String>,
     pub subtitles: Vec<String>,
     pub creator: String,
-    #[builder(default = None)]
+    #[serde(default)]
     pub retirement_reason: Option<String>,
-    #[builder(default = None)]
-    pub tag: Option<String>, // TODO: Should this be optional?
+    #[serde(default)]
+    pub tag: Option<String>, 
 
-    #[builder(default = None)]
+    #[serde(default)]
     pub logo_url: Option<String>,
-    pub page_img_url: String,
+    pub page_img_key: String,
 
     pub infobox: Vec<InfoboxRow>,
-    #[builder(default = None)]
+    #[serde(default)]
     pub overlay_css: Option<String>,
-    #[builder(default = None)]
+    #[serde(default)]
     pub custom_css: Option<String>,
-    #[builder(default = None)]
+    #[serde(default)]
     pub page_contents: Option<String>,
 }
 
@@ -107,7 +108,7 @@ impl BaseCharacter {
             is_main_character: row.get("is_main_character"),
             is_archived: archival_reason.is_some(),
             name: row.get("short_name"),
-            thumbnail_url: row.get("thumbnail"),
+            thumbnail_key: row.get("thumbnail"),
             slug: row.get("page_slug"),
             birthday: row.get("birthday"),
         }
@@ -178,7 +179,7 @@ impl PageCharacter {
                 is_main_character: row.get("is_main_character"),
                 is_archived: retirement_reason.is_some(),
                 name: row.get("short_name"),
-                thumbnail_url: row.get("thumbnail"),
+                thumbnail_key: row.get("thumbnail"),
                 slug: row.get("page_slug"),
                 birthday: row.get("birthday"),
             },
@@ -187,7 +188,7 @@ impl PageCharacter {
             creator: row.get("creator"),
             retirement_reason,
             logo_url: row.get("logo"),
-            page_img_url: row.get("page_image"),
+            page_img_key: row.get("page_image"),
             infobox: row.get("infobox"),
             overlay_css: row.get("overlay_css"),
             custom_css: row.get("custom_css"),

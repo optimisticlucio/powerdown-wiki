@@ -4,14 +4,12 @@ use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response, PostingSteps};
 use crate::{errs::RootErrors, ServerState};
 use askama::Template;
-use aws_sdk_s3::presigning::PresigningConfig;
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
 use http::Uri;
-use rand::distr::Alphanumeric;
-use rand::distr::SampleString;
 use serde::{self, Deserialize, Serialize};
+use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::task::JoinSet;
@@ -42,11 +40,11 @@ pub async fn add_art(
 
     match posting_step {
         PostingSteps::RequestPresignedURLs { art_amount } => {
-            give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
+            give_user_presigned_s3_urls(art_amount, original_uri, cookie_jar, &state).await
         }
         PostingSteps::UploadMetadata(mut page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
-            sanitize_recieved_page_art(&mut page_art);
+            sanitize_recieved_page_art(&mut page_art, &state);
 
             // Now, let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
@@ -78,30 +76,9 @@ pub async fn add_art(
             columns.push("creators".into());
             values.push(&page_art.base_art.creators);
 
-            // TODO: RESIZE THUMBNAIL
+            // We don't have the thumbnail quite yet, so just put in a garbage value
             columns.push("thumbnail".into());
-
-            let temp_thumbnail_key = match Url::parse(&page_art.base_art.thumbnail_key) {
-                Err(err) => {
-                    return Err(RootErrors::BadRequest(
-                        original_uri,
-                        cookie_jar,
-                        requesting_user,
-                        format!(
-                            "Invalid Thumbnail Url: {}, {:?}",
-                            &page_art.base_art.thumbnail_key, err
-                        ),
-                    ))
-                }
-                Ok(parsed_thumbnail_url) => parsed_thumbnail_url
-                    .path()
-                    .trim_start_matches("/")
-                    .trim_start_matches(&state.config.s3_public_bucket)
-                    .trim_start_matches("/")
-                    .to_owned(),
-            };
-
-            values.push(&temp_thumbnail_key);
+            values.push(&"missing_thumbnail");
 
             
             if !page_art.tags.is_empty() {
@@ -131,7 +108,7 @@ pub async fn add_art(
                 }
             }
 
-            // Safe bc we're not inserting anything the user did. Everything user-inputted is passed as values later.
+            // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
             let query = format!(
                 "INSERT INTO art ({}) VALUES ({}) RETURNING id;",
                 columns.join(","),
@@ -158,7 +135,7 @@ pub async fn add_art(
             utils::move_temp_s3_file(
                 state.s3_client.clone(),
                 &state.config,
-                &temp_thumbnail_key,
+                &page_art.base_art.thumbnail_key,
                 &state.config.s3_public_bucket,
                 &target_thumbnail_key,
             )
@@ -199,35 +176,7 @@ pub async fn add_art(
             let mut art_upload_tasks = JoinSet::new();
 
             // The names of the files we're supposed to create, incase the upload fails.
-            let temp_file_keys = page_art
-                .art_keys
-                .iter()
-                .map(|given_art_key| {
-                    Ok(Url::parse(&given_art_key)
-                        .map_err(|_| format!("Invalid Art Url: {}", &given_art_key))?
-                        .path()
-                        .trim_start_matches("/")
-                        .trim_start_matches(&state.config.s3_public_bucket)
-                        .trim_start_matches("/")
-                        .to_owned())
-                })
-                .collect::<Result<Vec<String>, String>>();
-
-            // Doing this so the compiler doesn't whine about ownership re: the error. If you have a better way, please do that.
-            let temp_file_keys = match temp_file_keys {
-                Err(err_string) => {
-                    // Delete the processing art before returning error.
-                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
-
-                    return Err(RootErrors::BadRequest(
-                        original_uri,
-                        cookie_jar,
-                        requesting_user,
-                        err_string,
-                    ))
-                }
-                Ok(temp_keys) => temp_keys,
-            };
+            let temp_file_keys = page_art.art_keys;
 
             for (s3_key, index) in temp_file_keys.iter().zip(1i32..) {
                 // Clone everything to move it into the async move.
@@ -399,11 +348,11 @@ pub async fn edit_art_put_request(
 
     match posting_step {
         PostingSteps::RequestPresignedURLs { art_amount } => {
-            give_user_presigned_s3_urls(art_amount, true, original_uri, cookie_jar, &state).await
+            give_user_presigned_s3_urls(art_amount, original_uri, cookie_jar, &state).await
         }
         PostingSteps::UploadMetadata(mut sent_page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
-            sanitize_recieved_page_art(&mut sent_page_art);
+            sanitize_recieved_page_art(&mut sent_page_art, &state);
 
             // Now let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
@@ -459,7 +408,7 @@ pub async fn edit_art_put_request(
                 values.push(&sent_page_art.description);
             }
 
-            // Safe bc nothing user-written is passed into the string. User values are in `values`
+            // SAFETY: nothing user-written is passed into the string. User values are in `values`
             let query = format!(
                 "UPDATE art SET {} WHERE id={};",
                 columns.iter().enumerate()
@@ -532,21 +481,13 @@ pub async fn edit_art_put_request(
 /// Given an amount of urls requested by the user, sends the user back the appropriate amount of new temp S3 presigned URLs. May also request an extra url for the thumbnail.
 async fn give_user_presigned_s3_urls(
     requested_amount_of_urls: u8,
-    including_thumbnail: bool,
     original_uri: Uri,
     cookie_jar: tower_cookies::Cookies,
     state: &ServerState,
 ) -> Result<Response, RootErrors> {
     let requesting_user = User::easy_get_from_cookie_jar(state, &cookie_jar).await?;
 
-    if requested_amount_of_urls < 1 {
-        Err(RootErrors::BadRequest(
-            original_uri,
-            cookie_jar,
-            requesting_user,
-            "art post must have at least one art piece".to_string(),
-        ))
-    } else if requested_amount_of_urls > 25 {
+    if requested_amount_of_urls > 25 {
         Err(RootErrors::BadRequest(
             original_uri,
             cookie_jar,
@@ -555,23 +496,15 @@ async fn give_user_presigned_s3_urls(
                 .to_string(),
         ))
     } else {
-        let amount_of_presigned_urls_needed =
-            requested_amount_of_urls + if including_thumbnail { 1 } else { 0 }; // The art, plus the thumbnail.
-
-        let mut temp_keys_for_presigned = utils::get_temp_s3_presigned_urls(state, amount_of_presigned_urls_needed.into(), "art")
+        let presigned_urls = utils::get_temp_s3_presigned_urls(state, requested_amount_of_urls.into(), "art")
             .await.map_err(|err| {
                 eprintln!("[ART POST STEP 1] {}", err);
                 RootErrors::InternalServerError
             })?;
 
         // Send back the urls as a json.
-        let response = serde_json::to_string(&PresignedUrlsResponse {
-            thumbnail_presigned_url: if including_thumbnail {
-                temp_keys_for_presigned.pop()
-            } else {
-                None
-            },
-            art_presigned_urls: temp_keys_for_presigned,
+        let response = serde_json::to_string(&utils::PresignedUrlsResponse {
+            presigned_urls,
         })
         .unwrap();
 
@@ -611,7 +544,7 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
 
 /// Given a Page Art, cleans up any invalid or nonsensical values, such as empty strings for artist names.
 /// NOTE: Does not make sure the values make _logical_ sense, only that we don't deal with trivially incorrect data.
-fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt) {
+fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt, state: &ServerState) {
     // Clean up any empty tags
     recieved_page_art.tags = recieved_page_art.tags.iter().filter_map(|tag| {
         // SAFETY: The code doesn't pass the tags directly anywhere and are filtered by askama,
@@ -644,23 +577,11 @@ fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt) {
     // We don't need to raise an error if the host is wrong bc if the host is wrong, the key _has_ got to be wrong too.
     // If the host is wrong but the key is correct I legitimately have no idea what the fuck the user is doing.
 
-    /// Returns Some(String) if the key was successfully cleaned. None if the key is empty or otherwise invalid.
-    fn clean_passed_key(passed_url: &String) -> Option<String> {
-        let parsed_url = Uri::from_str(passed_url).ok()?;
-            let key = parsed_url.path();
-
-            if key.is_empty() {
-                None
-            } else {
-                Some(key.to_string())
-            }
-    }
-
     recieved_page_art.art_keys = recieved_page_art.art_keys
         .iter()
-        .filter_map(clean_passed_key)
+        .filter_map(|url| utils::clean_passed_key(url, state))
         .collect();
 
     // If this is invalid, it returns an empty string. I know, not great, is handled by the verification function.
-    recieved_page_art.base_art.thumbnail_key = clean_passed_key(&recieved_page_art.base_art.thumbnail_key).unwrap_or_default();
+    recieved_page_art.base_art.thumbnail_key = utils::clean_passed_key(&recieved_page_art.base_art.thumbnail_key, state).unwrap_or_default();
 }

@@ -73,7 +73,7 @@ pub async fn character_page(
 
             subtitle: chosen_char.subtitles.choose(&mut rand::rng()).unwrap(),
             infobox: chosen_char.infobox.clone(),
-            page_img: &chosen_char.page_img_url,
+            page_img: &chosen_char.page_img_key,
             character_logo: chosen_char.logo_url.as_deref(),
             content: parsed_content.as_deref(),
         }))
