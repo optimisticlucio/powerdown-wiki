@@ -167,7 +167,7 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
     let mut presigned_url_response: PresignedUrlsResponse = presigned_url_request
         .json()
         .await
-        .map_err(|err| format!("Response mapping failed: {}", err.to_string()))?;
+        .map_err(|err| format!("Response mapping failed: {:?}", err))?;
 
     // Upload thumbnail.
     let thumbnail_key = presigned_url_response.presigned_urls.pop().unwrap();
