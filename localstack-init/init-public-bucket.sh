@@ -6,7 +6,7 @@ awslocal s3api put-bucket-cors --bucket powerdown-public-storage --cors-configur
             "AllowedHeaders": ["*"],
             "AllowedMethods": ["GET", "PUT", "POST"],
             "AllowedOrigins": ["*"],
-            "ExposeHeaders": [],
+            "ExposeHeaders": ["ETag", "x-amz-request-id", "x-amz-id-2"],
             "MaxAgeSeconds": 3000
         }
     ]

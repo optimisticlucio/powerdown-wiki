@@ -244,7 +244,7 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     // Upload thumbnail.
     let thumbnail_url = presigned_url_response.presigned_urls.pop().unwrap();
     utils::send_to_presigned_url(&thumbnail_url, thumbnail_img_bytes).await
-        .map_err(|err| format!("Thumbnail Upload Err: {}", err.to_string()))?;
+        .map_err(|err| format!("Thumbnail Upload Err: {:?}", err))?;
 
     for (index, target_url) in presigned_url_response.presigned_urls.iter().enumerate() {
         let img_relative_path = frontmatter.img_files.get(index).unwrap();

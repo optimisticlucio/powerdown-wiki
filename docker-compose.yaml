@@ -53,6 +53,8 @@ services:
       - DEBUG=${DEBUG:-0}
       - PERSISTENCE=0 # Change this once the server is prod ready.
       - DISABLE_CORS_CHECKS=1 # TODO: Fix the cors issue when uploading art.
+      - LOCALSTACK_HOST=${S3_URL}
+      - EXTRA_CORS_ALLOWED_ORIGINS=
     volumes:
       - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh"  # Auto-run on ready
       - "/var/run/docker.sock:/var/run/docker.sock"
