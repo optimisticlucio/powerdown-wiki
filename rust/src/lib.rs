@@ -43,6 +43,8 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/stories", stories::router())
         .nest("/user", user::router())
         .nest("/misc", misc::router())
+        .fallback(fallback)
+        .with_state(state)
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
@@ -50,8 +52,6 @@ pub fn router(state: ServerState) -> Router<()> {
                 .layer(CookieManagerLayer::new())
                 .layer(CompressionLayer::new()),
         )
-        .fallback(fallback)
-        .with_state(state)
 }
 
 async fn root_error_handler(err: BoxError) -> impl IntoResponse {
