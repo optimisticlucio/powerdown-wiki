@@ -222,7 +222,7 @@ pub async fn get_temp_s3_presigned_urls(
             let presigned_uri = Uri::from_str(presigned_url).unwrap();
             let corrected_uri = Uri::builder()
                 .authority(s3_website_uri.authority().unwrap().clone())
-                .scheme(Scheme::HTTPS) // I am assuming this is in production. If not... that's a shame.
+                .scheme(s3_website_uri.scheme_str().unwrap()) 
                 .path_and_query(presigned_uri.path_and_query().unwrap().clone())
                 .build().unwrap();
             corrected_uri.to_string()

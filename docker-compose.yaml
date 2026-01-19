@@ -52,7 +52,6 @@ services:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - DEBUG=${DEBUG:-0}
       - PERSISTENCE=0 # Change this once the server is prod ready.
-      - LOCALSTACK_HOST=${S3_URL}
       - DISABLE_CORS_CHECKS=1
     volumes:
       - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh"  # Auto-run on ready
