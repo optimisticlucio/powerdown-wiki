@@ -59,7 +59,8 @@ FROM unnest(ARRAY[
     'Christian-friendly. But like, Ezekiel 23:20 christian-friendly.',
     'Sex 2 couldn''t get any realer.',
     'I have done nothing but draw tits for the past three days!',
-    'Now featuring quantum cup sizes!'
+    'Now featuring quantum cup sizes!',
+    'Penises, just like how meemaw used to make.'
     ]) AS joke;
 
 
