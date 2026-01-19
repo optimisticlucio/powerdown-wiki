@@ -24,5 +24,5 @@ awslocal s3api put-bucket-lifecycle-configuration --bucket powerdown-public-stor
             }
         }
     ]
-
+}'
 echo "S3 buckets created"
