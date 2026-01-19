@@ -1,4 +1,5 @@
 use std::{fs, path::{Path, PathBuf}};
+use regex::Regex;
 use reqwest::{Response, Url};
 use serde::{Deserialize, Serialize};
 use gray_matter::{Matter, engine::YAML};
@@ -28,10 +29,11 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
     println!("Art Archive folder found! There are {} art pieces. {}", &total_art_amount, "Any files starting with _ were ignored.".italic());
 
-    println!("Would you like to\n{}\n{}\nor {}?\n{}", 
+    println!("Would you like to\n{}\n{}\n{}\nor {}?\n{}", 
         "(1) Import all art".yellow(), 
         "(2) Import a random group of art pieces".blue(), 
         "(3) Import a specific file".green(), 
+        "(4) Import all arts whose filenames fit a regex".cyan(),
         "Press 0 to exit screen.".italic());
 
     loop {
@@ -104,6 +106,36 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 break;
             }
 
+            "4" => {
+                println!("Please write the regex you'd like to search by.");
+                let given_regex = crate::read_line().unwrap().trim().to_owned();
+
+                let parsed_regex = match Regex::new(&given_regex) {
+                    Ok(x) => x,
+                    Err(err) => {
+                        println!("Regex Parse Err: {:?}", err);
+                        continue;
+                    }
+                };
+
+                let files_that_fit_regex: Vec<PathBuf> = all_art_paths
+                    .iter()
+                    .filter(|filename| 
+                                parsed_regex.is_match(filename.file_name().unwrap().to_str().unwrap())
+                            )
+                    .map(|path_buf| path_buf.to_owned())
+                    .collect();
+
+                println!("There are {} files which fit this regex. Initiating operation.",
+                        files_that_fit_regex.len());
+
+                if let Err(import_errs) = utils::run_multiple_imports(&root_path, &files_that_fit_regex, &post_url, &import_given_art_piece).await {
+                    println!("---{}---\n{}\n------", "There were errors during the import!".red(), import_errs.join("\n"))
+                }
+
+                break;
+            }
+
             "0" => {
                 break;
             }
@@ -137,46 +169,46 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
     // Read and parse file
     let file_contents = fs::read_to_string(art_file_path).map_err(|err| format!("File Read Err: {}", err.to_string()))?
                 .lines().map(|line| {
-                // Check if this line is a date field and convert dots to dashes
-                if line.trim_start().starts_with("date:") {
-                    let converted = line.replace('.', "-");
+        // Check if this line is a date field and convert dots to dashes
+        if line.trim_start().starts_with("date:") {
+            let converted = line.replace('.', "-");
+            
+            // Check if format is DD-MM-YYYY or DD-MM-YY and convert to YYYY-MM-DD
+            if let Some((_, date_str)) = converted.split_once(':') {
+                let date_str = date_str.trim();
+                let parts: Vec<&str> = date_str.split('-').collect();
+                
+                if parts.len() == 3 {
+                    let (first, second, third) = (parts[0], parts[1], parts[2]);
                     
-                    // Check if format is DD-MM-YYYY or DD-MM-YY and convert to YYYY-MM-DD
-                    if let Some((_, date_str)) = converted.split_once(':') {
-                        let date_str = date_str.trim();
-                        let parts: Vec<&str> = date_str.split('-').collect();
-                        
-                        if parts.len() == 3 {
-                            let (first, second, third) = (parts[0], parts[1], parts[2]);
-                            
-                            // Check if it's DD-MM-YY format (YY between 18-26)
-                            if first.len() <= 2 && third.len() == 2 {
-                                if let Ok(yy) = third.parse::<u32>() {
-                                    if yy >= 18 && yy <= 26 {
-                                        format!("date: 20{}-{}-{}", third, second, first)
-                                    } else {
-                                        format!("date: 20{}-{}-{}", first, second, third)
-                                    }
-                                } else {
-                                    converted
-                                }
-                            }
-                            // Check if it's DD-MM-YYYY format
-                            else if first.len() <= 2 && third.len() == 4 {
-                                format!("date: {}-{}-{}", third, second, first)
+                    // Check if it's DD-MM-YY format (YY between 18-26)
+                    if first.len() <= 2 && third.len() == 2 {
+                        if let Ok(yy) = third.parse::<u32>() {
+                            if yy >= 18 && yy <= 26 {
+                                format!("date: 20{}-{}-{}", third, second, first)
                             } else {
-                                converted
+                                format!("date: 20{}-{}-{}", first, second, third)
                             }
                         } else {
                             converted
                         }
+                    }
+                    // Check if it's DD-MM-YYYY format
+                    else if first.len() <= 2 && third.len() == 4 {
+                        format!("date: {}-{}-{}", third, second, first)
                     } else {
                         converted
                     }
                 } else {
-                    line.to_string()
+                    converted
                 }
-                }).collect::<Vec<_>>().join("\n");
+            } else {
+                converted
+            }
+        } else {
+            line.to_string()
+        }
+        }).collect::<Vec<_>>().join("\n");
 
     let parser = Matter::<YAML>::new();
     let parsed_file = parser.parse(&file_contents)
