@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use import_tool::{select_import_type, select_main_folder, select_server_url};
 use owo_colors::OwoColorize;
-use reqwest::Url;
 
 #[tokio::main]
 async fn main() {

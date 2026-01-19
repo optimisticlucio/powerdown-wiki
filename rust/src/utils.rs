@@ -6,10 +6,8 @@ use crate::errs::RootErrors;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
 use axum::body::Body;
-use axum::extract::multipart::Field;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
-use http::uri::Scheme;
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 use rand::distr::{Alphanumeric, SampleString};
@@ -99,7 +97,7 @@ pub async fn move_temp_s3_file(
         .send()
         .await
         .map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {}", err.to_string());
+            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {:?}", err);
             MoveTempS3FileErrs::DownloadFailed
         })?;
 
@@ -107,7 +105,7 @@ pub async fn move_temp_s3_file(
 
     let original_file_bytes = downloaded_file.body
         .collect().await.map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {}", err.to_string());
+            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
             MoveTempS3FileErrs::ConversionFailed
         })?
         .into_bytes().to_vec();
@@ -125,7 +123,7 @@ pub async fn move_temp_s3_file(
         .send()
         .await
         .map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {}", err.to_string());
+            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {:?}", err);
             MoveTempS3FileErrs::UploadFailed
         })?;
 

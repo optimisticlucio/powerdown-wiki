@@ -183,7 +183,7 @@ impl User {
                 .send()
                 .await
                 .map_err(|err| {
-                    eprintln!("[CREATE USER IN DB] Failed to upload pfp to target {target_file_key} due to an error during upload: {}", err.to_string());
+                    eprintln!("[CREATE USER IN DB] Failed to upload pfp to target {target_file_key} due to an error during upload: {:?}", err);
                 }).unwrap();
         }
 

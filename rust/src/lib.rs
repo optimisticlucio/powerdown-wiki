@@ -46,7 +46,7 @@ pub fn router(state: ServerState) -> Router<()> {
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(root_error_handler))
-                .timeout(time::Duration::from_secs(15))
+                .timeout(time::Duration::from_secs(30))
                 .layer(CookieManagerLayer::new())
                 .layer(CompressionLayer::new()),
         )

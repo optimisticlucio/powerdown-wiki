@@ -193,7 +193,7 @@ async fn oauth_process<
             println!(
                 "[OAUTH2; {}] Failed sending request for access token: {:?}",
                 process_name_for_debug,
-                err.to_string()
+                err
             );
             RootErrors::InternalServerError
         })?;
@@ -209,7 +209,7 @@ async fn oauth_process<
             println!(
                 "[OAUTH2; {}] Failed reading access token response: {:?}",
                 process_name_for_debug,
-                err.to_string()
+                err
             );
             RootErrors::InternalServerError
         })?;
@@ -233,7 +233,7 @@ async fn oauth_process<
             println!(
                 "[OAUTH2; {}] Failed sending identification request: {:?}",
                 process_name_for_debug,
-                err.to_string()
+                err
             );
             RootErrors::InternalServerError
         })?;
@@ -242,7 +242,7 @@ async fn oauth_process<
         println!(
             "[OAUTH2; {}] Failed reading user's @me info: {:?}",
             process_name_for_debug,
-            err.to_string()
+            err
         );
         RootErrors::InternalServerError
     })?;

@@ -124,7 +124,7 @@ async fn get_older_and_newer_art_slugs(
         // If we get "unexpected number of rows", that's fine, it means the search was too specific and we got nothing.
         // Because of the UNIQUE constraint on page_slug, there's no way it's more than one response.
         if !err.to_string().contains("number of rows") {
-            println!("DB Errored!\nQuery={}\nErr={}", query, err.to_string());
+            println!("DB Errored!\nQuery={}\nErr={:?}", query, err);
         }
 
         (None, None)

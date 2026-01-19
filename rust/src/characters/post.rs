@@ -5,7 +5,7 @@ use crate::{
     errs::RootErrors,
     ServerState,
 };
-use axum::extract::{Multipart, OriginalUri, State};
+use axum::extract::{OriginalUri, State};
 use axum::{http, Json};
 use axum::response::{IntoResponse, Redirect, Response};
 use http::Uri;
@@ -172,8 +172,8 @@ pub async fn add_character(
                 .await
                 .map_err(|err| {
                     eprintln!(
-                        "[CHARACTER POSTING] Converting thumbnail of character {character_id} failed, {}",
-                        err.to_string()
+                        "[CHARACTER POSTING] Converting thumbnail of character {character_id} failed, {:?}",
+                        err
                     );
 
                     // Delete the processing character before returning error.
@@ -197,8 +197,8 @@ pub async fn add_character(
                 .await
                 .map_err(|err| {
                     eprintln!(
-                        "[CHARACTER POSTING] Converting main art of character {character_id} failed, {}",
-                        err.to_string()
+                        "[CHARACTER POSTING] Converting main art of character {character_id} failed, {:?}",
+                        err
                     );
 
                     // Delete the processing character before returning error.

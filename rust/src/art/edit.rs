@@ -1,11 +1,9 @@
 use super::structs;
 use crate::{errs::RootErrors, user::User, utils::template_to_response, ServerState};
-use askama::Template;
 use axum::{
     extract::{OriginalUri, Path, State},
     response::Response,
 };
-use http::Uri;
 
 pub async fn edit_art_page(
     Path(art_slug): Path<String>,

@@ -8,12 +8,7 @@ use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
 use http::Uri;
-use serde::{self, Deserialize, Serialize};
-use std::env;
-use std::str::FromStr;
-use std::time::Duration;
 use tokio::task::JoinSet;
-use url::Url;
 
 /// Post Request Handler for art category.
 #[axum::debug_handler]
@@ -122,7 +117,7 @@ pub async fn add_art(
                 .query_one(&query, &values)
                 .await
                 .map_err(|err| {
-                    eprintln!("[ART UPLOAD] Initial DB upload failed! {}", err.to_string());
+                    eprintln!("[ART UPLOAD] Initial DB upload failed! {:?}", err);
                     RootErrors::InternalServerError
                 })?
                 .get(0);
@@ -142,8 +137,8 @@ pub async fn add_art(
             .await
             .map_err(|err| {
                 eprintln!(
-                    "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {}",
-                    err.to_string()
+                    "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {:?}",
+                    err
                 );
 
                 // Delete the processing art before returning error.
@@ -160,8 +155,8 @@ pub async fn add_art(
                 .await
                 .map_err(|err| {
                     eprintln!(
-                        "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {}",
-                        err.to_string()
+                        "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {:?}",
+                        err
                     );
 
                     // Delete the processing art before returning error.
@@ -208,7 +203,7 @@ pub async fn add_art(
                         &file_key,
                     )
                     .await
-                    .map_err(|err| err.to_string())?;
+                    .map_err(|err| format!("{:?}", err))?;
 
                     let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
                     values.push(&art_id);
@@ -218,7 +213,7 @@ pub async fn add_art(
                     db_connection
                         .execute(query, &values)
                         .await
-                        .map_err(|err| err.to_string())
+                        .map_err(|err| format!("{:?}", err))
                 });
             }
 
@@ -263,8 +258,8 @@ pub async fn add_art(
                 .await
                 .map_err(|err| {
                     eprintln!(
-                        "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {}",
-                        err.to_string()
+                        "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {:?}",
+                        err
                     );
 
                     // Delete the processing art before returning error.
@@ -276,12 +271,6 @@ pub async fn add_art(
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-struct PresignedUrlsResponse {
-    thumbnail_presigned_url: Option<String>,
-    art_presigned_urls: Vec<String>,
 }
 
 #[derive(Debug, Template)]
@@ -466,9 +455,9 @@ pub async fn edit_art_put_request(
                 .await
                 .map_err(|err| {
                     eprintln!(
-                        "[ART UPLOAD] Setting post state of id {} to public failed?? {}",
+                        "[ART UPLOAD] Setting post state of id {} to public failed?? {:?}",
                         existing_art.base_art.id,
-                        err.to_string()
+                        err
                     );
                     RootErrors::InternalServerError
                 })?;

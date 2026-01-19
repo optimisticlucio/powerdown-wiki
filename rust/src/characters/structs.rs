@@ -1,7 +1,6 @@
 use chrono;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
-use derive_builder::Builder;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
 use rand::{distr::Alphanumeric, Rng};
@@ -68,12 +67,6 @@ pub struct RitualCharacter {
 pub struct InfoboxRow {
     pub title: String,
     pub description: String,
-}
-
-impl InfoboxRow {
-    pub fn new(title: String, description: String) -> Self {
-        Self { title, description }
-    }
 }
 
 impl BaseCharacter {
