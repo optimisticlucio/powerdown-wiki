@@ -63,7 +63,7 @@ pub async fn run_multiple_imports<'a, F, Fut>(
         F: Fn(&'a Path, &'a Path, &'a Url) -> Fut,
         Fut: Future<Output = Result<Response, String>> + 'a,
     {
-    let simultaneous_threads = 4;
+    let simultaneous_threads = 8;
     let import_errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let import_successes: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
