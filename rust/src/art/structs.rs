@@ -14,8 +14,6 @@ pub struct BaseArt {
     pub creators: Vec<String>,
     pub thumbnail_key: String,
     pub slug: String,
-    #[serde(skip)]
-    pub has_video: bool,
     #[serde(default)]
     pub is_nsfw: bool,
     #[serde(default = "default_art_state")]
@@ -77,7 +75,6 @@ impl BaseArt {
             creators: row.get("creators"),
             thumbnail_key: row.get("thumbnail"),
             slug: row.get("page_slug"),
-            has_video: false, //TODO: Handle this somehow.
             is_nsfw: row.get("is_nsfw"),
             art_state: row.get("post_state"),
         }

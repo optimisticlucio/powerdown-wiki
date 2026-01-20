@@ -38,13 +38,13 @@
     <div class="art-grid">
         {% for artpiece in art_pieces -%}
         <a class="artpiece" href="/art/{{ artpiece.slug }}{{user_search_params.to_uri_parameters(false)}}">
-            <div class="onhover{% if artpiece.has_video %} video{%- endif %}">
-            <div class="art-name">
-                {{ artpiece.title }}
-            </div>
-            <div class="artist-name">
-                {{ artpiece.creators | join(", and ") }}
-            </div>
+            <div class="onhover">
+                <div class="art-name">
+                    {{ artpiece.title }}
+                </div>
+                <div class="artist-name">
+                    {{ artpiece.creators | join(", and ") }}
+                </div>
             </div>
             <img src="{{ artpiece.get_thumbnail_url() }}">
         </a>

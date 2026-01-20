@@ -8,8 +8,6 @@ CREATE TABLE art (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.
     page_slug text NOT NULL UNIQUE CHECK (TRIM(page_slug) != ''),
 
-    -- TODO: I used to have a "format" enum to say if this has a video or not. How to better handle that? Runtime check?
-
     creation_date date NOT NULL DEFAULT CURRENT_DATE,
     --TODO: I should have a "last modification date" for my own usage. How to make it update on read?
     --TODO: I should write whoever's been the last person to change this. NULL means it was sysadmin (me).
