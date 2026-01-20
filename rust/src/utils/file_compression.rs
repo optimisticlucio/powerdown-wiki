@@ -5,8 +5,11 @@ use std::io::Cursor;
 
 pub fn compress_image_lossless(
     image_bytes: Vec<u8>,
-    format: image::ImageFormat
+    format: infer::Type
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    // Convert the infer type to ImageReader's.
+    let format = ImageFormat::from_extension(format.extension()).unwrap();
+
     // Load the image
     let mut reader = ImageReader::new(Cursor::new(&image_bytes));
     reader.set_format(format);
@@ -80,40 +83,4 @@ fn compress_to_png_max(img: &DynamicImage) -> Result<Vec<u8>, Box<dyn std::error
         img.color().into(),
     )?;
     Ok(output)
-}
-
-/// When passed a file, tries to figure out what kind of file it is. Returns the guessed type.
-pub fn get_filetype(image_bytes: &Vec<u8>) -> Result<Filetype, Box<dyn std::error::Error>>{
-    // Let's see if it's an image.
-    if let Some(image_format) = ImageReader::new(Cursor::new(image_bytes))
-                .with_guessed_format()
-                .ok()
-                .and_then(|r| r.format())
-    {
-        return Ok(Filetype::Image(image_format))
-    };
-
-    // TODO: TEST FOR VIDEO FILE TYPE
-
-    // If we reached this point, it's not a filetype we can handle.
-    Ok(Filetype::Unknown)
-}
-
-pub enum Filetype {
-    /// An image of some sort. May be an animated file, like a gif.
-    Image(image::ImageFormat),
-    /// A filetype that is not currently handled by our system.
-    Unknown
-}
-
-impl Filetype {
-    /// Returns the string of the filetype, without a leading period. ("jpg", "mp4", "zip")
-    pub fn extension_str(&self) -> String {
-        match self {
-            Self::Image(image_format) => image_format.extensions_str()
-                                                                .get(0).unwrap() // There should be at least one extension in the list.
-                                                                .to_string(),
-            Self::Unknown => "".to_string()
-        }
-    }
 }

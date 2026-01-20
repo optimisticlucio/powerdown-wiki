@@ -166,35 +166,15 @@ pub async fn delete_art_page(
     // The request is valid? Lovely! Let's start nuking stuff. First of all, take aim at the S3 bucket.
     let s3_client = state.s3_client.clone();
 
-    // Get all of the art
-    let mut files_to_delete: Vec<ObjectIdentifier> = requested_art
-        .art_keys
-        .iter()
-        .map(|key| ObjectIdentifier::builder().key(key).build().unwrap())
-        .collect();
+    // Get all of the art, and the thumbnail.
+    let mut files_to_delete: Vec<&str> = requested_art.art_keys.iter().map(AsRef::as_ref).collect();
+    files_to_delete.push(&requested_art.base_art.thumbnail_key);
 
-    // Add the thumbnail
-    files_to_delete.push(
-        ObjectIdentifier::builder()
-            .key(requested_art.base_art.thumbnail_key)
-            .build()
-            .unwrap(),
-    );
-
-    // now, KILL
-    s3_client.delete_objects()
-        .bucket(&state.config.s3_public_bucket)
-        .delete(aws_sdk_s3::types::Delete::builder()
-        .set_objects(
-            Some(files_to_delete))
-            .build()
-            .unwrap()
-        )
-        .send()
+    crate::utils::delete_keys_from_s3(s3_client, &state.config.s3_public_bucket, &files_to_delete)
         .await
         .map_err(|err|
             {
-                eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {:?}", &requested_art.base_art.id, &requested_art.base_art.title, err);
+                eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {}", &requested_art.base_art.id, &requested_art.base_art.title, err);
                 RootErrors::InternalServerError
             }
         )?;

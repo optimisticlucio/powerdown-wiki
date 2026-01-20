@@ -234,7 +234,12 @@ pub async fn add_art(
                 });
 
             if !failed_upload_errs.is_empty() {
-                // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES FROM S3.
+                // TODO: Handle if part of this method fails. It's already a fail-method, so what then?
+                
+                let _ = utils::delete_keys_from_s3(
+                    state.s3_client.clone(),
+                    &state.config.s3_public_bucket,
+                    &final_art_keys.iter().map(AsRef::as_ref).collect()).await;
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 

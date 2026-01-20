@@ -3,9 +3,9 @@ use std::{env, fmt};
 
 use crate::ServerState;
 use crate::errs::RootErrors;
-use crate::utils::file_compression::Filetype;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
+use aws_sdk_s3::types::ObjectIdentifier;
 use axum::body::Body;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
@@ -112,23 +112,24 @@ pub async fn move_temp_s3_file(
         .into_bytes().to_vec();
 
     // Now let's find out what kind of file this is, and compress it appropriately.
-    let file_type = file_compression::get_filetype(&original_file_bytes)
-        .map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Error while trying to get filetype: {:?}", err);
-            MoveTempS3FileErrs::UnknownFiletype
-        })?;
-
-    // Now compress the file depending on its filetype.
-    let converted_file = match file_type {
-        Filetype::Image(image_format) => file_compression::compress_image_lossless(
-                                        original_file_bytes.to_vec(),
-                                        image_format
-                                    )
-                                    .unwrap_or(original_file_bytes.to_vec()), // If can't compress it, just send back the original untouched.
-        Filetype::Unknown => return Err(MoveTempS3FileErrs::UnknownFiletype)
+    let file_type = if let Some(file_type) = infer::get(&original_file_bytes) {
+        file_type
+    } else {
+        eprintln!("[MOVE TEMP S3 FILE] File key {} has an unknown filetype.", temp_file_key);
+        return Err(MoveTempS3FileErrs::UnknownFiletype);
     };
 
-    let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension_str());
+    // Now compress the file depending on its filetype.
+    let converted_file = match file_type.matcher_type() {
+        infer::MatcherType::Image => file_compression::compress_image_lossless(
+                                        original_file_bytes.to_vec(),
+                                        file_type
+                                    )
+                                    .unwrap_or(original_file_bytes.to_vec()), // If can't compress it, just send back the original untouched.
+        _ => return Err(MoveTempS3FileErrs::UnknownFiletype) // Not necessarily unknown, in this case it's unhandled.
+    };
+
+    let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension());
 
     s3_client.put_object()
         .bucket(target_bucket_name)
@@ -267,4 +268,26 @@ pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<Stri
             .to_string()
         )
     }
+}
+
+/// Given a list of keys to delete from S3, and the bucket to delete them from, attempts a delete.
+pub async fn delete_keys_from_s3(s3_client: aws_sdk_s3::Client, bucket_to_delete_from: &str, keys_to_delete: &Vec<&str>) -> Result<(), String> {
+    let files_to_delete: Vec<ObjectIdentifier> = keys_to_delete
+        .iter()
+        .map(|key| ObjectIdentifier::builder().key(*key).build().unwrap())
+        .collect();
+    
+    s3_client.delete_objects()
+        .bucket(bucket_to_delete_from)
+        .delete(aws_sdk_s3::types::Delete::builder()
+        .set_objects(
+            Some(files_to_delete))
+            .build()
+            .unwrap()
+        )
+        .send()
+        .await
+        .map_err(|err| format!("{:?}",err))?;
+
+    Ok(())
 }
