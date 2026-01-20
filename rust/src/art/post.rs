@@ -97,10 +97,9 @@ pub async fn add_art(
             }).filter(|description| !description.is_empty());
 
             if let Some(description) = &sanitized_description {
-                if description.trim().is_empty() {
-                    columns.push("description".into());
-                    values.push(description);
-                }
+                // If we got here, the description is sanitized and not empty.
+                columns.push("description".into());
+                values.push(description);
             }
 
             // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
@@ -235,7 +234,7 @@ pub async fn add_art(
 
             if !failed_upload_errs.is_empty() {
                 // TODO: Handle if part of this method fails. It's already a fail-method, so what then?
-                
+
                 let _ = utils::delete_keys_from_s3(
                     state.s3_client.clone(),
                     &state.config.s3_public_bucket,
