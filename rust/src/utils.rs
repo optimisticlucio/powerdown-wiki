@@ -3,6 +3,7 @@ use std::{env, fmt};
 
 use crate::ServerState;
 use crate::errs::RootErrors;
+use crate::utils::file_compression::Filetype;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
 use axum::body::Body;
@@ -91,6 +92,7 @@ pub async fn move_temp_s3_file(
     target_bucket_name: &str,
     target_file_key: &str,
 ) -> Result<(), MoveTempS3FileErrs> {
+    // Download file from S3
     let downloaded_file = s3_client.get_object()
         .bucket(&server_config.s3_public_bucket)
         .key(temp_file_key)
@@ -101,8 +103,6 @@ pub async fn move_temp_s3_file(
             MoveTempS3FileErrs::DownloadFailed
         })?;
 
-    let content_type = downloaded_file.content_type().map(str::to_string);
-
     let original_file_bytes = downloaded_file.body
         .collect().await.map_err(|err| {
             eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
@@ -110,11 +110,22 @@ pub async fn move_temp_s3_file(
         })?
         .into_bytes().to_vec();
 
-    let converted_file = file_compression::compress_image_lossless(
-        original_file_bytes.to_vec(),
-        content_type.as_deref(),
-    )
-    .unwrap_or(original_file_bytes.to_vec()); // If can't compress it, just send back the original untouched.
+    // Now let's find out what kind of file this is, and compress it appropriately.
+    let file_type = file_compression::get_filetype(&original_file_bytes)
+        .map_err(|err| {
+            eprintln!("[MOVE TEMP S3 FILE] Error while trying to get filetype: {:?}", err);
+            MoveTempS3FileErrs::UnknownFiletype
+        })?;
+
+    // Now compress the file depending on its filetype.
+    let converted_file = match file_type {
+        Filetype::Image(image_format) => file_compression::compress_image_lossless(
+                                        original_file_bytes.to_vec(),
+                                        image_format
+                                    )
+                                    .unwrap_or(original_file_bytes.to_vec()), // If can't compress it, just send back the original untouched.
+        Filetype::Unknown => return Err(MoveTempS3FileErrs::UnknownFiletype)
+    };
 
     s3_client.put_object()
         .bucket(target_bucket_name)
@@ -135,6 +146,7 @@ pub enum MoveTempS3FileErrs {
     DownloadFailed,
     ConversionFailed,
     UploadFailed,
+    UnknownFiletype,
 }
 
 impl fmt::Display for MoveTempS3FileErrs {
@@ -143,6 +155,7 @@ impl fmt::Display for MoveTempS3FileErrs {
             Self::DownloadFailed => write!(f, "Download Failed"),
             Self::ConversionFailed => write!(f, "Conversion Failed"),
             Self::UploadFailed => write!(f, "Upload Failed"),
+            Self::UnknownFiletype => write!(f, "Unknown Filetype"),
         }
     }
 }

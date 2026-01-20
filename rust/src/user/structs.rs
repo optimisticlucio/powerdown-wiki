@@ -10,7 +10,7 @@ use std::env;
 use tower_cookies::cookie;
 use tower_cookies::{cookie::SameSite, Cookie, Cookies};
 
-use crate::{RootErrors, ServerState};
+use crate::{RootErrors, ServerState, utils};
 
 /// Relative links to various default profile pictures users may have.
 const USER_DEFAULT_PFPS: [&str; 9] = [
@@ -165,27 +165,7 @@ impl User {
 
         // User is created? Splendid. Now let's get some info that we're either unsure about or is dependent on the ID.
 
-        // If we were given a pfp file, let's put it in S3.
-        if let Some(pfp_file) = pfp_file {
-            let converted_file =
-                crate::utils::file_compression::compress_image_lossless(pfp_file.to_vec(), None)
-                    .unwrap_or(pfp_file.to_vec()); // If can't compress it, just send back the original untouched.
-
-            let s3_client = server_state.s3_client.clone();
-
-            let target_file_key: String =
-                format!("user/profile_picture/{}", successfully_created_user.id);
-
-            s3_client.put_object()
-                .bucket(&server_state.config.s3_public_bucket)
-                .key(&target_file_key)
-                .body(converted_file.into())
-                .send()
-                .await
-                .map_err(|err| {
-                    eprintln!("[CREATE USER IN DB] Failed to upload pfp to target {target_file_key} due to an error during upload: {:?}", err);
-                }).unwrap();
-        }
+        // TODO - HANDLE PFP
 
         successfully_created_user
     }
