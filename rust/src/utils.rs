@@ -125,7 +125,8 @@ pub async fn move_temp_s3_file(
                                         original_file_bytes.to_vec(),
                                         file_type
                                     )
-                                    .unwrap_or(original_file_bytes.to_vec()), // If can't compress it, just send back the original untouched.
+                                    .unwrap_or(original_file_bytes), // If can't compress it, just send back the original untouched.
+        infer::MatcherType::Video => original_file_bytes, // Video compression takes ages, I'm not doing it on-server.
         _ => return Err(MoveTempS3FileErrs::UnknownFiletype) // Not necessarily unknown, in this case it's unhandled.
     };
 
