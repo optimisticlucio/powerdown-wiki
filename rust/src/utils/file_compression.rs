@@ -105,3 +105,15 @@ pub enum Filetype {
     /// A filetype that is not currently handled by our system.
     Unknown
 }
+
+impl Filetype {
+    /// Returns the string of the filetype, without a leading period. ("jpg", "mp4", "zip")
+    pub fn extension_str(&self) -> String {
+        match self {
+            Self::Image(image_format) => image_format.extensions_str()
+                                                                .get(0).unwrap() // There should be at least one extension in the list.
+                                                                .to_string(),
+            Self::Unknown => "".to_string()
+        }
+    }
+}

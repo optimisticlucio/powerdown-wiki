@@ -162,7 +162,7 @@ pub async fn add_character(
             
             // Move thumbnail.
             let thumbnail_target_s3_key = format!("{target_s3_folder}/thumbnail");
-            utils::move_temp_s3_file(
+            let thumbnail_s3_key = utils::move_temp_s3_file(
                     state.s3_client.clone(),
                     &state.config,
                     &recieved_page_character.base_character.thumbnail_key,
@@ -183,11 +183,11 @@ pub async fn add_character(
                 })?;
             
             columns.push("thumbnail".into());
-            values.push(&thumbnail_target_s3_key);
+            values.push(&thumbnail_s3_key);
             
             // Move main page art
             let main_art_target_s3_key = format!("{target_s3_folder}/page_art");
-            utils::move_temp_s3_file(
+            let main_art_key = utils::move_temp_s3_file(
                     state.s3_client.clone(),
                     &state.config,
                     &recieved_page_character.page_img_key,
@@ -208,7 +208,7 @@ pub async fn add_character(
                 })?;
 
             columns.push("page_image".into());
-            values.push(&main_art_target_s3_key);
+            values.push(&main_art_key);
 
             // TODO - Move optional logo!
 

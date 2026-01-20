@@ -83,7 +83,8 @@ pub fn get_s3_public_object_url(file_key: &str) -> String {
     get_s3_object_url(&env::var("S3_PUBLIC_BUCKET_NAME").unwrap(), file_key)
 }
 
-/// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key.
+/// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key. 
+/// Returns the key that it was uploaded to (with the file extension).
 /// Mainly for usage with temp images uploaded by users.
 pub async fn move_temp_s3_file(
     s3_client: aws_sdk_s3::Client,
@@ -91,7 +92,7 @@ pub async fn move_temp_s3_file(
     temp_file_key: &str,
     target_bucket_name: &str,
     target_file_key: &str,
-) -> Result<(), MoveTempS3FileErrs> {
+) -> Result<String, MoveTempS3FileErrs> {
     // Download file from S3
     let downloaded_file = s3_client.get_object()
         .bucket(&server_config.s3_public_bucket)
@@ -127,9 +128,11 @@ pub async fn move_temp_s3_file(
         Filetype::Unknown => return Err(MoveTempS3FileErrs::UnknownFiletype)
     };
 
+    let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension_str());
+
     s3_client.put_object()
         .bucket(target_bucket_name)
-        .key(target_file_key)
+        .key(&target_key_with_filename)
         .body(converted_file.into())
         .send()
         .await
@@ -138,7 +141,7 @@ pub async fn move_temp_s3_file(
             MoveTempS3FileErrs::UploadFailed
         })?;
 
-    Ok(())
+    Ok(target_key_with_filename)
 }
 
 #[derive(Debug)]

@@ -127,30 +127,30 @@ pub async fn add_art(
 
             let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
 
-            utils::move_temp_s3_file(
-                state.s3_client.clone(),
-                &state.config,
-                &page_art.base_art.thumbnail_key,
-                &state.config.s3_public_bucket,
-                &target_thumbnail_key,
-            )
-            .await
-            .map_err(|err| {
-                eprintln!(
-                    "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {:?}",
-                    err
-                );
+            let thumbnail_key = utils::move_temp_s3_file(
+                    state.s3_client.clone(),
+                    &state.config,
+                    &page_art.base_art.thumbnail_key,
+                    &state.config.s3_public_bucket,
+                    &target_thumbnail_key,
+                )
+                .await
+                .map_err(|err| {
+                    eprintln!(
+                        "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {:?}",
+                        err
+                    );
 
-                // Delete the processing art before returning error.
-                let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                    // Delete the processing art before returning error.
+                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 
-                RootErrors::InternalServerError
-            })?;
+                    RootErrors::InternalServerError
+                })?;
 
             db_connection
                 .execute(
                     "UPDATE art SET thumbnail=$1 WHERE id=$2",
-                    &[&target_thumbnail_key, &art_id],
+                    &[&thumbnail_key, &art_id],
                 )
                 .await
                 .map_err(|err| {
@@ -195,7 +195,7 @@ pub async fn add_art(
                         s3_key.split_terminator("/").last().unwrap()
                     );
 
-                    utils::move_temp_s3_file(
+                    let final_file_key = utils::move_temp_s3_file(
                         s3_client,
                         &config,
                         &s3_key,
@@ -208,41 +208,39 @@ pub async fn add_art(
                     let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
                     values.push(&art_id);
                     values.push(&index);
-                    values.push(&file_key);
+                    values.push(&final_file_key);
 
                     db_connection
                         .execute(query, &values)
                         .await
-                        .map_err(|err| format!("{:?}", err))
+                        .map_err(|err| format!("{:?}", err))?;
+
+                    Ok(final_file_key)
                 });
             }
 
             // Now collect everything that ran async, make sure nothing fucked up.
-            let art_upload_results = art_upload_tasks.join_all().await;
+            let art_upload_results: Vec<Result<String, String>> = art_upload_tasks.join_all().await;
 
-            let failed_uploads: Vec<_> = art_upload_results
+            // Let's get all the errors and the results
+            let (final_art_keys, failed_upload_errs) = art_upload_results
                 .into_iter()
-                .filter_map(|result| result.err())
-                .collect();
+                .fold((Vec::new(), Vec::new()), |(mut oks, mut errs), result| {
+                    match result {
+                        Ok(a) => oks.push(a),
+                        Err(b) => errs.push(b),
+                    }
+                    (oks, errs)
+                });
 
-            if !failed_uploads.is_empty() {
-                let _file_keys_to_delete: Vec<String> = temp_file_keys
-                    .iter()
-                    .map(|key| {
-                        format!(
-                            "{target_s3_folder}/{}",
-                            key.split_terminator("/").last().unwrap()
-                        )
-                    })
-                    .collect();
-
-                // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES.
+            if !failed_upload_errs.is_empty() {
+                // TODO: DELETE ANY OF THE SUCCESSFULLY PROCESSED FILES FROM S3.
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 
                 eprintln!(
                     "[ART POST] Failed to move files from temp to permanent location! [{}]",
-                    failed_uploads.join(", ")
+                    failed_upload_errs.join(", ")
                 );
 
                 return Err(RootErrors::InternalServerError);
