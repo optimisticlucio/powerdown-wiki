@@ -37,11 +37,18 @@ where
 }
 
 pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
-    let readable_day = match date.day() {
-        1 => "1st".to_owned(),
-        2 => "2nd".to_owned(),
-        3 => "3rd".to_owned(),
-        x => format!("{x}th"),
+    let day_number =  date.day();
+
+    let readable_day = if day_number <= 13 && day_number >= 11 {
+        // Handling "11th, 12th, 13th" first.
+        format!("{day_number}th")
+    } else {
+        match day_number % 10 {
+            1 => format!("{day_number}st"),
+            2 => format!("{day_number}nd"),
+            3 => format!("{day_number}rd"),
+            _ => format!("{day_number}th"),
+        }
     };
     let readable_month = date.format("%B");
 
