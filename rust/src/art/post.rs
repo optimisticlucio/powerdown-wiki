@@ -433,7 +433,7 @@ pub async fn edit_art_put_request(
                     ;
 
                 // Converting "as i8" should be fine as long as no one puts over 127 art pieces in the same place.
-                // As of writing this comment, I limit people to 25 at most, so we should be fine.
+                // As of writing this comment, I limit people to 35 at most, so we should be fine.
                 if !previous_art_key_index.is_some_and(|previous_index| previous_index as i8 == new_art_key_index) {
                     // The new art at index i is unlike the previous art at index i.
 
@@ -577,7 +577,7 @@ async fn give_user_presigned_s3_urls(
     cookie_jar: tower_cookies::Cookies,
     state: &ServerState,
 ) -> Result<Response, RootErrors> {
-    if requested_amount_of_urls > 25 {
+    if requested_amount_of_urls > 35 {
         Err(RootErrors::BadRequest(
             "for the good of mankind, don't put that many art pieces in one post. split them up"
                 .to_string(),
