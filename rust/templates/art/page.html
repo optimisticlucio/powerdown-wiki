@@ -15,7 +15,7 @@
             {% if url_is_of_video(art_url) %}{# Url is a video #} 
                 <video class="art-item" src="{{ art_url }}" controls autoplay></video>
             {% else %} {# Url is an image or gif #}
-                <img class="art-item" src="{{ art_url }}" />
+                <a class="art-item" href="{{ art_url }}"><img src="{{ art_url }}" /></a>
             {% endif %}
         {% endfor %}
     </div>
@@ -41,7 +41,7 @@
             <h2>By: 
                 {{ artists | join(", ") }}
             </h2>
-            {% if let Some(description) = description -%}<div class="content">{{ description }}</div>{%- endif -%}
+            {% if let Some(description) = description -%}<div class="content">{{ description | safe }}</div>{%- endif -%}
             <div class="tags">
                 {%- for tag in tags -%}
                     <a class="tag" href="/art?tags={{ tag }}">{{ tag }}</a>

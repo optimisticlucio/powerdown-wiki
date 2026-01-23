@@ -6,11 +6,11 @@ use crate::{
     ServerState,
 };
 use askama::Template;
-use aws_sdk_s3::types::ObjectIdentifier;
 use axum::{
     extract::{OriginalUri, Path, Query, State},
     response::{IntoResponse, Response},
 };
+use comrak::markdown_to_html;
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use http::Uri;
@@ -64,6 +64,9 @@ pub async fn art_page(
             .as_ref()
             .is_some_and(|user| requested_art.can_be_modified_by(user));
 
+        let markdownified_description = requested_art.description
+            .map(|f| markdown_to_html(&f, &comrak::Options::default()));
+
         Ok(template_to_response(ArtPage {
             user,
             original_uri,
@@ -76,7 +79,7 @@ pub async fn art_page(
             formatted_creation_date: requested_art.creation_date.to_string(),
             art_urls,
             tags: requested_art.tags,
-            description: requested_art.description,
+            description: markdownified_description,
 
             older_art_url,
             newer_art_url,
@@ -171,7 +174,7 @@ pub async fn delete_art_page(
     let mut files_to_delete: Vec<&str> = requested_art.art_keys.iter().map(AsRef::as_ref).collect();
     files_to_delete.push(&requested_art.base_art.thumbnail_key);
 
-    crate::utils::delete_keys_from_s3(s3_client, &state.config.s3_public_bucket, &files_to_delete)
+    crate::utils::delete_keys_from_s3(&s3_client, &state.config.s3_public_bucket, &files_to_delete)
         .await
         .map_err(|err|
             {

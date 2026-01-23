@@ -18,7 +18,7 @@ pub enum RootErrors {
     /// My code took too long to respond.
     RequestTimeout,
     /// Part of my code ate shit and it *is* the user's fault.
-    BadRequest(Uri, Cookies, Option<User>, String),
+    BadRequest(String),
     /// The user tried doing an action requiring to be logged in, and they aren't.
     Unauthorized,
     /// The user is logged in, and they don't have the permissions to do what they were doing.
@@ -37,7 +37,7 @@ impl IntoResponse for RootErrors {
             )
                 .into_response(),
             Self::RequestTimeout => request_timeout().into_response(),
-            Self::BadRequest(original_uri, cookie_jar, logged_in_user, elaboration) => {
+            Self::BadRequest(elaboration) => {
                 bad_request(elaboration).into_response()
             }
             Self::Unauthorized => unauthorized().into_response(),

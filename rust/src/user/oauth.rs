@@ -155,9 +155,6 @@ async fn oauth_process<
     let authorization_code = match query.code {
         None => {
             return Err(RootErrors::BadRequest(
-                original_uri,
-                cookie_jar,
-                logged_in_user,
                 format!(
                     "Entered {} Authorization Callback without an authorization code.",
                     process_name_for_debug
@@ -261,16 +258,10 @@ async fn oauth_process<
         if let Some(logged_in_user) = logged_in_user {
             if logged_in_user == existing_user_with_connection {
                 Err(RootErrors::BadRequest(
-                    original_uri,
-                    cookie_jar,
-                    Some(logged_in_user),
                     "You're already logged in, silly! You can't re-log-in!".to_string(),
                 ))
             } else {
                 Err(RootErrors::BadRequest(
-                    original_uri,
-                    cookie_jar,
-                    Some(logged_in_user),
                     "Someone already has an account with that discord account attached to it! Are you sure you didn't make two accounts by accident?".to_string()))
             }
         }
@@ -314,6 +305,9 @@ async fn oauth_process<
             let _ = db_connection.execute(SUPERADMIN_QUERY, &[&account_to_connect_to.id]).await
                 .map_err(|err| {
                     eprintln!("[LUCIO OVERRIDE] Failed to make user superadmin! {:?}. Continuing as normal.", err);
+                })
+                .map(|success| {
+                    println!("[LUCIO OVERRIDE] Converted user ID {} to superadmin! Welcome, me!", account_to_connect_to.id)
                 });
         }
 

@@ -292,7 +292,7 @@ where
     }
 
     Ok(s.split(',')
-        .map(|item| item.trim().to_string())
+        .map(|item| item.trim().to_lowercase())
         .filter(|item| !item.is_empty())
         .collect())
 }

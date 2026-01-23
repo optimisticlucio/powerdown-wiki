@@ -10,6 +10,9 @@ use axum::{http, Json};
 use http::Uri;
 use tokio::task::JoinSet;
 
+const INSERT_INTO_ART_FILE_DB_QUERY: &str = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
+const DELETE_FROM_ART_FILE_DB_QUERY: &str = "DELETE FROM art_file WHERE belongs_to=$1 AND internal_order=$2";
+
 /// Post Request Handler for art category.
 #[axum::debug_handler]
 pub async fn add_art(
@@ -44,9 +47,6 @@ pub async fn add_art(
             // Now, let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
                 return Err(RootErrors::BadRequest(
-                    original_uri,
-                    cookie_jar,
-                    requesting_user,
                     err_explanation,
                 ));
             }
@@ -127,7 +127,7 @@ pub async fn add_art(
             let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
 
             let thumbnail_key = utils::move_temp_s3_file(
-                    state.s3_client.clone(),
+                    &state.s3_client.clone(),
                     &state.config,
                     &page_art.base_art.thumbnail_key,
                     &state.config.s3_public_bucket,
@@ -165,7 +165,7 @@ pub async fn add_art(
                 })?;
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
-            let query = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
+
 
             let mut art_upload_tasks = JoinSet::new();
 
@@ -195,7 +195,7 @@ pub async fn add_art(
                     );
 
                     let final_file_key = utils::move_temp_s3_file(
-                        s3_client,
+                        &s3_client,
                         &config,
                         &s3_key,
                         &public_bucket_key,
@@ -210,7 +210,7 @@ pub async fn add_art(
                     values.push(&final_file_key);
 
                     db_connection
-                        .execute(query, &values)
+                        .execute(INSERT_INTO_ART_FILE_DB_QUERY, &values)
                         .await
                         .map_err(|err| format!("{:?}", err))?;
 
@@ -236,7 +236,7 @@ pub async fn add_art(
                 // TODO: Handle if part of this method fails. It's already a fail-method, so what then?
 
                 let _ = utils::delete_keys_from_s3(
-                    state.s3_client.clone(),
+                    &state.s3_client.clone(),
                     &state.config.s3_public_bucket,
                     &final_art_keys.iter().map(AsRef::as_ref).collect()).await;
 
@@ -348,9 +348,6 @@ pub async fn edit_art_put_request(
             // Now let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
                 return Err(RootErrors::BadRequest(
-                    original_uri,
-                    cookie_jar,
-                    Some(requesting_user),
                     err_explanation,
                 ));
             }
@@ -425,7 +422,110 @@ pub async fn edit_art_put_request(
                     RootErrors::InternalServerError
                 })?;
 
-            // TODO - DELETE ANY REMOVED ART, AND MOVE THE NEW ART INTO PLACE
+            // Now let's reorder and reorganize the art. Go over all of the given art keys, and see which have been modified.
+            let s3_client = state.s3_client.clone();
+            let target_s3_folder = format!("art/{}", existing_art.base_art.id);
+
+            for (art_key, new_art_key_index) in sent_page_art.art_keys.iter().zip(0i8..) {
+                let previous_art_key_index = existing_art.art_keys
+                    .iter()
+                    .position(|old_key| old_key == art_key) // Get the index of where that art used to be.
+                    ;
+
+                // Converting "as i8" should be fine as long as no one puts over 127 art pieces in the same place.
+                // As of writing this comment, I limit people to 25 at most, so we should be fine.
+                if !previous_art_key_index.is_some_and(|previous_index| previous_index as i8 == new_art_key_index) {
+                    // The new art at index i is unlike the previous art at index i.
+
+                    let new_art_key = if previous_art_key_index.is_some() {
+                        art_key.to_string()
+                    } else {
+                        // If it's new art, move it into place.
+                        let target_file_key = format!(
+                            "{target_s3_folder}/{}",
+                            art_key.split_terminator("/").last().unwrap()
+                        );
+
+                        utils::move_temp_s3_file(
+                            &s3_client,
+                            &state.config,
+                            art_key,
+                            &state.config.s3_public_bucket,
+                            &target_file_key
+                        ).await
+                        .map_err(|err| {
+                            eprintln!("[MODIFY ART] Failed moving new art for \"{}\", id:{}. Err:{:?}", 
+                                &existing_art.base_art.title,
+                                &existing_art.base_art.id,
+                                err);
+                            
+                            RootErrors::InternalServerError
+                        })?
+                    };
+
+                    // Remove the DB entry for the current index.
+                    db_connection
+                        .execute(
+                            DELETE_FROM_ART_FILE_DB_QUERY,
+                            &[&existing_art.base_art.id, &((new_art_key_index+1) as i32)],
+                        )
+                        .await
+                        .map_err(|err| {
+                            eprintln!(
+                                "[ART MODIFICATION] Deleting one of the records of art ID {} failed. {:?}",
+                                existing_art.base_art.id,
+                                err
+                            );
+                            RootErrors::InternalServerError
+                        })?;
+
+                    // Now insert a new value for this index.
+                    db_connection
+                        .execute(
+                            INSERT_INTO_ART_FILE_DB_QUERY,
+                            &[&existing_art.base_art.id, &((new_art_key_index+1) as i32), &new_art_key],
+                        )
+                        .await
+                        .map_err(|err| {
+                            eprintln!(
+                                "[ART MODIFICATION] Adding a new record to art ID {} failed. {:?}",
+                                existing_art.base_art.id,
+                                err
+                            );
+                            RootErrors::InternalServerError
+                        })?;
+                }
+            }
+            
+            // We modified all the existing records, cool. Now let's delete any records we didn't get to go over.
+            if sent_page_art.art_keys.len() < existing_art.art_keys.len() {
+                for leftover_index in sent_page_art.art_keys.len()..existing_art.art_keys.len() {   
+                    db_connection
+                        .execute(
+                            DELETE_FROM_ART_FILE_DB_QUERY,
+                            &[&existing_art.base_art.id, &(leftover_index as i32)],
+                        )
+                        .await
+                        .map_err(|err| {
+                            eprintln!(
+                                "[ART MODIFICATION] Deleting one of the records of art ID {} failed. {:?}",
+                                existing_art.base_art.id,
+                                err
+                            );
+                            RootErrors::InternalServerError
+                        })?;
+                }
+            }
+
+            // Now that all the new art was moved in, let's delete the art that's no longer present.
+            let art_keys_that_were_removed: Vec<&String> = Vec::new(); // TODO: Get the removed art!
+
+            // TODO: How do we handle this fail? If this fails the post is fine, it's just some leftovers on our side.
+            utils::delete_keys_from_s3(
+                &s3_client,
+                &state.config.s3_public_bucket,
+                &art_keys_that_were_removed.iter().map(AsRef::as_ref).collect())
+                .await;
 
             // ---- Now that we finished, set the appropriate art state, and maybe update the thumbnail ----
 
@@ -436,6 +536,7 @@ pub async fn edit_art_put_request(
             values.push(&ArtState::Public);
 
             if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
+                // TODO: Move thumbnail out of temp.
                 columns.push("thumbnail".into());
                 values.push(&sent_page_art.base_art.thumbnail_key);
             }
@@ -476,13 +577,8 @@ async fn give_user_presigned_s3_urls(
     cookie_jar: tower_cookies::Cookies,
     state: &ServerState,
 ) -> Result<Response, RootErrors> {
-    let requesting_user = User::easy_get_from_cookie_jar(state, &cookie_jar).await?;
-
     if requested_amount_of_urls > 25 {
         Err(RootErrors::BadRequest(
-            original_uri,
-            cookie_jar,
-            requesting_user,
             "for the good of mankind, don't put that many art pieces in one post. split them up"
                 .to_string(),
         ))
@@ -547,7 +643,7 @@ fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt, state: &ServerSta
             None
         }
         else {
-            Some(trimmed_tag.to_string())
+            Some(trimmed_tag.to_lowercase())
         }
     }).collect();
 

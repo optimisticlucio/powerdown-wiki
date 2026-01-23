@@ -56,7 +56,7 @@ pub async fn add_character(
             sanitize_recieved_page_character(&mut recieved_page_character, &state);
 
             if let Err(err_string) =  validate_recieved_page_character(&recieved_page_character) {
-                return Err(RootErrors::BadRequest(original_uri, cookie_jar, requesting_user, err_string));
+                return Err(RootErrors::BadRequest(err_string));
             }
 
             // Now the character is ready to send to the DB.
@@ -159,11 +159,12 @@ pub async fn add_character(
             let target_s3_folder = format!("characters/{character_id}");
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+            let s3_client = state.s3_client.clone();
             
             // Move thumbnail.
             let thumbnail_target_s3_key = format!("{target_s3_folder}/thumbnail");
             let thumbnail_s3_key = utils::move_temp_s3_file(
-                    state.s3_client.clone(),
+                    &s3_client,
                     &state.config,
                     &recieved_page_character.base_character.thumbnail_key,
                     &state.config.s3_public_bucket,
@@ -188,7 +189,7 @@ pub async fn add_character(
             // Move main page art
             let main_art_target_s3_key = format!("{target_s3_folder}/page_art");
             let main_art_key = utils::move_temp_s3_file(
-                    state.s3_client.clone(),
+                    &s3_client,
                     &state.config,
                     &recieved_page_character.page_img_key,
                     &state.config.s3_public_bucket,

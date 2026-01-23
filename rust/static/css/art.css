@@ -30,6 +30,11 @@
                 display: unset;
                 pointer-events: auto;
             }
+
+            * {
+                max-height: inherit; /* do NOT change this or box-sizing. Otherwise there's overflow on chrome.*/
+                max-width: 100%;
+            }
         }
 
         input[type="radio"] {

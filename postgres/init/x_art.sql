@@ -20,6 +20,7 @@ CREATE TABLE art (
 
     thumbnail text NOT NULL, -- Assumed to be the key of the thumbnail in the public bucket.
 
+    -- Tags are assumed to all be lowercase. Not necessarily alphanumeric, but lowercase.
     tags text[] NOT NULL DEFAULT ARRAY[]::text[] CHECK (
         NOT ('' = ANY(tags)) AND -- None of the tags are ''
         array_position(tags, NULL) IS NULL -- None of the tags are null

@@ -196,6 +196,13 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
   }
 }
 
+// Sends a DELETE request to the given url. If no URL is passed, the current page.
+async function sendDeleteRequest(targetUrl = window.location.pathname) {
+  await fetch(targetUrl, {
+    method: 'DELETE'
+  });
+}
+
 // Ran when the user selects a new file to be added to the image section.
 function addNewImage(event) {
   const file = event.target.files[0];

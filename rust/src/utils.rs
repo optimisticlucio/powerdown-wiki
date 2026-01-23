@@ -9,6 +9,7 @@ use aws_sdk_s3::types::ObjectIdentifier;
 use axum::body::Body;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
+use lazy_static::lazy_static;
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 use rand::distr::{Alphanumeric, SampleString};
@@ -94,7 +95,7 @@ pub fn get_s3_public_object_url(file_key: &str) -> String {
 /// Returns the key that it was uploaded to (with the file extension).
 /// Mainly for usage with temp images uploaded by users.
 pub async fn move_temp_s3_file(
-    s3_client: aws_sdk_s3::Client,
+    s3_client: &aws_sdk_s3::Client,
     server_config: &crate::server_state::config::Config,
     temp_file_key: &str,
     target_bucket_name: &str,
@@ -137,12 +138,27 @@ pub async fn move_temp_s3_file(
         _ => return Err(MoveTempS3FileErrs::UnknownFiletype) // Not necessarily unknown, in this case it's unhandled.
     };
 
+    // As far as I know, this is only referenced when the browser decides whether to display or download a file.
+    // Inline displays in-browser, attach downloads it.
+    let file_content_disposition = match file_type.matcher_type() {
+        infer::MatcherType::Image |
+        infer::MatcherType::Video |
+        infer::MatcherType::Audio => {
+            "inline"
+        }
+        _ => {
+            "attachment"
+        }
+    };
+
     let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension());
 
     s3_client.put_object()
         .bucket(target_bucket_name)
         .key(&target_key_with_filename)
         .body(converted_file.into())
+        .content_type(file_type.mime_type())
+        .content_disposition(file_content_disposition) 
         .send()
         .await
         .map_err(|err| {
@@ -279,7 +295,7 @@ pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<Stri
 }
 
 /// Given a list of keys to delete from S3, and the bucket to delete them from, attempts a delete.
-pub async fn delete_keys_from_s3(s3_client: aws_sdk_s3::Client, bucket_to_delete_from: &str, keys_to_delete: &Vec<&str>) -> Result<(), String> {
+pub async fn delete_keys_from_s3(s3_client: &aws_sdk_s3::Client, bucket_to_delete_from: &str, keys_to_delete: &Vec<&str>) -> Result<(), String> {
     let files_to_delete: Vec<ObjectIdentifier> = keys_to_delete
         .iter()
         .map(|key| ObjectIdentifier::builder().key(*key).build().unwrap())

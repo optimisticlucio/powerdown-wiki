@@ -3,6 +3,7 @@
     position: fixed;
     bottom: 0px;
     padding: 0.5ch;
+    height: 1.5em;
 
     &.debug {
         color: red;
