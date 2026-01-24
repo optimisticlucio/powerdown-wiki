@@ -208,9 +208,6 @@ struct StoryFrontmatter {
     #[serde(rename(deserialize="sequel"))]
     next_story_slug: Option<String>,
 
-    #[serde(default)]
-    exclude_from_pagination: bool,
-
     #[serde(rename(deserialize="editors-note"))]
     editors_note: Option<String>,
 

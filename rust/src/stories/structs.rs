@@ -51,7 +51,7 @@ impl BaseStory {
 
         let requested_story_rows = db_connection
             .query(
-                "SELECT * FROM story ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
+                "SELECT * FROM story WHERE is_hidden=false ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
                 &query_parameters,
             )
             .await
