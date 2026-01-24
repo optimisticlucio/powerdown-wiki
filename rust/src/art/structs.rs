@@ -1,4 +1,5 @@
 use crate::user::{User, UsermadePost};
+use chrono::{DateTime, Utc};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
@@ -309,4 +310,10 @@ impl Default for ArtState {
     fn default() -> Self {
         Self::Public
     }
+}
+
+pub struct Comment {
+    pub posting_user: Option<User>, // None means a deleted user.
+    pub contents: String,
+    pub posting_time: DateTime<Utc>,
 }
