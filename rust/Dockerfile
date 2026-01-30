@@ -16,8 +16,13 @@ RUN cargo build --release
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
+# Now we install some dependencies
+RUN apt-get update
 # Install ca-certificates for reqwest
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y ca-certificates 
+# Install postgresql-client for pg_dump
+RUN apt-get install -y postgresql-client
+RUN rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/powerdown-wiki /usr/local/bin
 COPY ./static /app/static
 ENTRYPOINT ["stdbuf", "-oL", "/usr/local/bin/powerdown-wiki"]
