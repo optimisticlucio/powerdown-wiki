@@ -1,11 +1,15 @@
-use powerdown_wiki::ServerState;
+use powerdown_wiki::{ServerState, initiate_scheduled_tasks};
 use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
-    let app = powerdown_wiki::router(ServerState::initalize().await);
+    let state = ServerState::initalize().await;
+
+    let app = powerdown_wiki::router(state.clone());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+
+    initiate_scheduled_tasks(state);
 
     axum::serve(
         listener,

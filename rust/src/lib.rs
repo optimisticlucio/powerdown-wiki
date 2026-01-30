@@ -24,9 +24,11 @@ mod stories;
 mod test_data;
 mod user;
 mod utils;
+mod scheduled_tasks;
 
 pub use errs::RootErrors;
 pub use server_state::ServerState;
+pub use scheduled_tasks::initiate_scheduled_tasks;
 
 use crate::user::User;
 
