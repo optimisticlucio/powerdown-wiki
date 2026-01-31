@@ -4,8 +4,26 @@ use crate::ServerState;
 pub async fn clean_temp_db_entries(state: ServerState) {
     println!("[CLEAN TEMP DB ENTRIES] System time is {}, cleaning up old DB entries.", get_current_human_readable_time());
 
-    let mut entries_cleaned_up = 0;
-    // TODO: Implement
+    let db_connection = match state.db_pool.get().await {
+        Ok(ok) => ok,
+        Err(err) => {
+            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to get sql connection! {:?}", err);
+            return;
+        }
+    };
+    
+    // Clean up anything that's been processing for over 10 minutes.
+    const ART_DB_CLEANUP_QUERY: &str = "DELETE FROM art WHERE post_state = 'processing' AND last_modified_date < NOW() - INTERVAL '10 minutes'";
+    let art_db_cleanup_rows_modified = match db_connection.execute(ART_DB_CLEANUP_QUERY, &[]).await {
+        Ok(rows_modified) => rows_modified,
+        Err(err) => {
+            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to clean up art db! {:?}. Continuing cleanup.", err);
+            0
+        }
+    };
+
+
+    let entries_cleaned_up = art_db_cleanup_rows_modified;
 
     println!("[CLEAN TEMP DB ENTRIES] Cleanup complete, {} entries removed.", entries_cleaned_up);
 }

@@ -9,8 +9,8 @@ CREATE TABLE art (
     page_slug text NOT NULL UNIQUE CHECK (TRIM(page_slug) != ''),
 
     creation_date date NOT NULL DEFAULT CURRENT_DATE,
-    --TODO: I should have a "last modification date" for my own usage. How to make it update on read?
-    --TODO: I should write whoever's been the last person to change this. NULL means it was sysadmin (me).
+    last_modified_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Updates whenever this table is modified, see `update_last_modified_date()` below.
+    --TODO: I should write whoever's been the last person to change this. NULL means it was a deleted user.
     title text NOT NULL CHECK (TRIM(title) != ''),
     creators text[] NOT NULL CONSTRAINT has_creators CHECK (
         array_length(creators, 1) > 0 AND -- At least one creator
@@ -38,6 +38,19 @@ CREATE TABLE art (
 
     CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
+
+CREATE FUNCTION update_last_modified_date()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_modified_date = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER art_last_modified
+BEFORE UPDATE ON art
+FOR EACH ROW
+EXECUTE FUNCTION update_last_modified_date();
 
 CREATE TABLE art_file (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY, -- Created by db, auto-increments.

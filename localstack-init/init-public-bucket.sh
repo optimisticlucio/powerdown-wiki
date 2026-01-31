@@ -25,4 +25,16 @@ awslocal s3api put-bucket-lifecycle-configuration --bucket powerdown-public-stor
         }
     ]
 }'
+awslocal s3 mb s3://powerdown-sql-backups-storage
+awslocal s3api put-bucket-cors --bucket powerdown-sql-backups-storage --cors-configuration '{
+    "CORSRules": [
+        {
+            "AllowedHeaders": ["*"],
+            "AllowedMethods": ["GET", "PUT", "POST"],
+            "AllowedOrigins": ["*"],
+            "ExposeHeaders": ["ETag", "x-amz-request-id", "x-amz-id-2"],
+            "MaxAgeSeconds": 3000
+        }
+    ]
+}'
 echo "S3 buckets created"

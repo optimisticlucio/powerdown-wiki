@@ -17,12 +17,17 @@ RUN cargo build --release
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 # Now we install some dependencies
-RUN apt-get update
-# Install ca-certificates for reqwest
-RUN apt-get install -y ca-certificates 
-# Install postgresql-client for pg_dump
-RUN apt-get install -y postgresql-client
-RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    # Add ca-certificates for reqwest
+    apt-get install -y ca-certificates curl gnupg lsb-release && \
+    # Add PostgreSQL repository
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && \
+    # Install postgresql-client-16, for pg_dump
+    apt-get install -y postgresql-client-16 && \
+    # Clean up
+    rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/powerdown-wiki /usr/local/bin
 COPY ./static /app/static
 ENTRYPOINT ["stdbuf", "-oL", "/usr/local/bin/powerdown-wiki"]
