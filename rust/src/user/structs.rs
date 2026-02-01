@@ -59,8 +59,8 @@ pub struct UserPermissions {
     pub can_modify_misc: bool,
     /// Whether the given user type can turn other people into admins.
     pub can_promote_to_admin: bool,
-    /// Whether the given user type can modify other users' types, except turning into admin.
-    pub can_modify_user_type: bool,
+    /// Whether the given user type can modify info on other users, except turning into admin.
+    pub can_modify_users: bool,
     /// Whether the given user can ban other users from the site.
     pub can_ban_users: bool,
     /// Whether the given user type can modify content posted by other users, like stories or art.
@@ -190,6 +190,11 @@ impl User {
             self.get_default_pfp_url().to_string()
         }
     }
+
+    /// Returns whether a given user can modify this user's visible data. (Pfp, nickname, etc)
+    pub fn can_modify_visible_data(&self, other: &Self) -> bool {
+        self == other || other.user_type.permissions().can_modify_users
+    }
 }
 
 impl PartialEq for User {
@@ -208,7 +213,7 @@ impl UserType {
                 can_modify_misc: false,
                 can_ban_users: false,
                 can_promote_to_admin: false,
-                can_modify_user_type: false,
+                can_modify_users: false,
                 can_modify_others_content: false,
             },
             Self::Uploader => UserPermissions {
@@ -217,7 +222,7 @@ impl UserType {
                 can_modify_misc: false,
                 can_ban_users: false,
                 can_promote_to_admin: false,
-                can_modify_user_type: false,
+                can_modify_users: false,
                 can_modify_others_content: false,
             },
             Self::Admin => UserPermissions {
@@ -225,7 +230,7 @@ impl UserType {
                 can_post_characters: true,
                 can_modify_misc: true,
                 can_ban_users: true,
-                can_modify_user_type: true,
+                can_modify_users: true,
                 can_promote_to_admin: false,
                 can_modify_others_content: true,
             },
@@ -234,7 +239,7 @@ impl UserType {
                 can_post_characters: true,
                 can_modify_misc: true,
                 can_ban_users: true,
-                can_modify_user_type: true,
+                can_modify_users: true,
                 can_promote_to_admin: true,
                 can_modify_others_content: true,
             },
