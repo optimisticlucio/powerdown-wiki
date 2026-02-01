@@ -245,7 +245,7 @@ pub async fn add_art(
                 let _ = utils::delete_keys_from_s3(
                     &state.s3_client.clone(),
                     &state.config.s3_public_bucket,
-                    &final_art_keys.iter().map(AsRef::as_ref).collect()).await;
+                    &final_art_keys).await;
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 
@@ -525,13 +525,13 @@ pub async fn edit_art_put_request(
             }
 
             // Now that all the new art was moved in, let's delete the art that's no longer present.
-            let art_keys_that_were_removed: Vec<&String> = Vec::new(); // TODO: Get the removed art!
+            let art_keys_that_were_removed: Vec<String> = Vec::new(); // TODO: Get the removed art!
 
             // TODO: How do we handle this fail? If this fails the post is fine, it's just some leftovers on our side.
             utils::delete_keys_from_s3(
                 &s3_client,
                 &state.config.s3_public_bucket,
-                &art_keys_that_were_removed.iter().map(AsRef::as_ref).collect())
+                &art_keys_that_were_removed)
                 .await;
 
             // ---- Now that we finished, set the appropriate art state, and maybe update the thumbnail ----

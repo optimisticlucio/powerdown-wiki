@@ -171,8 +171,8 @@ pub async fn delete_art_page(
     let s3_client = state.s3_client.clone();
 
     // Get all of the art, and the thumbnail.
-    let mut files_to_delete: Vec<&str> = requested_art.art_keys.iter().map(AsRef::as_ref).collect();
-    files_to_delete.push(&requested_art.base_art.thumbnail_key);
+    let mut files_to_delete = requested_art.art_keys.clone();
+    files_to_delete.push(requested_art.base_art.thumbnail_key.clone());
 
     crate::utils::delete_keys_from_s3(&s3_client, &state.config.s3_public_bucket, &files_to_delete)
         .await

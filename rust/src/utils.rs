@@ -376,10 +376,10 @@ pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<Stri
 }
 
 /// Given a list of keys to delete from S3, and the bucket to delete them from, attempts a delete.
-pub async fn delete_keys_from_s3(s3_client: &aws_sdk_s3::Client, bucket_to_delete_from: &str, keys_to_delete: &Vec<&str>) -> Result<(), String> {
+pub async fn delete_keys_from_s3(s3_client: &aws_sdk_s3::Client, bucket_to_delete_from: &str, keys_to_delete: &Vec<String>) -> Result<(), String> {
     let files_to_delete: Vec<ObjectIdentifier> = keys_to_delete
         .iter()
-        .map(|key| ObjectIdentifier::builder().key(*key).build().unwrap())
+        .map(|key| ObjectIdentifier::builder().key(key).build().unwrap())
         .collect();
     
     s3_client.delete_objects()

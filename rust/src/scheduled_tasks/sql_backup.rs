@@ -1,5 +1,7 @@
 use std::{env, time::{SystemTime, Duration}};
+use std::collections::{HashMap, HashSet};
 
+use chrono::Datelike;
 use tokio::process::Command;
 
 use crate::ServerState;
@@ -118,9 +120,9 @@ async fn clean_up_old_backups(state: ServerState) -> Result<(), Box<dyn std::err
             Box::new(err)
         })?;
     
-    let mut list_of_objects = match list_objects_output.contents {
+    let list_of_objects = match list_objects_output.contents {
         None => {
-            eprintln!("[CLEANUP SQL BACKUPS] No SQL backups found on S3! Finishing operation, but this should likely not be happening!");
+            eprintln!("[CLEANUP SQL BACKUPS] No SQL backups found on S3! Finishing operation, but this should not be happening!");
             return Ok(());
         },
         Some(list) => list
@@ -135,6 +137,7 @@ async fn clean_up_old_backups(state: ServerState) -> Result<(), Box<dyn std::err
     let three_days_ago = current_timestamp - chrono::Duration::days(3);
     let week_ago = current_timestamp - chrono::Duration::weeks(1);
     let month_ago = current_timestamp - chrono::Duration::days(30);
+    let three_months_ago = current_timestamp - chrono::Duration::days(90);
 
     for backup in list_of_objects {
         // If the last modification date is null, just ignore it for now.
@@ -143,21 +146,94 @@ async fn clean_up_old_backups(state: ServerState) -> Result<(), Box<dyn std::err
             let last_modification_date = chrono::DateTime::from_timestamp_millis(last_modification_date.to_millis().unwrap()).unwrap();
 
             match last_modification_date {
+                date if date < three_months_ago => {
+                    // Old enough that we assume it's already organized.
+                },
                 date  if date < month_ago => {
-                    backups_from_over_month_ago.push(backup);
+                    backups_from_over_month_ago.push(backup.key.unwrap());
                 },
                 date  if date < week_ago => {
-                    backups_from_over_week_ago_to_month_ago.push(backup);
+                    backups_from_over_week_ago_to_month_ago.push(backup.key.unwrap());
                 },
                 date  if date < three_days_ago => {
-                    backups_from_4_days_ago_to_week_ago.push(backup);
+                    backups_from_4_days_ago_to_week_ago.push(backup.key.unwrap());
                 },
                 _ => () // The last 3 days. Leave unmodified.
             }
         }
     }
 
-    // TODO: Delete the relevant backups
+    // Sort each list for convenience.
+    backups_from_4_days_ago_to_week_ago.sort();
+    backups_from_over_week_ago_to_month_ago.sort();
+    backups_from_over_month_ago.sort();
+
+    // Now let's see which backups we need to delete.
+    let mut backup_keys_to_delete: Vec<String> = Vec::new();
+
+    // 4 days to a week: Keep only the earliest backup per day.
+    let mut days_already_backed_up: HashSet<String> = HashSet::new();
+    // Because the list is sorted, we can assume the first day we see is the oldest.
+    for backup_key in backups_from_4_days_ago_to_week_ago {
+        let backup_date = backup_key
+            .strip_prefix(S3_SQL_BACKUP_PREFIX).unwrap()
+            .strip_prefix("/").unwrap()
+            .split(" ").next().unwrap(); // Get the YYYY-MM-DD part of the filename.
+
+        if days_already_backed_up.contains(backup_date) {
+            backup_keys_to_delete.push(backup_key);
+        }
+        else {
+            days_already_backed_up.insert(backup_date.to_string());
+        }
+    }
+
+    // week to a month: only keep sundays.
+    for backup_key in backups_from_over_week_ago_to_month_ago {
+        let backup_date = backup_key
+            .strip_prefix(S3_SQL_BACKUP_PREFIX).unwrap()
+            .strip_prefix("/").unwrap()
+            .split(" ").next().unwrap(); // Get the YYYY-MM-DD part of the filename.
+
+        let backup_naivedate = chrono::NaiveDate::parse_from_str(backup_date, "%Y-%m-%d").unwrap();
+
+        if backup_naivedate.weekday() != chrono::Weekday::Sun {
+            backup_keys_to_delete.push(backup_key);
+        }
+    }
+
+    // month and above: first sunday of the month
+    let mut months_already_backed_up: HashSet<u32> = HashSet::new();
+    // Because the list is sorted, we can assume the first day we see is the oldest.
+    for backup_key in backups_from_over_month_ago {
+        let backup_month = backup_key
+            .strip_prefix(S3_SQL_BACKUP_PREFIX).unwrap()
+            .strip_prefix("/").unwrap()
+            .split(" ").next().unwrap(); // Get the YYYY-MM-DD part of the filename.
+
+        let backup_naivedate = chrono::NaiveDate::parse_from_str(backup_month, "%Y-%m-%d").unwrap();
+
+        let backup_month = backup_naivedate.month();
+
+        if months_already_backed_up.contains(&backup_month) {
+            backup_keys_to_delete.push(backup_key);
+        } else {
+            months_already_backed_up.insert(backup_month);
+        }
+    }
+
+    // Now that we have the keys to delete, nuke em.
+    if backup_keys_to_delete.is_empty() {
+        return Ok(())
+    }
+
+    let _ = crate::utils::delete_keys_from_s3(
+        &s3_client,
+        &state.config.s3_sql_backup_bucket,
+        &backup_keys_to_delete.into()).await
+        .map_err(|err| {
+            eprintln!("[CLEANUP SQL BACKUPS] Failed deleting old backups! err: {}", err);
+        });
 
     Ok(())
 }
