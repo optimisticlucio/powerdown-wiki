@@ -169,6 +169,83 @@ pub async fn move_temp_s3_file(
     Ok(target_key_with_filename)
 }
 
+/// Given an image on the public bucket, attempts to compress it and move it to the target bucket under the target key. 
+/// Returns the key that it was uploaded to (with the file extension).
+/// If passed something that isn't an image, returns UnknownFiletype.
+pub async fn move_and_lossily_compress_temp_s3_img(
+    s3_client: &aws_sdk_s3::Client,
+    server_config: &crate::server_state::config::Config,
+    temp_file_key: &str,
+    target_bucket_name: &str,
+    target_file_key: &str,
+    compression_settings: Option<file_compression::LossyCompressionSettings>,
+) -> Result<String, MoveTempS3FileErrs> {
+    // Download file from S3
+    let downloaded_file = s3_client.get_object()
+        .bucket(&server_config.s3_public_bucket)
+        .key(temp_file_key)
+        .send()
+        .await
+        .map_err(|err| {
+            eprintln!("[COMPRESS TEMP S3 IMG] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {:?}", err);
+            MoveTempS3FileErrs::DownloadFailed
+        })?;
+
+    let original_file_bytes = downloaded_file.body
+        .collect().await.map_err(|err| {
+            eprintln!("[COMPRESS TEMP S3 IMG] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
+            MoveTempS3FileErrs::ConversionFailed
+        })?
+        .into_bytes().to_vec();
+
+    // Now let's find out what kind of file this is, and compress it appropriately.
+    let file_type = if let Some(file_type) = infer::get(&original_file_bytes) {
+        file_type
+    } else {
+        eprintln!("[COMPRESS TEMP S3 IMG] File key {} has an unknown filetype.", temp_file_key);
+        return Err(MoveTempS3FileErrs::UnknownFiletype);
+    };
+
+    // If it's not an image, SHOOT THAT SHIT BACK.
+    if file_type.matcher_type() !=  infer::MatcherType::Image {
+        return Err(MoveTempS3FileErrs::UnknownFiletype);
+    }
+
+    // Now it's gotta be an image. COMPRESS IT.
+    let converted_file = file_compression::compress_image_lossy(
+                    original_file_bytes.to_vec(),
+                file_type,
+                compression_settings)
+                .map_err(|err| {
+                    eprintln!("[COMPRESS TEMP S3 IMG] Failed to compress file {}: {:?}", temp_file_key, err);
+                    MoveTempS3FileErrs::ConversionFailed
+                })?;
+
+    // Let's get the new filetype. It's probably webp, but making sure incase I change this later.
+    let file_type = infer::get(&converted_file).unwrap();
+
+    // As far as I know, this is only referenced when the browser decides whether to display or download a file.
+    // Inline displays in-browser, attach downloads it.
+    let file_content_disposition = "inline";
+
+    let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension());
+
+    s3_client.put_object()
+        .bucket(target_bucket_name)
+        .key(&target_key_with_filename)
+        .body(converted_file.into())
+        .content_type(file_type.mime_type())
+        .content_disposition(file_content_disposition) 
+        .send()
+        .await
+        .map_err(|err| {
+            eprintln!("[COMPRESS TEMP S3 IMG] Failed to move temp img {temp_file_key} to target {target_file_key} due to an error during upload: {:?}", err);
+            MoveTempS3FileErrs::UploadFailed
+        })?;
+
+    Ok(target_key_with_filename)
+}
+
 #[derive(Debug)]
 pub enum MoveTempS3FileErrs {
     DownloadFailed,

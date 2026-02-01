@@ -84,3 +84,84 @@ fn compress_to_png_max(img: &DynamicImage) -> Result<Vec<u8>, Box<dyn std::error
     )?;
     Ok(output)
 }
+
+pub struct LossyCompressionSettings {
+    pub max_width: Option<u32>,
+    pub max_height: Option<u32>,
+    pub quality: u8, // 1-100, higher = better quality
+}
+
+impl Default for LossyCompressionSettings {
+    fn default() -> Self {
+        Self {
+            max_width: None,
+            max_height: None,
+            quality: 85,
+        }
+    }
+}
+
+pub fn compress_image_lossy(
+    image_bytes: Vec<u8>,
+    format: infer::Type,
+    settings: Option<LossyCompressionSettings>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    // Use default settings if none provided
+    let settings = settings.unwrap_or_default();
+
+    // Convert the infer type to ImageReader's format
+    let format = ImageFormat::from_extension(format.extension()).unwrap();
+
+    // Load the image
+    let mut reader = ImageReader::new(Cursor::new(&image_bytes));
+    reader.set_format(format);
+    let mut img = reader.decode()?;
+
+    // Resize if dimensions are specified
+    if let (Some(max_w), Some(max_h)) = (settings.max_width, settings.max_height) {
+        img = resize_if_needed(img, max_w, max_h);
+    } else if let Some(max_w) = settings.max_width {
+        if img.width() > max_w {
+            let ratio = max_w as f32 / img.width() as f32;
+            let new_height = (img.height() as f32 * ratio) as u32;
+            img = img.resize(max_w, new_height, image::imageops::FilterType::Lanczos3);
+        }
+    } else if let Some(max_h) = settings.max_height {
+        if img.height() > max_h {
+            let ratio = max_h as f32 / img.height() as f32;
+            let new_width = (img.width() as f32 * ratio) as u32;
+            img = img.resize(new_width, max_h, image::imageops::FilterType::Lanczos3);
+        }
+    }
+
+    // Compress to lossy WebP
+    let compressed = compress_to_webp_lossy(&img, settings.quality)?;
+    
+    Ok(compressed)
+}
+
+fn resize_if_needed(img: DynamicImage, max_width: u32, max_height: u32) -> DynamicImage {
+    let (width, height) = (img.width(), img.height());
+    
+    // Calculate if resizing is needed
+    if width <= max_width && height <= max_height {
+        return img;
+    }
+    
+    // Calculate the scaling ratio to fit within bounds
+    let width_ratio = max_width as f32 / width as f32;
+    let height_ratio = max_height as f32 / height as f32;
+    let ratio = width_ratio.min(height_ratio);
+    
+    let new_width = (width as f32 * ratio) as u32;
+    let new_height = (height as f32 * ratio) as u32;
+    
+    img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3)
+}
+
+fn compress_to_webp_lossy(img: &DynamicImage, quality: u8) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let rgba = img.to_rgba8();
+    let encoder = webp::Encoder::from_rgba(&rgba, img.width(), img.height());
+    let webp = encoder.encode(quality as f32);
+    Ok(webp.to_vec())
+}

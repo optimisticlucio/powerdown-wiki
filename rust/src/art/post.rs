@@ -13,6 +13,12 @@ use tokio::task::JoinSet;
 const INSERT_INTO_ART_FILE_DB_QUERY: &str = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
 const DELETE_FROM_ART_FILE_DB_QUERY: &str = "DELETE FROM art_file WHERE belongs_to=$1 AND internal_order=$2";
 
+const ART_THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings = utils::file_compression::LossyCompressionSettings {
+                            max_width: Some(180),
+                            max_height: Some(150),
+                            quality: 60
+                        };
+
 /// Post Request Handler for art category.
 #[axum::debug_handler]
 pub async fn add_art(
@@ -126,12 +132,13 @@ pub async fn add_art(
 
             let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
 
-            let thumbnail_key = utils::move_temp_s3_file(
+            let thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
                     &state.s3_client.clone(),
                     &state.config,
                     &page_art.base_art.thumbnail_key,
                     &state.config.s3_public_bucket,
                     &target_thumbnail_key,
+                    Some(ART_THUMBNAIL_COMPRESSION_SETTINGS)
                 )
                 .await
                 .map_err(|err| {
@@ -535,10 +542,30 @@ pub async fn edit_art_put_request(
             columns.push("post_state".into());
             values.push(&ArtState::Public);
 
+            // I need to create new_thumbnail_key here so that, incase we use it, it can survive enough.
+            let mut new_thumbnail_key = "".to_owned();
             if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
-                // TODO: Move thumbnail out of temp.
+                new_thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
+                        &state.s3_client.clone(),
+                        &state.config,
+                        &sent_page_art.base_art.thumbnail_key,
+                        &state.config.s3_public_bucket,
+                        &existing_art.base_art.thumbnail_key,
+                        Some(ART_THUMBNAIL_COMPRESSION_SETTINGS)
+                    )
+                    .await
+                    .map_err(|err| {
+                            eprintln!(
+                                "[ART EDIT] Converting thumbnail of art {} failed, {:?}",
+                                existing_art.base_art.id,
+                                err
+                            );
+                            RootErrors::InternalServerError
+                        }
+                    )?;
+
                 columns.push("thumbnail".into());
-                values.push(&sent_page_art.base_art.thumbnail_key);
+                values.push(&new_thumbnail_key);
             }
 
             values.push(&existing_art.base_art.id);

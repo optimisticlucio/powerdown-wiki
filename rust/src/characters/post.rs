@@ -163,12 +163,17 @@ pub async fn add_character(
             
             // Move thumbnail.
             let thumbnail_target_s3_key = format!("{target_s3_folder}/thumbnail");
-            let thumbnail_s3_key = utils::move_temp_s3_file(
+            let thumbnail_s3_key = utils::move_and_lossily_compress_temp_s3_img(
                     &s3_client,
                     &state.config,
                     &recieved_page_character.base_character.thumbnail_key,
                     &state.config.s3_public_bucket,
                     &thumbnail_target_s3_key,
+                    Some( utils::file_compression::LossyCompressionSettings {
+                            max_width: Some(100),
+                            max_height: Some(100),
+                            ..Default::default()
+                        })
                 )
                 .await
                 .map_err(|err| {
