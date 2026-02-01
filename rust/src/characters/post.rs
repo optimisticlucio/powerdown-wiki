@@ -11,6 +11,18 @@ use axum::response::{IntoResponse, Redirect, Response};
 use http::Uri;
 use askama::Template;
 
+const CHARACTER_THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings = utils::file_compression::LossyCompressionSettings {
+                            max_width: Some(100),
+                            max_height: Some(100),
+                            quality: 85
+                        };
+
+const CHARACTER_IMAGE_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings = utils::file_compression::LossyCompressionSettings {
+                            max_width: Some(500),
+                            max_height: Some(500),
+                            quality: 90
+                        };
+
 #[axum::debug_handler]
 pub async fn add_character(
     State(state): State<ServerState>,
@@ -169,11 +181,7 @@ pub async fn add_character(
                     &recieved_page_character.base_character.thumbnail_key,
                     &state.config.s3_public_bucket,
                     &thumbnail_target_s3_key,
-                    Some( utils::file_compression::LossyCompressionSettings {
-                            max_width: Some(100),
-                            max_height: Some(100),
-                            ..Default::default()
-                        })
+                    Some(CHARACTER_THUMBNAIL_COMPRESSION_SETTINGS)
                 )
                 .await
                 .map_err(|err| {
@@ -193,12 +201,13 @@ pub async fn add_character(
             
             // Move main page art
             let main_art_target_s3_key = format!("{target_s3_folder}/page_art");
-            let main_art_key = utils::move_temp_s3_file(
+            let main_art_key = utils::move_and_lossily_compress_temp_s3_img(
                     &s3_client,
                     &state.config,
                     &recieved_page_character.page_img_key,
                     &state.config.s3_public_bucket,
                     &main_art_target_s3_key,
+                    Some(CHARACTER_IMAGE_COMPRESSION_SETTINGS)
                 )
                 .await
                 .map_err(|err| {
