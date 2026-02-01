@@ -1,18 +1,26 @@
-use std::env;
+use std::{env, time::{SystemTime, Duration}};
 
 use tokio::process::Command;
 
 use crate::ServerState;
 use super::get_current_human_readable_time;
 
+/// The prefix/folder all SQL backups are placed in. Do not put starting nor leading slash.
+const S3_SQL_BACKUP_PREFIX: &str = "sql_backups";
+
 /// Runs all processes related to SQL backup, including cleaning up old revisions.
 pub async fn run_backup_processes(state: ServerState) {
     println!("[SQL BACKUP PROCESSES] System time is {}, initiating sql backup.", get_current_human_readable_time());
 
     if let Err(err) = backup_db(state.clone()).await {
-        eprintln!("[SQL BACKUP PROCESSES] Failed to backup DB! err: {:?}",err)
+        eprintln!("[SQL BACKUP PROCESSES] Failed to backup DB! err: {:?}",err);
+        return;
     }
-    // TODO: Also, clean up any superflous backups from S3 (1 a day for this week. 1 a week for this month. 1 per month afterwards.)
+
+    if let Err(err) = clean_up_old_backups(state.clone()).await {
+        eprintln!("[SQL BACKUP PROCESSES] Failed to clean old backups! err: {:?}",err);
+        return;
+    }
 
     println!("[SQL BACKUP PROCESSES] System time is {}, sql backup complete.", get_current_human_readable_time());
 }
@@ -65,7 +73,7 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
             Box::new(err)
         })?;
 
-    let pg_dump_target_filename = format!("{}.pgdump", get_current_human_readable_time());
+    let pg_dump_target_filename = format!("{}/{}.pgdump", S3_SQL_BACKUP_PREFIX, get_current_human_readable_time());
 
     let s3_client = state.s3_client.clone();
 
@@ -87,6 +95,69 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
         // If it starts causing problems, someone can go in there and delete the file themselves.
         eprintln!("[SQL BACKUP] Removing local file failed! Proceeding as normal. Err: {:?}", err);
     };
+
+    Ok(())
+}
+
+/// When run, cleans up old backups from the s3 private bucket, in the following manner:
+/// Between today and 3 days ago, all backups are untouched.
+/// Between 4 days ago and a week ago, 1 backup is stored per day (the earliest backup is kept each day).
+/// Between a week + a day ago and a month ago, 1 backup is stored per week (the sunday backup).
+/// From a month + a day ago onward, one backup is kept per month (the earliest sunday).
+async fn clean_up_old_backups(state: ServerState) -> Result<(), Box<dyn std::error::Error>> {
+    let s3_client = state.s3_client.clone();
+    
+    // First, get all of the backups currently on s3.
+    let list_objects_output = s3_client.list_objects_v2()
+        .bucket(&state.config.s3_sql_backup_bucket)
+        .prefix(S3_SQL_BACKUP_PREFIX)
+        .send()
+        .await
+        .map_err(|err| {
+            eprintln!("[CLEANUP SQL BACKUPS] Failed getting list of backups on S3! Passing error upwards.");
+            Box::new(err)
+        })?;
+    
+    let mut list_of_objects = match list_objects_output.contents {
+        None => {
+            eprintln!("[CLEANUP SQL BACKUPS] No SQL backups found on S3! Finishing operation, but this should likely not be happening!");
+            return Ok(());
+        },
+        Some(list) => list
+    };
+
+    // Now let's organize the relevant backups into their categories.
+    let mut backups_from_4_days_ago_to_week_ago = Vec::new();
+    let mut backups_from_over_week_ago_to_month_ago = Vec::new();
+    let mut backups_from_over_month_ago = Vec::new();
+
+    let current_timestamp = chrono::Utc::now();
+    let three_days_ago = current_timestamp - chrono::Duration::days(3);
+    let week_ago = current_timestamp - chrono::Duration::weeks(1);
+    let month_ago = current_timestamp - chrono::Duration::days(30);
+
+    for backup in list_of_objects {
+        // If the last modification date is null, just ignore it for now.
+        // We could check the filename later, but I am lazy rn.
+        if let Some(last_modification_date) = backup.last_modified {
+            let last_modification_date = chrono::DateTime::from_timestamp_millis(last_modification_date.to_millis().unwrap()).unwrap();
+
+            match last_modification_date {
+                date  if date < month_ago => {
+                    backups_from_over_month_ago.push(backup);
+                },
+                date  if date < week_ago => {
+                    backups_from_over_week_ago_to_month_ago.push(backup);
+                },
+                date  if date < three_days_ago => {
+                    backups_from_4_days_ago_to_week_ago.push(backup);
+                },
+                _ => () // The last 3 days. Leave unmodified.
+            }
+        }
+    }
+
+    // TODO: Delete the relevant backups
 
     Ok(())
 }

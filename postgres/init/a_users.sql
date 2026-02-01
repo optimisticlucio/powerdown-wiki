@@ -1,5 +1,6 @@
 CREATE TYPE user_type AS ENUM (
     'normal',
+    'uploader',
     'admin',
     'superadmin'
 );

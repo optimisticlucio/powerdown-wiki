@@ -30,5 +30,5 @@ pub async fn clean_temp_db_entries(state: ServerState) {
 
 // Returns the current UTC time and date in a human-readable format.
 pub fn get_current_human_readable_time() -> String {
-    chrono::Utc::now().format("%d/%m/%Y %T").to_string()
+    chrono::Utc::now().format("%Y-%m-%d %T").to_string()
 }

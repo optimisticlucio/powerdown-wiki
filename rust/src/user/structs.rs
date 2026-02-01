@@ -38,8 +38,13 @@ pub struct User {
 #[derive(FromSql, ToSql, Debug, Clone, Deserialize)]
 #[postgres(name = "user_type", rename_all = "snake_case")]
 pub enum UserType {
-    Normal,
+    /// The default user type someone gets when they first sign up.
+    Normal, 
+    /// A user who's been promoted by admins and allowed to post to the site.
+    Uploader,
+    /// Admins, tasked with handling daily tasks and making sure nothing blows up.
     Admin,
+    /// Superadmins, people who can assign other admins and have root access.
     Superadmin,
 }
 
@@ -198,8 +203,17 @@ impl UserType {
     pub fn permissions(&self) -> UserPermissions {
         match self {
             Self::Normal => UserPermissions {
-                can_post_art: true,
+                can_post_art: false,
                 can_post_characters: false,
+                can_modify_misc: false,
+                can_ban_users: false,
+                can_promote_to_admin: false,
+                can_modify_user_type: false,
+                can_modify_others_content: false,
+            },
+            Self::Uploader => UserPermissions {
+                can_post_art: true,
+                can_post_characters: true,
                 can_modify_misc: false,
                 can_ban_users: false,
                 can_promote_to_admin: false,
