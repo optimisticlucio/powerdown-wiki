@@ -42,13 +42,6 @@ nav {
             gap: 1ch;
         }
     }
-
-    .profile-pic {
-        height: 3.25em;
-        aspect-ratio: 1/1;
-        border: 0.2ch solid black;
-        z-index: 10;
-    }
 }
 
 @media screen and (max-width: 800px) {

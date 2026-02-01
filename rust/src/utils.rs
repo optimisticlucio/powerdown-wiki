@@ -151,7 +151,9 @@ pub async fn move_temp_s3_file(
         }
     };
 
-    let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension());
+    let target_key_with_filename = format!("{}.{}",
+        target_file_key.split(".").next().unwrap(), // Remove a passed extension.
+        file_type.extension());
 
     s3_client.put_object()
         .bucket(target_bucket_name)
@@ -228,7 +230,9 @@ pub async fn move_and_lossily_compress_temp_s3_img(
     // Inline displays in-browser, attach downloads it.
     let file_content_disposition = "inline";
 
-    let target_key_with_filename = format!("{}.{}",target_file_key, file_type.extension());
+    let target_key_with_filename = format!("{}.{}",
+        target_file_key.split(".").next().unwrap(), // Remove a passed extension.
+        file_type.extension());
 
     s3_client.put_object()
         .bucket(target_bucket_name)

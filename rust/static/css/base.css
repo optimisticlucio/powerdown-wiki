@@ -28,6 +28,13 @@ a {
     color: white;
 }
 
+.profile-pic {
+    height: 3.25em;
+    aspect-ratio: 1/1;
+    border: 0.2ch solid black;
+    z-index: 10;
+}
+
 .wrapper {
     text-align: left;
     max-width: 900px;

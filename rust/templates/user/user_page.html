@@ -4,16 +4,16 @@
 
 {% block content %}
 <div class="wrapper">
-    {% if let Some(user) = user %}
-    <h1>Logged Into Wiki</h1>
+    {% if let Some(user) = viewed_user %}
+    <h1>USER PAGE</h1>
 
-    <p>Hello, {{user.display_name}}! You have successfully logged in! Your ID is {{user.id}}.</p>
+    <img class="profile-pic" src="{{user.get_pfp_url()}}" />
+
+    <p>This is the page for the user: {{user.display_name}}. Their DB ID is {{user.id}}.</p>
     {% else %}
-    <h1>...Huh</h1>
+    <h1>User does not exist!</h1>
         
-        <p>Hello! If you're seeing this text, it means you managed to access the user page without being logged in. This should not have happened, so I'm impressed.</p>
-
-    <p><b>Please message Lucio</b> with an explanation of how you managed to get here, as detailed as you can reasonably make it. Thanks!</p>
+        <p>If you got here, you were likely trying to see some user's account. Well - they don't exist. Sorry pal.</p>
     {% endif %}
 </div>
 {% endblock %}
