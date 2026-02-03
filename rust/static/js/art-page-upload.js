@@ -24,10 +24,8 @@ thumbnailContainer.innerHTML = '';
 
 // Now we render whatever is in the files and object variables.
 filesInImageContainer.forEach( (givenImage) => {
-  const img = document.createElement('img');
-  img.src = givenImage.key;
-  imageContainer.appendChild(img);
-})
+  createImageElement(givenImage.key);
+});
 // If thumbnail object isn't empty.
 if (Object.keys(thumbnailObject).length > 0) {
   const img = document.createElement('img');
@@ -203,6 +201,34 @@ async function sendDeleteRequest(targetUrl = window.location.pathname) {
   });
 }
 
+// Creates and appends an image container with controls to the imageContainer element
+function createImageElement(src) {
+  const localImageContainer = document.createElement('div');
+  localImageContainer.classList.add('imageContainer');
+
+  // Create the movement buttons, and place in the container.
+  const moveForwardButton = document.createElement('button');
+  moveForwardButton.innerHTML = '→';
+  moveForwardButton.onclick = (event) => moveImage(localImageContainer, 1);
+
+  const moveBackwardButton = document.createElement('button');
+  moveBackwardButton.innerHTML = '←';
+  moveBackwardButton.onclick = (event) => moveImage(localImageContainer, -1);
+
+  const buttonHolder = document.createElement('div');
+  buttonHolder.append(moveBackwardButton, moveForwardButton);
+
+  localImageContainer.appendChild(buttonHolder);
+
+  // Create an img element
+  const img = document.createElement('img');
+  img.src = src;
+  
+  // Add it to the container
+  localImageContainer.appendChild(img);
+  imageContainer.appendChild(localImageContainer);
+}
+
 // Ran when the user selects a new file to be added to the image section.
 function addNewImage(event) {
   const file = event.target.files[0];
@@ -218,14 +244,9 @@ function addNewImage(event) {
 
     // Now, make the user see the new file listed.
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
-      // Create an img element
-      const img = document.createElement('img');
-      img.src = e.target.result; // This is the base64 data URL
-      
-      // Add it to the page
-      imageContainer.appendChild(img);
+      createImageElement(e.target.result); // Pass the base64 data URL
     };
     
     reader.readAsDataURL(file); // Read as data URL for images
@@ -263,4 +284,27 @@ function setThumbnail(event) {
     reader.readAsDataURL(file); // Read as data URL for images
     event.target.value = '';
   }
+}
+
+// Given an image container div, moves the image in both the visual section and the filesInImageContainer array.
+// imageDelta is how much to change the index. 0 would keep it in the same place, 1 would move one index forward, -1 backward, etc.
+function moveImage(imageDiv, indexDelta) {
+  const parentChildrenArray = imageDiv.parentElement.children;
+  const imageCurrentIndex = Array.prototype.indexOf.call(parentChildrenArray, imageDiv);
+  // Ensure target index is within bounds.
+  const imageTargetIndex = Math.min(Math.max((imageCurrentIndex + indexDelta), 0), parentChildrenArray.length - 1);
+
+  if (imageCurrentIndex == imageTargetIndex) return;
+
+  // First move it visually
+  if (imageTargetIndex == (parentChildrenArray.length - 1)) {
+    imageDiv.parentElement.appendChild(imageDiv);
+  }
+  else {
+    let modifier = (imageTargetIndex > imageCurrentIndex) ? 1 : 0;
+    imageDiv.parentElement.insertBefore(imageDiv, parentChildrenArray[imageTargetIndex + modifier]);
+  }
+
+  // Now move it in the back logic
+  [filesInImageContainer[imageCurrentIndex], filesInImageContainer[imageTargetIndex]] = [filesInImageContainer[imageTargetIndex], filesInImageContainer[imageCurrentIndex]];
 }

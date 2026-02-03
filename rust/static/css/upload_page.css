@@ -7,8 +7,14 @@
     }
 
     .imageHolder {
-        img {
-            max-width: 500px;
+        display: flex;
+        flex-flow: row wrap;
+        gap: 1ch;
+
+        .imageContainer {
+            img {
+                max-width: 500px;
+            }
         }
     }
 }
