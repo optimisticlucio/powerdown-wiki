@@ -33,6 +33,7 @@ pub fn router() -> Router<ServerState> {
                 .put(post::edit_art_put_request)
                 .post(post::edit_art_put_request),
         )
+        .route_with_tsr("/{art_slug}/comment", post(comment::add_comment))
         .route_with_tsr("/{art_slug}/edit", get(edit::edit_art_page))
 }
 

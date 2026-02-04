@@ -26,7 +26,7 @@ pub fn initiate_scheduled_tasks(state: ServerState) {
     // expensive way to run all these functions that I've seen so far.
     // If you know of a better way, PLEASE.
 
-    tokio::spawn(run_periodically(state.clone(), sql_backup::run_backup_processes, DAY_DURATION));
+    tokio::spawn(run_periodically(state.clone(), sql_backup::run_backup_processes, DAY_DURATION.checked_div(2).unwrap()));
     tokio::spawn(run_periodically(state.clone(), clean_temp_db_entries, HOUR_DURATION));
 }
 

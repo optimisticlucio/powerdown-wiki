@@ -160,21 +160,29 @@ a {
 
     .comment {
         background-color: var(--dark-shade);
-        padding: 0.5em;
+        padding: 1em 1.5em;
         display: flex;
         flex-direction: row;
-        gap: 1ch;
+        gap: 2ch;
         
         .profile-pic {
-            height: 100%;
+            height: 6em;
             border: unset;
             width: fit-content;
+            margin: auto;
         }
 
         .text {
             flex-grow: 1;
+            text-align: left;
+
             .poster {
                 color: orange;
+            }
+
+            .titles {
+                font-size: 1.2em;
+                margin-bottom: 0.3em;
             }
 
             .date {
@@ -192,6 +200,7 @@ a {
             padding: 0.5em 1em;
             color: white;
             height: fit-content;
+            margin: auto;
 
             &:hover {
                 background-color: #CB6239;

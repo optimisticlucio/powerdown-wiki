@@ -26,3 +26,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (artItems[0]) artItems[0].classList.add('active');
     if (labels[0]) labels[0].classList.add('active');
 });
+
+function postComment() {
+    const commentText = document.getElementById("commentArea").value;
+    
+    fetch(`${window.location.href}/comment`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/plain'
+        },
+        body: commentText
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            console.error('Error:', response.statusText);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
