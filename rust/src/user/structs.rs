@@ -117,7 +117,7 @@ impl User {
             user_type: row.get("user_type"),
             profile_pic_s3_key: row.get("profile_picture_s3_key"),
             creator_name: row.get("creator_name"),
-            last_modified: row.get("last_modified"),
+            last_modified: row.get("last_modified_date"),
         }
     }
 

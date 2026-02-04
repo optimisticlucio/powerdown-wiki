@@ -155,12 +155,15 @@ a {
     display: flex;
     flex-direction: column;
     gap: 1em;
+    width: 75%;
+    margin: 2em 0;
 
     .comment {
         background-color: var(--dark-shade);
         padding: 0.5em;
         display: flex;
         flex-direction: row;
+        gap: 1ch;
         
         .profile-pic {
             height: 100%;
@@ -182,6 +185,25 @@ a {
         button.post {
             background-color: orange;
             width: fit-content;
+            font-family: inherit;
+            border: none;
+            font-weight: 500;
+            font-size: 1.5em;
+            padding: 0.5em;
+
+            &:hover {
+                background-color: #ffdb94;
+                transition: color 0.25s;
+            }
+        }
+
+        textarea {
+            resize: none;
+            border: 0;
+            font-family: inherit;
+            background: none;
+            color: white;
+            padding: 0.5em 0;
         }
     }
 }

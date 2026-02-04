@@ -50,15 +50,6 @@ CREATE TABLE user_session (
 
 );
 
-
-CREATE FUNCTION update_last_modified_date()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.last_modified_date = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE TRIGGER user_info_last_modified
 BEFORE UPDATE ON site_user
 FOR EACH ROW

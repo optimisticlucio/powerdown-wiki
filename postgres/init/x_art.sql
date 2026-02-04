@@ -39,14 +39,6 @@ CREATE TABLE art (
     CHECK (page_slug NOT IN ('new', 'add', 'update', 'null', '')) -- Make sure that we don't overlap with any hardcoded pages.
 );
 
-CREATE FUNCTION update_last_modified_date()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.last_modified_date = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE TRIGGER art_last_modified
 BEFORE UPDATE ON art
 FOR EACH ROW

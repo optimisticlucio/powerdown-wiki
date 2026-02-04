@@ -5,14 +5,6 @@ CREATE TABLE arbitrary_value (
     item_value text NOT NULL 
 );
 
-CREATE FUNCTION update_last_modified_date()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.last_modified_date = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE TRIGGER arbitrary_value_last_modified
 BEFORE UPDATE ON arbitrary_value
 FOR EACH ROW
