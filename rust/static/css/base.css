@@ -183,16 +183,18 @@ a {
         }
 
         button.post {
-            background-color: orange;
+            background-color: #EC9C56;
             width: fit-content;
             font-family: inherit;
             border: none;
             font-weight: 500;
             font-size: 1.5em;
-            padding: 0.5em;
+            padding: 0.5em 1em;
+            color: white;
+            height: fit-content;
 
             &:hover {
-                background-color: #ffdb94;
+                background-color: #CB6239;
                 transition: color 0.25s;
             }
         }
