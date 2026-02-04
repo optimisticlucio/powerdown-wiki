@@ -43,8 +43,8 @@ pub async fn add_art(
     }
 
     match posting_step {
-        PostingSteps::RequestPresignedURLs { art_amount } => {
-            give_user_presigned_s3_urls(art_amount, original_uri, cookie_jar, &state).await
+        PostingSteps::RequestPresignedURLs { file_amount } => {
+            give_user_presigned_s3_urls(file_amount, original_uri, cookie_jar, &state).await
         }
         PostingSteps::UploadMetadata(mut page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
@@ -172,7 +172,6 @@ pub async fn add_art(
                 })?;
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
-
 
             let mut art_upload_tasks = JoinSet::new();
 
@@ -345,8 +344,8 @@ pub async fn edit_art_put_request(
     }
 
     match posting_step {
-        PostingSteps::RequestPresignedURLs { art_amount } => {
-            give_user_presigned_s3_urls(art_amount, original_uri, cookie_jar, &state).await
+        PostingSteps::RequestPresignedURLs { file_amount } => {
+            give_user_presigned_s3_urls(file_amount, original_uri, cookie_jar, &state).await
         }
         PostingSteps::UploadMetadata(mut sent_page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.

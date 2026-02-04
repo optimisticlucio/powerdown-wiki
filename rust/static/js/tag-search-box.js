@@ -67,9 +67,8 @@ tagInput.addEventListener('keydown', (e) => {
         e.preventDefault();
         if (tagInput.value.trim()) {
             addTag(tagInput.value);
-        } else {
             window.location.href = createTargetUrl();
-        }
+        } 
     } else if (e.key === 'Backspace' && tagInput.value === '' && tags.length > 0) {
         const tagElements = tagsContainer.querySelectorAll('.tag');
         const lastTagElement = tagElements[tagElements.length - 1];

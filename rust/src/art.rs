@@ -19,6 +19,7 @@ mod edit;
 mod page;
 mod post;
 mod structs;
+mod comment;
 
 pub fn router() -> Router<ServerState> {
     Router::new()

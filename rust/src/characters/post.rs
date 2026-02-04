@@ -46,10 +46,10 @@ pub async fn add_character(
     }
 
     match posting_step {
-        PostingSteps::RequestPresignedURLs { art_amount } => {
+        PostingSteps::RequestPresignedURLs { file_amount } => {
             // TODO - Ensure it's an amount of art that makes sense. Right now the only variable is whether a page has a logo in it.
 
-            let presigned_urls = get_temp_s3_presigned_urls(&state, art_amount.into(), "characters")
+            let presigned_urls = get_temp_s3_presigned_urls(&state, file_amount.into(), "characters")
                 .await
                 .map_err(|err| {
                     eprintln!("[POSTING CHARACTER] Failed to get presigned URLs! {}", err);

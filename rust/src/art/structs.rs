@@ -38,9 +38,20 @@ pub struct PageArt {
     pub creation_date: chrono::NaiveDate,
     #[serde(skip)]
     pub uploading_user: Option<User>,
+    #[serde(skip)]
+    pub comments: Vec<Comment>,
 }
 
 impl BaseArt {
+    pub async fn get_by_slug(db_connection: &Object<Manager>, page_slug: &str) -> Option<Self> {
+        let requested_art = db_connection
+            .query_one("SELECT * FROM art WHERE page_slug=$1", &[&page_slug])
+            .await
+            .ok()?;
+
+        Some(Self::from_db_row(&requested_art))
+    }
+
     /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
     pub async fn get_art_from_index(
         db_connection: &Object<Manager>,
@@ -153,13 +164,18 @@ impl PageArt {
             None
         };
 
+        let base_art = BaseArt::from_db_row(row);
+
+        let comments = Self::get_comments(&base_art.id, db_connection).await;
+
         PageArt {
-            base_art: BaseArt::from_db_row(row),
+            base_art,
             description: row.get("description"),
             tags: row.try_get("tags").unwrap_or(Vec::new()),
             art_keys,
             creation_date: row.get("creation_date"),
             uploading_user,
+            comments
         }
     }
 
@@ -170,6 +186,29 @@ impl PageArt {
             .map(|key| crate::utils::get_s3_public_object_url(key))
             .collect()
     }
+
+    /// Returns the comments underneath a given art post, sorted by posting time.
+    pub async fn get_comments(post_id: &i32, db_connection: &Object<Manager>) -> Vec<Comment> {
+        // Get the relevant art URLs from the art_file table.
+        let comment_futures: Vec<_> = db_connection
+            .query("SELECT * FROM art_comment WHERE under_post=$1", &[post_id])
+            .await
+            .unwrap_or(Vec::new());
+
+        if comment_futures.is_empty() {
+            return Vec::new();
+        }
+
+        let mut comments = Vec::new();
+
+        for comment in comment_futures {
+            comments.push(Comment::from_db_row(&comment, db_connection).await);
+        }
+
+        comments.sort_by_key(|comment| comment.posting_time);
+
+        comments
+    }
 }
 
 impl UsermadePost for PageArt {
@@ -179,6 +218,10 @@ impl UsermadePost for PageArt {
                 .uploading_user
                 .as_ref()
                 .is_some_and(|uploading_user| uploading_user == user)
+            || user
+                .creator_name
+                .as_ref()
+                .is_some_and(|creator_name| self.base_art.creators.contains(creator_name))
     }
 }
 
@@ -312,8 +355,20 @@ impl Default for ArtState {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Comment {
     pub posting_user: Option<User>, // None means a deleted user.
     pub contents: String,
     pub posting_time: DateTime<Utc>,
+}
+
+impl Comment {
+    /// Converts a DB row with the relevant info to a Comment struct.
+    async fn from_db_row(row: &Row, db_connection: &Object<Manager>) -> Self {
+        Self {
+            posting_user: User::get_by_id(db_connection, &row.get("poster_id")).await,
+            posting_time: row.get("posting_time"),
+            contents: row.get("contents")
+        }
+    }
 }

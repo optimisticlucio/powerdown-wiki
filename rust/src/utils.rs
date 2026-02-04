@@ -279,7 +279,7 @@ pub enum PostingSteps<T> {
     #[serde(rename = "1")]
     RequestPresignedURLs {
         #[serde(default)]
-        art_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
+        file_amount: u8, // It shouldn't be any bigger than *25* and positive. even u8 is overkill.
     },
 
     #[serde(rename = "2")]

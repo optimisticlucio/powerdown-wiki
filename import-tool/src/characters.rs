@@ -155,11 +155,11 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
 
     // Ok we have all the info we need, let's request the presigned URLs for whatever we need.
     // It's the thumbnail, page image, and maybe a logo.
-    let art_amount = 2 + if frontmatter.logo_file.is_some() {1} else {0};
+    let file_amount = 2 + if frontmatter.logo_file.is_some() {1} else {0};
 
     let presigned_url_request = reqwest::Client::new().post(server_url.to_owned())
         .json(&utils::PostingSteps::<PageCharacter>::RequestPresignedURLs {
-            art_amount
+            file_amount
         })
         .send().await
         .map_err(|err| format!("Presigned Request Failed: {}", err.to_string()))?;

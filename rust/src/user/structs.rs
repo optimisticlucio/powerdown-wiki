@@ -33,9 +33,11 @@ pub struct User {
     /// The display name is not unique. It can have spaces, etc! If you need something that's 100% tied to this user, use the ID.
     pub display_name: String,
     pub profile_pic_s3_key: Option<String>, // The S3 key of their pfp image. Assumed to be in public bucket.
+    pub last_modified: DateTime<Utc>, // The last time that this user's info was modified.
+    pub creator_name: Option<String>, // The name which identifies this user in art posts and such.
 }
 
-#[derive(FromSql, ToSql, Debug, Clone, Deserialize)]
+#[derive(FromSql, ToSql, Debug, Clone, Deserialize, PartialEq)]
 #[postgres(name = "user_type", rename_all = "snake_case")]
 pub enum UserType {
     /// The default user type someone gets when they first sign up.
@@ -114,6 +116,8 @@ impl User {
             display_name: row.get("display_name"),
             user_type: row.get("user_type"),
             profile_pic_s3_key: row.get("profile_picture_s3_key"),
+            creator_name: row.get("creator_name"),
+            last_modified: row.get("last_modified"),
         }
     }
 

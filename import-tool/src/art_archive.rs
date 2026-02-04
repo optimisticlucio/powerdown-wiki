@@ -25,9 +25,9 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                 .filter(|path| !path.file_name().unwrap().to_string_lossy().starts_with("_"))
                 .collect();    
 
-    let total_art_amount = all_art_paths.len();
+    let total_file_amount = all_art_paths.len();
 
-    println!("Art Archive folder found! There are {} art pieces. {}", &total_art_amount, "Any files starting with _ were ignored.".italic());
+    println!("Art Archive folder found! There are {} art pieces. {}", &total_file_amount, "Any files starting with _ were ignored.".italic());
 
     println!("Would you like to\n{}\n{}\n{}\nor {}?\n{}", 
         "(1) Import all art".yellow(), 
@@ -60,9 +60,9 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
                         if let Ok(parsed_amount) =  chosen_amount.trim().parse::<usize>() {
                             match parsed_amount {
                                 x if x < 1 => println!("{}", "That's too little!".yellow()),
-                                x if x > total_art_amount => {
+                                x if x > total_file_amount => {
                                     println!("{}", "That's too much! Clamping down to ".yellow());
-                                    break total_art_amount;
+                                    break total_file_amount;
                                 }
                                 x => {
                                     break x;
@@ -266,7 +266,7 @@ async fn import_given_art_piece(root_path: &Path, art_file_path: &Path, server_u
 
     let presigned_url_request = reqwest::Client::new().post(server_url.to_owned())
         .json(&utils::PostingSteps::<PostArt>::RequestPresignedURLs {
-            art_amount: frontmatter.img_files.len() as u8 + 1
+            file_amount: frontmatter.img_files.len() as u8 + 1
         })
         .send().await
         .map_err(|err| format!("Presigned Request Failed: {}", err.to_string()))?;

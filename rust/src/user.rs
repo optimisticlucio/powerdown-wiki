@@ -13,6 +13,7 @@ use tower_cookies::Cookies;
 mod oauth;
 mod structs;
 mod traits;
+mod patch;
 
 pub use structs::User;
 pub use traits::UsermadePost;
@@ -24,7 +25,7 @@ pub fn router() -> Router<ServerState> {
         .route("/", get(self_user_page))
         .route_with_tsr("/login", get(login_page))
         .nest("/oauth2", oauth::router())
-        .route_with_tsr("/{user_id}", get(other_user_page))
+        .route_with_tsr("/{user_id}", get(other_user_page).patch(patch::patch_user))
 }
 
 /// Returns the user page. If the user is not logged in, redirects to login page.

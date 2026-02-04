@@ -10,5 +10,5 @@ CREATE TABLE art_comment (
         REFERENCES site_user(id)
         ON DELETE SET NULL,
 
-    contents text NOT NULL
+    contents text NOT NULL CHECK (TRIM(contents) != '')
 );

@@ -89,7 +89,7 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     credentials: "same-origin",
     body: JSON.stringify({
       step: "1",
-      art_amount: amountOfArtToUpload
+      file_amount: amountOfArtToUpload
     })
   };
 

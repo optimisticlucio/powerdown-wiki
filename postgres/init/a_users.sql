@@ -16,7 +16,9 @@ CREATE TABLE site_user (
 
     display_name text NOT NULL CHECK (TRIM(display_name) != ''),
     user_type user_type NOT NULL DEFAULT 'normal',
-    profile_picture_s3_key text CHECK (TRIM(profile_picture_s3_key) != '') DEFAULT NULL -- If null, insert some default pfp. Points to the public bucket.
+    profile_picture_s3_key text CHECK (TRIM(profile_picture_s3_key) != '') DEFAULT NULL, -- If null, insert some default pfp. Points to the public bucket.
+    last_modified_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Updates whenever this table is modified, see `update_last_modified_date()` below.
+    creator_name text CHECK (TRIM(creator_name) != '') -- The string which refers to this user in art posts and such.
     -- TODO: Think of relevant fields.
 );
 
@@ -47,3 +49,17 @@ CREATE TABLE user_session (
     -- The server, whenever reading the session, should check if it's been enough time since the creation for the session to be invalid. If it is, delete the entry.
 
 );
+
+
+CREATE FUNCTION update_last_modified_date()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_modified_date = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER user_info_last_modified
+BEFORE UPDATE ON site_user
+FOR EACH ROW
+EXECUTE FUNCTION update_last_modified_date();
