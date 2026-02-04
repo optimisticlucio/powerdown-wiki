@@ -33,6 +33,8 @@ struct ArtPage<'a> {
     tags: Vec<String>,
     description: Option<String>, // Assumed to be markdown.
 
+    comments: Vec<super::structs::Comment>,
+
     newer_art_url: Option<String>,
     older_art_url: Option<String>,
 }
@@ -80,6 +82,8 @@ pub async fn art_page(
             art_urls,
             tags: requested_art.tags,
             description: markdownified_description,
+
+            comments: requested_art.comments,
 
             older_art_url,
             newer_art_url,

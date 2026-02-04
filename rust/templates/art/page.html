@@ -63,6 +63,36 @@
             <a href="{{current_path}}/edit">Edit Page</a>
         {% endif %}
     </div>
+
+    <div class="comments">
+        {% if let Some(user) = user %}
+            <div class="comment">
+                <img class="profile-pic" src="{{user.get_pfp_url()}}" />
+                <textarea class="text" placeholder="Post a comment..."></textarea>
+                <button class="post">Post</button>
+            </div>
+        {% endif %}
+        {% for comment in comments %}
+            <div class="comment">
+                {% if let Some(posting_user) = comment.posting_user %}
+                <img class="profile-pic" src="{{posting_user.get_pfp_url()}}" />
+                <div class="text">
+                    <div>
+                        <b>{{posting_user.display_name}}</b>
+                {% else %}
+                <div class="text">
+                    <div>
+                        <b>[deleted user]</b>
+                {% endif %}
+                        <span class="date">{{ comment.posting_time.date_naive().format("%Y-%m-%d").to_string()}}</span>
+                    </div>
+                    <div>
+                        {{comment.contents}}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 </div>
 
 {% endblock %}

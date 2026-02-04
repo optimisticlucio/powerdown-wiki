@@ -150,3 +150,39 @@ a {
         }
     }
 }
+
+.comments {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+
+    .comment {
+        background-color: var(--dark-shade);
+        padding: 0.5em;
+        display: flex;
+        flex-direction: row;
+        
+        .profile-pic {
+            height: 100%;
+            border: unset;
+            width: fit-content;
+        }
+
+        .text {
+            flex-grow: 1;
+            .poster {
+                color: orange;
+            }
+
+            .date {
+                color: var(--bright-shade);
+            }
+        }
+
+        button.post {
+            background-color: orange;
+            width: fit-content;
+        }
+    }
+}
+
