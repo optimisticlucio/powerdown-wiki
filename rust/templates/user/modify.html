@@ -14,30 +14,36 @@
 
     <hr />
 
-    <label for="userDisplayName">
-        Display Name: 
-        <input type="text" id="userDisplayName" placeholder="{{ viewed_user.display_name }}"/>
-    </label>
-
-    <br />
-
-    <label for="userProfilePicture">
-        Profile Picture:
-        <input type="file" id="userProfilePicture" accept="image/*">
-    </label>
-
-    {% if viewed_user.can_have_user_type_modified_by(modifying_user) %}
-        <label for="userType">
-            Modify User Type from {{ viewed_user.user_type }}:
-            <select>
-                <option value="">Do Not Modify</option>
-                <option value="user">Standard User</option>
-                <option value="uploader">Uploader</option>
-                {% if modifying_user.user_type.permissions().can_promote_to_admin %}
-                <option value="admin">Admin</option>
-                {% endif %}
-            </select>
+    <form autocomplete="off">
+        <label for="userDisplayName">
+            Display Name: 
+            <input type="text" id="userDisplayName" placeholder="{{ viewed_user.display_name }}"/>
         </label>
-    {% endif %}
+
+        <br />
+
+        <label for="userProfilePicture">
+            Profile Picture:
+            <input type="file" id="userProfilePicture" accept="image/*">
+        </label>
+
+        {% if viewed_user.can_have_user_type_modified_by(modifying_user) %}
+            <label for="userType">
+                Modify User Type from {{ viewed_user.user_type }}:
+                <select id="userType">
+                    <option value="">Do Not Modify</option>
+                    <option value="user">Standard User</option>
+                    <option value="uploader">Uploader</option>
+                    {% if modifying_user.user_type.permissions().can_promote_to_admin %}
+                    <option value="admin">Admin</option>
+                    {% endif %}
+                </select>
+            </label>
+        {% endif %}
+
+        <br />
+
+        <button type="button" onclick="sendUserModifications()">Update User</button>
+    </form>
 </div>
 {% endblock %}

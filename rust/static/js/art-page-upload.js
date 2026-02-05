@@ -110,9 +110,6 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
 
   console.log(`RECIEVED: ${JSON.stringify(s3Urls)}`);
 
-  // TODO: Remove this conversion once we go live, it's only here bc we're working with localStack instead of a live server.
-  s3Urls.presigned_urls = s3Urls.presigned_urls.map((presigned_url) => presigned_url.replace("host.docker.internal", "localhost.localstack.cloud"));
-
   // Alright, let's try uploading everything to S3.
   // Put everything in a list so we can run them in parallel later.
   let listOfUploadFunctions = [];

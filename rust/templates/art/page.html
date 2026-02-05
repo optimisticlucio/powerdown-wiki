@@ -68,14 +68,14 @@
         {% if let Some(user) = user %}
             <div class="comment">
                 <img class="profile-pic" src="{{user.get_pfp_url()}}" />
-                <textarea class="text" id="commentArea" placeholder="Post a comment..."></textarea>
+                <textarea class="text" id="commentArea" placeholder="Post a comment..." autocomplete="off"></textarea>
                 <button class="post" onclick="postComment()">Post</button>
             </div>
         {% endif %}
         {% for comment in comments %}
             <div class="comment">
                 {% if let Some(posting_user) = comment.posting_user %}
-                <a href="profile-pic" href="{{posting_user.get_user_page_url()}}">
+                <a href="{{posting_user.get_user_page_url()}}">
                     <img class="profile-pic" src="{{posting_user.get_pfp_url()}}" />
                 </a>
                 <div class="text">
@@ -89,7 +89,7 @@
                         <span class="date">{{ comment.posting_time.date_naive().format("%Y-%m-%d").to_string()}}</span>
                     </div>
                     <div>
-                        {{comment.contents}}
+                        {{ comment.contents | safe }}
                     </div>
                 </div>
             </div>

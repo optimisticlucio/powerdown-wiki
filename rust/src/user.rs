@@ -26,12 +26,12 @@ pub fn router() -> Router<ServerState> {
         .route_with_tsr("/login", get(login_page))
         .nest("/oauth2", oauth::router())
         .route_with_tsr("/{user_id}", get(other_user_page).patch(patch::patch_user))
+        .route_with_tsr("/{user_id}/modify", get(patch::modify_user_page))
 }
 
 /// Returns the user page. If the user is not logged in, redirects to login page.
 pub async fn self_user_page(
     State(state): State<ServerState>,
-    OriginalUri(original_uri): OriginalUri,
     cookie_jar: Cookies,
 ) -> Result<Response, RootErrors> {
     let session_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
@@ -39,12 +39,7 @@ pub async fn self_user_page(
     match session_user {
         // If they aren't logged in, we have no user data to show em. Toss towards the login page!
         None => Ok(Redirect::to("/user/login").into_response()),
-        Some(viewed_user) => Ok(template_to_response(UserPageTemplate {
-                user: Some(viewed_user.clone()),
-                original_uri,
-
-                viewed_user,
-            }))
+        Some(viewed_user) => Ok(Redirect::to(&format!("/user/{}", viewed_user.id)).into_response())
     }
 }
 

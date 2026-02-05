@@ -57,6 +57,8 @@ struct ArtIndexPage<'a> {
 
     all_tags: Vec<String>,
 
+    show_upload_button: bool,
+
     user_search_params: &'a ArtSearchParameters,
 }
 
@@ -70,6 +72,8 @@ async fn art_index(
     const AMOUNT_OF_ART_PER_PAGE: i64 = 24;
 
     let db_connection = state.db_pool.get().await.unwrap();
+
+    let user: Option<User> = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     let random_quote = {
         let association = if query_params.is_nsfw {
@@ -111,8 +115,10 @@ async fn art_index(
     )
     .await;
 
+    let show_upload_button = user.as_ref().is_some_and(|user| user.user_type.permissions().can_post_art );
+
     Ok(template_to_response(ArtIndexPage {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        user,
         original_uri,
         user_search_params: &query_params,
 
@@ -153,6 +159,8 @@ async fn art_index(
                 ..query_params.clone()
             }))
         },
+
+        show_upload_button,
 
         all_tags: get_all_tags(state.db_pool.get().await.unwrap()).await,
 

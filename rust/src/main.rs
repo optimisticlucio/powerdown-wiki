@@ -1,4 +1,4 @@
-use powerdown_wiki::{ServerState, initiate_scheduled_tasks};
+use powerdown_wiki::{ServerState, initiate_scheduled_tasks, handle_shutdown_signal};
 use std::net::SocketAddr;
 
 #[tokio::main]
@@ -9,12 +9,13 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
-    initiate_scheduled_tasks(state);
+    initiate_scheduled_tasks(state.clone());
 
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(handle_shutdown_signal(state))
     .await
     .unwrap();
 }

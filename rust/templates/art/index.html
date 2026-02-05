@@ -51,7 +51,7 @@
         {% endfor -%}
     </div>
 
-    {% if user.is_some() %}
+    {% if show_upload_button %}
     <a href="/art/new">Upload new art!</a>
     {% endif %}
 </div>

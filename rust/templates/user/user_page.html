@@ -9,5 +9,11 @@
     <img class="profile-pic" src="{{viewed_user.get_pfp_url()}}" />
 
     <p>This is the page for the user: {{viewed_user.display_name}}. Their DB ID is {{viewed_user.id}}.</p>
+
+    {% if let Some(logged_in_user) = user %}
+        {% if viewed_user.can_have_visible_data_modified_by(logged_in_user) %}
+        <a href="{{ original_uri.path() }}/modify">Go here to modify this user's data</a>
+        {% endif %}
+    {% endif %}
 </div>
 {% endblock %}

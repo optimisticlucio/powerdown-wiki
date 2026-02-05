@@ -1,9 +1,6 @@
 use super::structs;
 use crate::{
-    errs::RootErrors,
-    user::{User, UsermadePost},
-    utils::template_to_response,
-    ServerState,
+    ServerState, art::structs::Comment, errs::RootErrors, user::{User, UsermadePost}, utils::template_to_response
 };
 use askama::Template;
 use axum::{
@@ -69,6 +66,16 @@ pub async fn art_page(
         let markdownified_description = requested_art.description
             .map(|f| markdown_to_html(&f, &comrak::Options::default()));
 
+        let comments_with_sanitized_contents = requested_art.comments
+            .into_iter().map(|comment| {
+                // TODO: SANITIZE!!
+                Comment {
+                    contents: markdown_to_html(&comment.contents, &comrak::Options::default()),
+                    ..comment
+                }
+            })
+            .collect();
+
         Ok(template_to_response(ArtPage {
             user,
             original_uri,
@@ -83,7 +90,7 @@ pub async fn art_page(
             tags: requested_art.tags,
             description: markdownified_description,
 
-            comments: requested_art.comments,
+            comments: comments_with_sanitized_contents,
 
             older_art_url,
             newer_art_url,

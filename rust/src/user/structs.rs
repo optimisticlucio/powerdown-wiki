@@ -221,7 +221,7 @@ impl User {
     }
 
     /// Returns whether a given user can modify this user's visible data. (Pfp, nickname, etc)
-    pub fn can_modify_visible_data(&self, other: &Self) -> bool {
+    pub fn can_have_visible_data_modified_by(&self, other: &Self) -> bool {
         self == other || other.user_type.permissions().can_modify_users
     }
 }

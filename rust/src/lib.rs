@@ -25,10 +25,12 @@ mod test_data;
 mod user;
 mod utils;
 mod scheduled_tasks;
+mod graceful_shutdown;
 
 pub use errs::RootErrors;
 pub use server_state::ServerState;
 pub use scheduled_tasks::initiate_scheduled_tasks;
+pub use graceful_shutdown::handle_shutdown_signal;
 
 use crate::user::User;
 

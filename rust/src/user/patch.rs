@@ -4,12 +4,14 @@
 
 use crate::utils::file_compression::LossyCompressionSettings;
 use crate::{RootErrors, ServerState, User, utils};
-use crate::utils::{MoveTempS3FileErrs, PostingSteps, get_temp_s3_presigned_urls, PresignedUrlsResponse};
+use crate::utils::{MoveTempS3FileErrs, PostingSteps, PresignedUrlsResponse, get_temp_s3_presigned_urls, template_to_response};
 use super::structs::UserType;
+use askama::Template;
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
 use serde::Deserialize;
+use http::Uri;
 
 const PROFILE_PICTURE_COMPRESSION_SETTINGS: LossyCompressionSettings = LossyCompressionSettings {
     max_height: Some(150),
@@ -54,7 +56,7 @@ pub async fn patch_user(
         }
     };
 
-    if !modified_user.can_modify_visible_data(&requesting_user) {
+    if !modified_user.can_have_visible_data_modified_by(&requesting_user) {
         return Err(RootErrors::Forbidden);
     }
 
@@ -62,10 +64,24 @@ pub async fn patch_user(
 
     match posting_step {
         PostingSteps::RequestPresignedURLs { file_amount} => {
-            todo!()
+            let presigned_urls = get_temp_s3_presigned_urls(
+                &state,
+                file_amount as u32,
+                "user")
+                .await
+                .map_err(|err| {
+                    eprintln!("[MODIFY USER INFO] Failed getting {} s3 urls! {}", file_amount, err);
+                    RootErrors::InternalServerError
+                })?;
+            
+            Ok(
+                serde_json::to_string(
+                    &PresignedUrlsResponse{
+                        presigned_urls
+                    }
+                ).unwrap().into_response())
         }
         PostingSteps::UploadMetadata(modified_user_info) => {
-
             // Let's build an update query.
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
@@ -95,11 +111,17 @@ pub async fn patch_user(
             let new_pfp_key: String;
             if let Some(passed_pfp_key) = &modified_user_info.pfp_temp_key {
                 let target_file_key = format!("user/{}/profile_picture", &modified_user.id);
+                let cleaned_pfp_key = match utils::clean_passed_key(passed_pfp_key, &state) {
+                    Some(clean_key) => clean_key,
+                    None => {
+                        return Err(RootErrors::BadRequest("Passed invalid pfp key.".to_string()));
+                    }
+                };
 
                 new_pfp_key = utils::move_and_lossily_compress_temp_s3_img(
                         &state.s3_client,
                         &state.config,
-                        passed_pfp_key,
+                        &cleaned_pfp_key,
                         &state.config.s3_public_bucket,
                         &target_file_key,
                         Some(PROFILE_PICTURE_COMPRESSION_SETTINGS)).await
@@ -131,7 +153,7 @@ pub async fn patch_user(
             }
 
             let sanitized_creator_name: String;
-            if let Some(creator_name) = &modified_user_info.display_name {
+            if let Some(creator_name) = &modified_user_info.creator_name {
                 // You can't modify your own creator name. Too easy to fuck shit up like that.
                 if modified_user == requesting_user {
                     return Err(RootErrors::Forbidden);
@@ -190,7 +212,7 @@ pub async fn patch_user(
 /// The info I expect to recieve from the end-user about what should be modified for this given user.
 /// Making this one a separate struct bc I don't want to give any user the full info about another user,
 /// unlike Art and Characters where they just send back the whole thing and I see what needs to be modified.
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ModifiableUserInfo {
     /// New display name
     #[serde(default)]
@@ -224,7 +246,7 @@ fn sanitize_display_name(display_name: &str) -> Option<String> {
         .join(" ");
 
     // Ensure it's not too long
-    if collapsed_display_name.len() > 24 {
+    if collapsed_display_name.len() > 36 {
         return None;
     }
 
@@ -241,4 +263,63 @@ fn sanitize_display_name(display_name: &str) -> Option<String> {
     }
 
     Some(collapsed_display_name.to_string())
+}
+
+#[axum::debug_handler]
+pub async fn modify_user_page(
+    Path(user_id): Path<String>,
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
+    let db_connection = state.db_pool.get().await.unwrap();
+
+    // Who's trying to do this?
+    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        Some(requesting_user) => requesting_user,
+        None => {
+            return Err(RootErrors::Unauthorized);
+        }
+    };
+
+    // Who are they trying to modify?
+    let user_id = match user_id.parse() {
+        Err(_) => {
+            // If the parse failed, it's 100% a nonexistent user ID. Shoot back 404.
+            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)))
+        }
+        Ok(id) => id
+    };
+
+    let modified_user = match User::get_by_id(&db_connection, &user_id).await {
+        Some(user) => user,
+        None => {
+            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)));
+        }
+    };
+
+    if !modified_user.can_have_visible_data_modified_by(&requesting_user) {
+        return Err(RootErrors::Forbidden);
+    }
+
+    Ok(template_to_response(
+        ModifyUserPage {
+            user: Some(requesting_user.clone()),
+            original_uri,
+
+            modifying_user: requesting_user,
+
+            viewed_user: modified_user
+        }
+    ))
+}
+
+#[derive(Debug, Template)]
+#[template(path = "user/modify.html")]
+struct ModifyUserPage {
+    user: Option<User>,
+    original_uri: Uri,
+
+    viewed_user: User,
+    modifying_user: User,
 }

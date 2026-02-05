@@ -12,6 +12,7 @@ mod sql_backup;
 mod lib;
 
 pub use lib::get_current_human_readable_time;
+pub use sql_backup::run_backup_processes;
 
 /// Sets up all the periodic tasks that the server needs to do, so they'll run at the appropriate times.
 pub fn initiate_scheduled_tasks(state: ServerState) {
