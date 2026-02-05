@@ -39,6 +39,7 @@ pub struct User {
 
 #[derive(FromSql, ToSql, Debug, Clone, Deserialize, PartialEq)]
 #[postgres(name = "user_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]  // Add this line
 pub enum UserType {
     /// The default user type someone gets when they first sign up.
     Normal, 
