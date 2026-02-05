@@ -10,7 +10,7 @@ use std::env;
 use tower_cookies::cookie;
 use tower_cookies::{cookie::SameSite, Cookie, Cookies};
 
-use crate::{RootErrors, ServerState, utils};
+use crate::{RootErrors, ServerState};
 
 /// Relative links to various default profile pictures users may have.
 const USER_DEFAULT_PFPS: [&str; 9] = [
@@ -195,6 +195,31 @@ impl User {
         }
     }
 
+    /// Returns a URL pointing towards this user's user page.
+    pub fn get_user_page_url(&self) -> String {
+        format!("{}/user/{}",
+            std::env::var("WEBSITE_URL").unwrap(),
+            self.id
+            )
+    }
+
+    // Returns whether another user can modify this user's type.
+    pub fn can_have_user_type_modified_by(&self, other: &Self) -> bool {
+        // Can't change your own permissions.
+        if self == other {
+            return false;
+        }
+
+        match self.user_type {
+            // Can't demote superadmins without DB access
+            UserType::Superadmin => false,
+            // Only those who can promote someone else to admin can modify the perms of other admins.
+            UserType::Admin => other.user_type.permissions().can_promote_to_admin,
+
+            _ => other.user_type.permissions().can_modify_users
+        }
+    }
+
     /// Returns whether a given user can modify this user's visible data. (Pfp, nickname, etc)
     pub fn can_modify_visible_data(&self, other: &Self) -> bool {
         self == other || other.user_type.permissions().can_modify_users
@@ -248,6 +273,12 @@ impl UserType {
                 can_modify_others_content: true,
             },
         }
+    }
+}
+
+impl std::fmt::Display for UserType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 

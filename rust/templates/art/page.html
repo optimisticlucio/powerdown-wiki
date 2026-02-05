@@ -75,7 +75,9 @@
         {% for comment in comments %}
             <div class="comment">
                 {% if let Some(posting_user) = comment.posting_user %}
-                <img class="profile-pic" src="{{posting_user.get_pfp_url()}}" />
+                <a href="profile-pic" href="{{posting_user.get_user_page_url()}}">
+                    <img class="profile-pic" src="{{posting_user.get_pfp_url()}}" />
+                </a>
                 <div class="text">
                     <div class="titles">
                         <b>{{posting_user.display_name}}</b>

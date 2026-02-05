@@ -1,0 +1,43 @@
+{% extends "base-template.html" %}
+
+{% block title %}Modify - {{viewed_user.display_name}}{% endblock %}
+
+{% block customhead %}<script src="/static/js/modify-user.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <h1>MODIFY USER PAGE</h1>
+
+    <img class="profile-pic" src="{{viewed_user.get_pfp_url()}}" />
+
+    <p>You are currently changing the info of user: {{viewed_user.display_name}}. Their DB ID is {{viewed_user.id}}.</p>
+
+    <hr />
+
+    <label for="userDisplayName">
+        Display Name: 
+        <input type="text" id="userDisplayName" placeholder="{{ viewed_user.display_name }}"/>
+    </label>
+
+    <br />
+
+    <label for="userProfilePicture">
+        Profile Picture:
+        <input type="file" id="userProfilePicture" accept="image/*">
+    </label>
+
+    {% if viewed_user.can_have_user_type_modified_by(modifying_user) %}
+        <label for="userType">
+            Modify User Type from {{ viewed_user.user_type }}:
+            <select>
+                <option value="">Do Not Modify</option>
+                <option value="user">Standard User</option>
+                <option value="uploader">Uploader</option>
+                {% if modifying_user.user_type.permissions().can_promote_to_admin %}
+                <option value="admin">Admin</option>
+                {% endif %}
+            </select>
+        </label>
+    {% endif %}
+</div>
+{% endblock %}

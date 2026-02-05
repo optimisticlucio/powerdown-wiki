@@ -1,19 +1,13 @@
 {% extends "base-template.html" %}
 
-{% block title %}User{% endblock %}
+{% block title %}{{viewed_user.display_name}}{% endblock %}
 
 {% block content %}
 <div class="wrapper">
-    {% if let Some(user) = viewed_user %}
     <h1>USER PAGE</h1>
 
-    <img class="profile-pic" src="{{user.get_pfp_url()}}" />
+    <img class="profile-pic" src="{{viewed_user.get_pfp_url()}}" />
 
-    <p>This is the page for the user: {{user.display_name}}. Their DB ID is {{user.id}}.</p>
-    {% else %}
-    <h1>User does not exist!</h1>
-        
-        <p>If you got here, you were likely trying to see some user's account. Well - they don't exist. Sorry pal.</p>
-    {% endif %}
+    <p>This is the page for the user: {{viewed_user.display_name}}. Their DB ID is {{viewed_user.id}}.</p>
 </div>
 {% endblock %}

@@ -36,17 +36,16 @@ pub async fn self_user_page(
 ) -> Result<Response, RootErrors> {
     let session_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
 
-    // If they aren't logged in, we have no user data to show em. Toss towards the login page!
-    if session_user.is_none() {
-        return Ok(Redirect::to("/user/login").into_response());
+    match session_user {
+        // If they aren't logged in, we have no user data to show em. Toss towards the login page!
+        None => Ok(Redirect::to("/user/login").into_response()),
+        Some(viewed_user) => Ok(template_to_response(UserPageTemplate {
+                user: Some(viewed_user.clone()),
+                original_uri,
+
+                viewed_user,
+            }))
     }
-
-    Ok(template_to_response(UserPageTemplate {
-        user: session_user.clone(),
-        original_uri,
-
-        viewed_user: session_user,
-    }))
 }
 
 #[derive(Debug, Template)]
@@ -55,7 +54,7 @@ struct UserPageTemplate {
     user: Option<User>,
     original_uri: Uri,
 
-    viewed_user: Option<User>,
+    viewed_user: User,
 }
 
 /// Shows you the info on a given user
@@ -81,13 +80,16 @@ pub async fn other_user_page(
             &db_connection, 
             &parsed_user_id
         ).await;
+    
+    match viewed_user {
+        Some(viewed_user) => Ok(template_to_response(UserPageTemplate {
+                user,
+                original_uri,
 
-    Ok(template_to_response(UserPageTemplate {
-        user,
-        original_uri,
-
-        viewed_user,
-    }))
+                viewed_user,
+            })),
+        None => Err(RootErrors::NotFound(original_uri, cookie_jar, user))
+    }
 }
 
 /// Returns page allowing user to login/create an account/connect an existing account using oauth methods.
