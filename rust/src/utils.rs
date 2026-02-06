@@ -101,6 +101,86 @@ pub async fn move_temp_s3_file(
     target_bucket_name: &str,
     target_file_key: &str,
 ) -> Result<String, MoveTempS3FileErrs> {
+    fn losslessly_convert_based_on_filetype(original_file_bytes: Vec<u8>, mime_type: &str, mime_media_type: &str) -> Option<Vec<u8>> {
+        match mime_media_type {
+            "image" if mime_type == "image/svg+xml" => Some(original_file_bytes), // God SVGs are a fuckin' headache.
+            "image" => Some(file_compression::compress_image_lossless(
+                                            original_file_bytes.to_vec(),
+                                            mime_type
+                                        )
+                                        .unwrap_or(original_file_bytes)), // If can't compress it, just send back the original untouched.
+            "video" => Some(original_file_bytes), // Video compression takes ages, I'm not doing it on-server.
+            _ => None
+        }
+    }
+
+    move_and_convert_temp_file(
+        s3_client,
+        server_config,
+        temp_file_key,
+        target_bucket_name,
+        target_file_key,
+        losslessly_convert_based_on_filetype,
+        "MOVE TEMP S3 FILE").await
+}
+
+/// Given an image on the public bucket, attempts to compress it and move it to the target bucket under the target key. 
+/// Returns the key that it was uploaded to (with the file extension).
+/// If passed something that isn't an image, returns UnknownFiletype.
+pub async fn move_and_lossily_compress_temp_s3_img(
+    s3_client: &aws_sdk_s3::Client,
+    server_config: &crate::server_state::config::Config,
+    temp_file_key: &str,
+    target_bucket_name: &str,
+    target_file_key: &str,
+    compression_settings: Option<file_compression::LossyCompressionSettings>,
+) -> Result<String, MoveTempS3FileErrs> {
+
+    fn lossily_compress_img(
+        original_file_bytes: Vec<u8>,
+        mime_type: &str,
+        mime_media_type: &str,
+        compression_settings: Option<file_compression::LossyCompressionSettings>)
+        -> Option<Vec<u8>> {
+        // If it's not an image, SHOOT THAT SHIT BACK.
+        if mime_media_type != "image" {
+            return None;
+        }
+
+        // If it's an SVG just skip this whole thing, it's as compressed as it'll get.
+        if mime_type == "image/svg+xml" {
+            return Some(original_file_bytes);
+        }
+
+        // Now it's gotta be an image. COMPRESS IT.
+        file_compression::compress_image_lossy(
+                original_file_bytes,
+            mime_type,
+            compression_settings).ok()
+    }
+
+    move_and_convert_temp_file(
+        s3_client,
+        server_config,
+        temp_file_key,
+        target_bucket_name,
+        target_file_key,
+        move |x, y, z| lossily_compress_img(x, y, z, compression_settings),
+        "COMPRESS TEMP S3 IMG").await
+}
+
+/// Helper function which downloads a temp file from the public bucket, runs a function on it, and moves it to a chosen final location in any bucket. 
+async fn move_and_convert_temp_file<F>(
+    s3_client: &aws_sdk_s3::Client,
+    server_config: &crate::server_state::config::Config,
+    temp_file_key: &str,
+    target_bucket_name: &str,
+    target_file_key: &str,
+    file_conversion_operation: F,
+    function_name_for_debug_logging: &str,
+) -> Result<String, MoveTempS3FileErrs>
+where F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>
+{
     // Download file from S3
     let downloaded_file = s3_client.get_object()
         .bucket(&server_config.s3_public_bucket)
@@ -108,13 +188,13 @@ pub async fn move_temp_s3_file(
         .send()
         .await
         .map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {:?}", err);
+            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {:?}", err);
             MoveTempS3FileErrs::DownloadFailed
         })?;
 
     let original_file_bytes = downloaded_file.body
         .collect().await.map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
+            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
             MoveTempS3FileErrs::ConversionFailed
         })?
         .into_bytes().to_vec();
@@ -135,7 +215,7 @@ pub async fn move_temp_s3_file(
         })
         .ok_or_else(|| {
             eprintln!(
-                "[MOVE TEMP S3 FILE] File key {} has an unknown filetype.", 
+                "[{function_name_for_debug_logging}] File key {} has an unknown filetype.", 
                 temp_file_key
             );
             MoveTempS3FileErrs::UnknownFiletype
@@ -155,18 +235,13 @@ pub async fn move_temp_s3_file(
             .unwrap_or(&"bin")
     };
 
-    println!("[DEBUG] {mime_type} {mime_type_extension}");
-
-    // Now compress the file depending on its filetype.
-    let converted_file = match mime_media_type {
-        "image" if mime_type == "image/svg+xml" => original_file_bytes, // God SVGs are a fuckin' headache.
-        "image" => file_compression::compress_image_lossless(
-                                        original_file_bytes.to_vec(),
-                                        mime_type
-                                    )
-                                    .unwrap_or(original_file_bytes), // If can't compress it, just send back the original untouched.
-        "video" => original_file_bytes, // Video compression takes ages, I'm not doing it on-server.
-        _ => return Err(MoveTempS3FileErrs::UnknownFiletype) // Not necessarily unknown, in this case it's unhandled.
+    // Now run the relevant operation on the file.
+    let converted_file = match file_conversion_operation(original_file_bytes, &mime_type, &mime_media_type) {
+        Some(x) => x,
+        None => {
+            // If the inner function passed none, it's assumed it failed somehow.
+            return Err(MoveTempS3FileErrs::ConversionFailed);
+        }
     };
 
     // As far as I know, this is only referenced when the browser decides whether to display or download a file.
@@ -195,86 +270,7 @@ pub async fn move_temp_s3_file(
         .send()
         .await
         .map_err(|err| {
-            eprintln!("[MOVE TEMP S3 FILE] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {:?}", err);
-            MoveTempS3FileErrs::UploadFailed
-        })?;
-
-    Ok(target_key_with_filename)
-}
-
-/// Given an image on the public bucket, attempts to compress it and move it to the target bucket under the target key. 
-/// Returns the key that it was uploaded to (with the file extension).
-/// If passed something that isn't an image, returns UnknownFiletype.
-pub async fn move_and_lossily_compress_temp_s3_img(
-    s3_client: &aws_sdk_s3::Client,
-    server_config: &crate::server_state::config::Config,
-    temp_file_key: &str,
-    target_bucket_name: &str,
-    target_file_key: &str,
-    compression_settings: Option<file_compression::LossyCompressionSettings>,
-) -> Result<String, MoveTempS3FileErrs> {
-    // Download file from S3
-    let downloaded_file = s3_client.get_object()
-        .bucket(&server_config.s3_public_bucket)
-        .key(temp_file_key)
-        .send()
-        .await
-        .map_err(|err| {
-            eprintln!("[COMPRESS TEMP S3 IMG] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {:?}", err);
-            MoveTempS3FileErrs::DownloadFailed
-        })?;
-
-    let original_file_bytes = downloaded_file.body
-        .collect().await.map_err(|err| {
-            eprintln!("[COMPRESS TEMP S3 IMG] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
-            MoveTempS3FileErrs::ConversionFailed
-        })?
-        .into_bytes().to_vec();
-
-    // Now let's find out what kind of file this is, and compress it appropriately.
-    let file_type = if let Some(file_type) = infer::get(&original_file_bytes) {
-        file_type
-    } else {
-        eprintln!("[COMPRESS TEMP S3 IMG] File key {} has an unknown filetype.", temp_file_key);
-        return Err(MoveTempS3FileErrs::UnknownFiletype);
-    };
-
-    // If it's not an image, SHOOT THAT SHIT BACK.
-    if file_type.matcher_type() !=  infer::MatcherType::Image {
-        return Err(MoveTempS3FileErrs::UnknownFiletype);
-    }
-
-    // Now it's gotta be an image. COMPRESS IT.
-    let converted_file = file_compression::compress_image_lossy(
-                    original_file_bytes.to_vec(),
-                file_type,
-                compression_settings)
-                .map_err(|err| {
-                    eprintln!("[COMPRESS TEMP S3 IMG] Failed to compress file {}: {:?}", temp_file_key, err);
-                    MoveTempS3FileErrs::ConversionFailed
-                })?;
-
-    // Let's get the new filetype. It's probably webp, but making sure incase I change this later.
-    let file_type = infer::get(&converted_file).unwrap();
-
-    // As far as I know, this is only referenced when the browser decides whether to display or download a file.
-    // Inline displays in-browser, attach downloads it.
-    let file_content_disposition = "inline";
-
-    let target_key_with_filename = format!("{}.{}",
-        target_file_key.split(".").next().unwrap(), // Remove a passed extension.
-        file_type.extension());
-
-    s3_client.put_object()
-        .bucket(target_bucket_name)
-        .key(&target_key_with_filename)
-        .body(converted_file.into())
-        .content_type(file_type.mime_type())
-        .content_disposition(file_content_disposition) 
-        .send()
-        .await
-        .map_err(|err| {
-            eprintln!("[COMPRESS TEMP S3 IMG] Failed to move temp img {temp_file_key} to target {target_file_key} due to an error during upload: {:?}", err);
+            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {:?}", err);
             MoveTempS3FileErrs::UploadFailed
         })?;
 

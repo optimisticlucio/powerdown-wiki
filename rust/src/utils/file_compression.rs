@@ -104,14 +104,14 @@ impl Default for LossyCompressionSettings {
 
 pub fn compress_image_lossy(
     image_bytes: Vec<u8>,
-    format: infer::Type,
+    mime_type: &str,
     settings: Option<LossyCompressionSettings>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Use default settings if none provided
     let settings = settings.unwrap_or_default();
 
     // Convert the infer type to ImageReader's format
-    let format = ImageFormat::from_extension(format.extension()).unwrap();
+    let format = ImageFormat::from_mime_type(mime_type).unwrap();
 
     // Load the image
     let mut reader = ImageReader::new(Cursor::new(&image_bytes));
