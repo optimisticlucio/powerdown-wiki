@@ -120,30 +120,61 @@ pub async fn move_temp_s3_file(
         .into_bytes().to_vec();
 
     // Now let's find out what kind of file this is, and compress it appropriately.
-    let file_type = if let Some(file_type) = infer::get(&original_file_bytes) {
-        file_type
-    } else {
-        eprintln!("[MOVE TEMP S3 FILE] File key {} has an unknown filetype.", temp_file_key);
-        return Err(MoveTempS3FileErrs::UnknownFiletype);
+    // TODO: This section is string-dependent. It works for now, 
+    // but there's gotta be some crate with a MIME type that can make this less error-prone. Rewrite later!
+    let mut mime_type = infer::get(&original_file_bytes)
+        .map(|file_type| file_type.mime_type())
+        .or_else(|| {
+            let detected = tree_magic_mini::from_u8(&original_file_bytes);
+            if detected == "application/octet-stream" {
+                // If we get octet stream it means tree_magic has no idea.
+                None
+            } else {
+                Some(detected)
+            }
+        })
+        .ok_or_else(|| {
+            eprintln!(
+                "[MOVE TEMP S3 FILE] File key {} has an unknown filetype.", 
+                temp_file_key
+            );
+            MoveTempS3FileErrs::UnknownFiletype
+        })?;
+
+    // For some reason, svgs isn't detected properly. This is an attempt to fix that.
+    if mime_type == "text/plain" && is_an_svg(&original_file_bytes) {
+        mime_type = "image/svg+xml";
+    }
+
+    let mime_media_type = mime_type.split("/").next().unwrap();
+    let mime_type_extension = match mime_type {
+        // Handle cases where mime_guess returns a weird file extension.
+        "text/plain" => "txt",
+        _ => mime_guess::get_mime_extensions_str(mime_type)
+            .and_then(|exts| exts.get(0))
+            .unwrap_or(&"bin")
     };
 
+    println!("[DEBUG] {mime_type} {mime_type_extension}");
+
     // Now compress the file depending on its filetype.
-    let converted_file = match file_type.matcher_type() {
-        infer::MatcherType::Image => file_compression::compress_image_lossless(
+    let converted_file = match mime_media_type {
+        "image" if mime_type == "image/svg+xml" => original_file_bytes, // God SVGs are a fuckin' headache.
+        "image" => file_compression::compress_image_lossless(
                                         original_file_bytes.to_vec(),
-                                        file_type
+                                        mime_type
                                     )
                                     .unwrap_or(original_file_bytes), // If can't compress it, just send back the original untouched.
-        infer::MatcherType::Video => original_file_bytes, // Video compression takes ages, I'm not doing it on-server.
+        "video" => original_file_bytes, // Video compression takes ages, I'm not doing it on-server.
         _ => return Err(MoveTempS3FileErrs::UnknownFiletype) // Not necessarily unknown, in this case it's unhandled.
     };
 
     // As far as I know, this is only referenced when the browser decides whether to display or download a file.
     // Inline displays in-browser, attach downloads it.
-    let file_content_disposition = match file_type.matcher_type() {
-        infer::MatcherType::Image |
-        infer::MatcherType::Video |
-        infer::MatcherType::Audio => {
+    let file_content_disposition = match mime_media_type {
+        "image" |
+        "video" |
+        "audio" => {
             "inline"
         }
         _ => {
@@ -153,13 +184,13 @@ pub async fn move_temp_s3_file(
 
     let target_key_with_filename = format!("{}.{}",
         target_file_key.split(".").next().unwrap(), // Remove a passed extension.
-        file_type.extension());
+        mime_type_extension);
 
     s3_client.put_object()
         .bucket(target_bucket_name)
         .key(&target_key_with_filename)
         .body(converted_file.into())
-        .content_type(file_type.mime_type())
+        .content_type(mime_type)
         .content_disposition(file_content_disposition) 
         .send()
         .await
@@ -399,4 +430,18 @@ pub async fn delete_keys_from_s3(s3_client: &aws_sdk_s3::Client, bucket_to_delet
         .map_err(|err| format!("{:?}",err))?;
 
     Ok(())
+}
+
+/// Given a file, returns whether I think its an SVG. For some reason, this is a headache to do.
+fn is_an_svg(file: &Vec<u8>) -> bool {
+    if let Ok(content) = std::str::from_utf8(&file) {
+        let content_lower = content.to_lowercase();
+        let trimmed = content_lower.trim_start();
+        
+        // SVG files typically start with <?xml or <svg, and contain svg namespace
+        (trimmed.starts_with("<?xml") || trimmed.starts_with("<svg") || trimmed.starts_with("<!doctype svg"))
+            && content_lower.contains("<svg")
+    } else {
+        false
+    }
 }

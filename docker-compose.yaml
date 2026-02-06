@@ -3,6 +3,7 @@ services:
     build: rust/.
     tty: true
     stdin_open: true
+    restart: unless-stopped
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_DATABASE=powerdown_db
@@ -26,6 +27,11 @@ services:
       - S3_URL
     ports:
       - 8080:8080
+    depends_on:
+      postgres:
+        condition: service_started
+      localstack:
+        condition: service_started
 
   postgres:
     image: postgres:16
@@ -43,6 +49,7 @@ services:
       - /var/lib/postgresql/data
     
   localstack:
+    profiles: [development]
     container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
     image: localstack/localstack
     ports:

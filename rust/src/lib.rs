@@ -27,11 +27,13 @@ mod utils;
 mod scheduled_tasks;
 mod graceful_shutdown;
 mod admin;
+mod refinery_migrations;
 
 pub use errs::RootErrors;
 pub use server_state::ServerState;
 pub use scheduled_tasks::initiate_scheduled_tasks;
 pub use graceful_shutdown::handle_shutdown_signal;
+pub use refinery_migrations::run_migrations;
 
 use crate::user::User;
 

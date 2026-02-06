@@ -3,12 +3,13 @@ use image::codecs::webp::WebPEncoder;
 use image::{DynamicImage, ImageEncoder, ImageFormat, ImageReader};
 use std::io::Cursor;
 
+/// Given an image and its mime type, compresses it as much as losslessly possible.
 pub fn compress_image_lossless(
     image_bytes: Vec<u8>,
-    format: infer::Type
+    mime_type: &str
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Convert the infer type to ImageReader's.
-    let format = ImageFormat::from_extension(format.extension()).unwrap();
+    let format = ImageFormat::from_mime_type(mime_type).unwrap();
 
     // Load the image
     let mut reader = ImageReader::new(Cursor::new(&image_bytes));

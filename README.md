@@ -38,6 +38,8 @@ Each variable will have its default value listed in parantheses.
 #### General
 
 - `DEBUG`: If this is set to *anything*, it triggers debug mode. Currently, it only adds a giant banner on the site saying "THIS IS A TEST SITE". Obviously this should be unset in production.
+- `COMPOSE_PROFILES`: Not one I made, it's from docker; if set to `development`, it'll start up the localstack image for local development. If unset or set to anything else, you only get the rust and postgres images.
+- `DISABLE_MIGRATIONS`: If set to anything, SQL migrations are not run when the server starts up. By default, migrations are checked on every startup. Frankly I'm not sure why you'd wanna do this, but ais suggested to have this.
 
 #### Bucket Names
 
