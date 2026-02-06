@@ -71,7 +71,7 @@ pub struct InfoboxRow {
 
 impl BaseCharacter {
     /// Gets BaseCharacter for all characters in the database.
-    pub async fn get_all_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
+    pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query("SELECT * FROM character ORDER BY short_name", &[])
@@ -82,7 +82,7 @@ impl BaseCharacter {
     }
 
     /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
-    pub async fn get_birthday_characters(db_connection: Object<Manager>) -> Vec<BaseCharacter> {
+    pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
             "SELECT * FROM character WHERE EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",

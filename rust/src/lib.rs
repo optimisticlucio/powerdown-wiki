@@ -26,6 +26,7 @@ mod user;
 mod utils;
 mod scheduled_tasks;
 mod graceful_shutdown;
+mod admin;
 
 pub use errs::RootErrors;
 pub use server_state::ServerState;
@@ -47,6 +48,8 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/stories", stories::router())
         .nest("/user", user::router())
         .nest("/misc", misc::router())
+        .nest("/admin", admin::router())
+
         .fallback(fallback)
         .with_state(state)
         .layer(

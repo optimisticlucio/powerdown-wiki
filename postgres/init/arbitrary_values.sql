@@ -9,3 +9,9 @@ CREATE TRIGGER arbitrary_value_last_modified
 BEFORE UPDATE ON arbitrary_value
 FOR EACH ROW
 EXECUTE FUNCTION update_last_modified_date();
+
+INSERT INTO arbitrary_value (
+    item_key, item_value
+) VALUES (
+    'discord_invite_url', ''
+);

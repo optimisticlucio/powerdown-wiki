@@ -43,8 +43,14 @@ async fn character_index(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
+
     let all_characters =
-        BaseCharacter::get_all_characters(state.db_pool.get().await.unwrap()).await;
+        BaseCharacter::get_all_characters(&db_connection).await;
 
     let mut active_characters: Vec<BaseCharacter> = all_characters
         .clone()
@@ -63,7 +69,7 @@ async fn character_index(
     let date_today_readable = utils::format_date_to_human_readable(current_time);
 
     let birthday_characters: Vec<BaseCharacter> =
-        BaseCharacter::get_birthday_characters(state.db_pool.get().await.unwrap()).await;
+        BaseCharacter::get_birthday_characters(&db_connection).await;
     let birthday_character_names = {
         let only_names: Vec<&str> = birthday_characters
             .iter()

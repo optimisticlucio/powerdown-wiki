@@ -7,12 +7,14 @@ use axum::{
     routing::get,
     Router,
 };
+use axum_extra::routing::RouterExt;
 use http::Uri;
 use lazy_static::lazy_static;
 use rand::seq::IndexedRandom;
 
 pub fn router() -> Router<ServerState> {
     Router::new().route("/", get(homepage))
+        .route_with_tsr("/onboarding", get(onboarding))
 }
 
 #[derive(Debug)]
@@ -54,6 +56,7 @@ struct FrontpageTemplate<'a> {
     random_ad: &'a str,
     birthday_characters: Vec<characters::BaseCharacter>,
     today_date: &'a str,
+    discord_link: Option<String>,
 }
 
 async fn homepage(
@@ -61,26 +64,31 @@ async fn homepage(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
-    let random_subtitle = {
-        let statement =
-            "SELECT *  FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;";
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
 
-        match state.db_pool.get().await {
-            // TODO: Turn this unwrap into something that handles error better.
-            Ok(db_connection) =>
-                db_connection.query(statement, &[]).await.unwrap()
-                    .get(0).unwrap()
-                    .get(0),
-            _ => "Designed so well, that you're already seeing error texts on the home page. Message Lucio, something broke.".to_owned() // "Oh shit it broke" text that won't seem too odd for a random user.
-        }
+    let random_subtitle: String = {
+        let statement =
+            "SELECT * FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;";
+
+        db_connection.query(statement, &[]).await.unwrap()
+            .get(0).unwrap()
+            .get(0)
     };
 
+    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
     let birthday_characters =
-        characters::BaseCharacter::get_birthday_characters(state.db_pool.get().await.unwrap())
+        characters::BaseCharacter::get_birthday_characters(&db_connection)
             .await;
+    
+    let discord_link = utils::arbitrary_values::get_discord_link(&db_connection).await;
 
     Ok(utils::template_to_response(FrontpageTemplate {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        user,
         original_uri,
 
         buttons: &FRONTPAGE_ITEMS,
@@ -90,5 +98,43 @@ async fn homepage(
             .unwrap(),
         birthday_characters,
         today_date: &utils::format_date_to_human_readable(chrono::Local::now().into()),
+
+        discord_link
     }))
+}
+
+
+#[derive(Debug, Template)]
+#[template(path = "onboarding.html")]
+struct Onboarding {
+    user: Option<User>,
+    original_uri: Uri,
+
+    discord_link: Option<String>,
+}
+
+
+async fn onboarding(
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+) -> Result<Response, RootErrors> {
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
+
+    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+    let discord_link = utils::arbitrary_values::get_discord_link(&db_connection).await;
+
+    Ok(utils::template_to_response(
+        Onboarding {
+            user,
+            original_uri,
+
+            discord_link
+        }
+    ))
 }

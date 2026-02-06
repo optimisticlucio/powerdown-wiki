@@ -56,3 +56,9 @@ You should assume, whenever possible, that these keys aren't assigned. They're c
 - `USER_SESSION_ID`: The session ID of the user currently logged in; self-explanatory. This cookie should be set to expire before the server's expiration date for the same session hits, purely for convenience.
 
 - `NSFW_WARNING_SHOWN`: This cookie is set if the user has been shown the NSFW "are you sure you want to see this" warning and said "yes, I do." It should have an expiry date of about a day.
+
+## Arbitrary Values
+
+In the DB there's a table called `arbitrary_value`, which holds key-value pairs. Both the key and value are strings, both cannot be null. Here's the list of the keys we have, and the expected values.
+
+- `discord_invite_url`: A link which invites the user to the discord server. If the value is an empty string, the server is assumed to be on lockdown (no one can join from a public link).

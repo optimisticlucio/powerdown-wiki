@@ -1,0 +1,135 @@
+{% extends "base-template.html" %}
+
+{% block title %}Onboarding{% endblock %}
+
+{% block content %}
+<div class="wrapper onboarding">
+    <div class="bubble">
+        <div>
+            <h1>Welcome to Power Down!</h1>
+            <p>
+                Hello hello, dear prospective participant, and welcome to Power Down! If you're reading this page,
+                it means that someone already in the project has decided to show you a little taste of what we
+                have to offer, to help you better decide whether you want to participate in our little pow-wow.
+                (If you didn't have that happen to you and just randomly stumbled upon this site... uh, that sucks?)
+            </p>
+            <p>
+                To avoid having 20 people make the same sales pitch 80 times, we've made this onboarding page to
+                help explain what the project is and what it may offer you if you participate. 
+            </p>
+        </div>
+        <div class="img">
+            <img src="/static/img/pd_logo.svg">
+        </div>
+    </div>
+
+    <div class="bubble reverse">
+        <div>
+            <h1>WHO ARE YOU WHERE AM I</h1>
+            <p>
+                Welcome, one and all, to the <strong>Electi Rehabilitation Academy</strong>!
+                This is a secretive government facility located somewhere in the mountain range of Montana, USA
+                whose goal is to help <strong>Electi</strong> properly integrate into society. What are <strong>Electi</strong>? 
+                I'm so glad I asked; They're anomalous humans whose magical features can be pretty much anything - maybe they're <strong>made of rocks</strong>,
+                maybe they <strong>zap people on command</strong>, maybe they can <strong>hover off the ground</strong>, or maybe they <strong>die if exposed to the sun</strong>
+                and kinda got screwed in the genetic lottery. (<a href="/characters/twerp">That's a real character</a>, by the way.)
+            </p>
+        </div>
+        <div class="img">
+            <img src="/static/img/onboarding/onboarding-bob-transparent.png">
+            <p>
+                <b>Bob</b> is made out of Rocks
+            </p>
+        </div>
+    </div>
+    <div class="bubble reverse">
+        <div>
+            <p>
+                Whether or not this facility has the best interests of its <strong>captives</strong>- I mean <strong>students</strong>
+                in mind is up for debate, but regardless, said students have their own agendas, group affiliations,
+                and troubles to deal with on a daily basis. Someone set up an underground fight ring!
+                The entire water system is flooded by Orbeez<sup>TM</sup>!
+                There's a trading card game that lets you punch other people in the schnoz!
+                There's always something happening and never for the benefit of the people involved. 
+            </p>
+            <p>
+                This is not <em>all</em> we have to offer, of course - we have other settings, a semi-detailed history,
+                school staff, numerous factions - but this covers the basics of it. 
+            </p>
+        </div>
+        
+        <div class="img">
+            <img src="/static/img/onboarding/onboarding-kay-transparent.png">
+            <p>
+                <b>Kay</b> hovers off the ground
+            </p>
+        </div>
+    </div>
+    <div class="bubble">
+        <div>
+            <h1>Do I Get Dental?</h1>
+            <p>
+                No, but this project is a collaborative writing/RP project where you (yes, YOU) get to have pretty much
+                equal say on what happens and why as anyone else.
+            </p>
+            <p>
+                Occassionaly the "Storytellers" (mods) will organize some big event that's plotted ahead of time,
+                but absolutely nothing is stopping you from starting a new story with whoever you want,
+                whether through interactive RP or just busting out a word document and typing it out!
+            </p>
+        </div>
+        
+        <div class="img">
+            <img src="/static/img/onboarding/if-youre-so-fuckin-smart.png">
+        </div>
+    </div>
+    <div class="bubble reverse">
+        <div>
+            <h1>What Else?</h1>
+            <p>
+                Writing is not the only avenue we create with: we have art, videos, music sometimes
+                (if someone is insane enough to try it), and a goddamn website.
+                Any idea you got is a valid one as long as everyone else is up for it.
+            </p>
+
+            <p>
+                And as a final note - <em>i mean, we're pretty cool to hang with</em> 👉👈.
+                The server ends up being as much (if not somewhat more) of a friend group than a
+                writing project, so you get the fun benefits of being woken up at 2 AM to a ping
+                from someone who really needs you to hop on VC and see a funny meme. 
+            </p>
+        </div>
+        <div class="img">
+            <img src="/static/img/onboarding/friends.png">
+            <p>
+                <b>Us</b>, soon :)
+            </p>
+        </div>
+    </div>
+    <div class="bubble center">
+        <h1>Wow! I Sure Read a Lot!</h1>
+        <p>
+            You sure did! Thanks for that, by the way!
+            If any of this sounds great to you and you wanna learn more,
+            ask any questions, or even have a shot at creating an Electi
+            of your own, join our Discord server and throw a metaphorical
+            rock at the nearest Storyteller! We'll gladly accept
+            a concussion from you!
+        </p>
+        <br>
+        <p>
+            See you there!
+        </p>
+    </div>
+
+    {% if let Some(discord_link) = discord_link %}
+    <a href="{{ discord_link }}">
+        <img src="https://discord.com/api/guilds/533387376676831246/widget.png?style=banner3" style="height: 9em;" onerror="this.onerror=null; this.src='/static/img/onboarding/i-am-so-good-at-this.png';">
+    </a>
+    {% else %}
+    <div class="lockdown">
+        Sorry! The discord is currently <b>on lockdown.</b> Check here later to see if the invite link is back!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

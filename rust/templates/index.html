@@ -23,12 +23,14 @@
                 </span>
             </a>
 
-            <a class="discord" href="/">
+            {% if let Some(discord_link) = discord_link %}
+            <a class="discord" href="{{discord_link}}">
                 <img src="https://powerdown.wiki/assets/img/discord-logo.svg">
                 <span>
                     Join PD!
                 </span>
             </a>
+            {% endif %}
         </div>
     </div>
 

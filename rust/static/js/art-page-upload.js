@@ -212,8 +212,12 @@ function createImageElement(src) {
   moveBackwardButton.innerHTML = '←';
   moveBackwardButton.onclick = (event) => moveImage(localImageContainer, -1);
 
+  const deleteButton = document.createElement('button');
+  deleteButton.innerHTML = 'X';
+  deleteButton.onclick = (event) => removeImage(localImageContainer);
+
   const buttonHolder = document.createElement('div');
-  buttonHolder.append(moveBackwardButton, moveForwardButton);
+  buttonHolder.append(moveBackwardButton, deleteButton, moveForwardButton);
 
   localImageContainer.appendChild(buttonHolder);
 
@@ -304,4 +308,16 @@ function moveImage(imageDiv, indexDelta) {
 
   // Now move it in the back logic
   [filesInImageContainer[imageCurrentIndex], filesInImageContainer[imageTargetIndex]] = [filesInImageContainer[imageTargetIndex], filesInImageContainer[imageCurrentIndex]];
+}
+
+// Given an image container div, removes the image visually and in the appropriate array.
+function removeImage(imageDiv) {
+  const parentChildrenArray = imageDiv.parentElement.children;
+  const imageCurrentIndex = Array.prototype.indexOf.call(parentChildrenArray, imageDiv);
+
+  // Remove it visually
+  imageDiv.remove();
+
+  // Remove it in the back logic
+  filesInImageContainer.splice(imageCurrentIndex, 1);
 }

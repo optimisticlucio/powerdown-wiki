@@ -9,7 +9,6 @@ use aws_sdk_s3::types::ObjectIdentifier;
 use axum::body::Body;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
-use lazy_static::lazy_static;
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 use rand::distr::{Alphanumeric, SampleString};
@@ -18,6 +17,7 @@ use http::Uri;
 use std::str::FromStr;
 
 pub mod file_compression;
+pub mod arbitrary_values;
 
 #[allow(dead_code)] // This is used by serde multiple times in the app, but the compiler can't tell. Don't delete this, jackass.
 pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>

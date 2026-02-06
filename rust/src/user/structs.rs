@@ -100,9 +100,9 @@ pub enum Oauth2Provider {
 impl User {
     /// Given a user ID, returns the user, if it exists.
     pub async fn get_by_id(db_connection: &Object<Manager>, given_id: &i32) -> Option<Self> {
-        let query = "SELECT * FROM site_user WHERE id=$1";
+        const GET_USER_QUERY: &str = "SELECT * FROM site_user WHERE id=$1";
 
-        let resulted_row = db_connection.query_opt(query, &[&given_id]).await.unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
+        let resulted_row = db_connection.query_opt(GET_USER_QUERY, &[&given_id]).await.unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
 
         match resulted_row {
             None => None,

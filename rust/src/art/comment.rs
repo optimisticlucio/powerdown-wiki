@@ -37,7 +37,11 @@ pub async fn add_comment(
         }
     };
 
-    // TODO: Sanitize comment. Check for slurs, injections, and so forth.
+    let sanitized_comment = sanitize_comment_content(&body);
+
+    if !comment_content_is_valid(&sanitized_comment) {
+        return Err(RootErrors::BadRequest("Content of comment is invalid.".to_string()));
+    }
 
     // Lovely! A new comment! Let's post it.
     const POST_COMMENT_QUERY: &str = "INSERT INTO art_comment (under_post, poster_id, contents) VALUES ($1,$2,$3);";
@@ -45,7 +49,7 @@ pub async fn add_comment(
     db_connection
             .execute(
                 POST_COMMENT_QUERY,
-                &[&requested_post.id, &requesting_user.id, &body],
+                &[&requested_post.id, &requesting_user.id, &sanitized_comment],
             )
             .await
             .map_err(|err| {
@@ -58,4 +62,16 @@ pub async fn add_comment(
             })?;
 
     Ok((StatusCode::CREATED, "").into_response())
+}
+
+/// Given the textual content of a given comment, cleans up anything that may cause issues for the code.
+fn sanitize_comment_content(original_comment: &str) -> String {
+    // TODO: Properly sanitize. This is the MINIMUM
+    original_comment.trim().to_string()
+}
+
+/// Given the textual content of a given comment, returns whether it has anything contentwise that may cause problems.
+/// Probably best not to look for specific words, cunthrope problem and all.
+fn comment_content_is_valid(comment: &str) -> bool {
+    !comment.is_empty()
 }
