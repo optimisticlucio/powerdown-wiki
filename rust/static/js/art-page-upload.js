@@ -193,6 +193,14 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
 
 // Sends a DELETE request to the given url. If no URL is passed, the current page.
 async function sendDeleteRequest(targetUrl = window.location.pathname) {
+  if (!confirm('Are you SURE you want to DELETE THIS POST? This CANNOT be undone!')) {
+    return;
+  }
+
+  if (!confirm('Again, CANNOT BE UNDONE. Everything will be gone. Admins won\'t be able to restore it. You sure?')) {
+    return;
+  }
+
   await fetch(targetUrl, {
     method: 'DELETE'
   });
@@ -312,6 +320,10 @@ function moveImage(imageDiv, indexDelta) {
 
 // Given an image container div, removes the image visually and in the appropriate array.
 function removeImage(imageDiv) {
+  if (!confirm('Are you sure you want to delete this image off the post? It won\'t be deleted off the site until you hit \'submit.\'')) {
+    return;
+  }
+
   const parentChildrenArray = imageDiv.parentElement.children;
   const imageCurrentIndex = Array.prototype.indexOf.call(parentChildrenArray, imageDiv);
 
