@@ -30,8 +30,6 @@ services:
     depends_on:
       postgres:
         condition: service_started
-      localstack:
-        condition: service_started
 
   postgres:
     image: postgres:16
