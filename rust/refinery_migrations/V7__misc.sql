@@ -7,19 +7,3 @@ CREATE TABLE misc (
     thumbnail text, 
     url text NOT NULL
 );
-
-INSERT INTO misc (
-    title, description,
-    thumbnail, url
-) VALUES (
-    'The Ritual', 'A torture session we do to newbies. If you do this, GET ON THE SERVER VC FIRST AND TELL US.',
-    'https://powerdown.wiki/assets/img/misc/the_ritual.jpg', '/ritual'
-);
-
-INSERT INTO misc (
-    title, description,
-    thumbnail, url
-) VALUES (
-    'RP Guidelines', 'Suggestions and assistance for people new to roleplaying.',
-    'https://powerdown.wiki/assets/img/misc/rp_guidelines.jpg', '/guides/rp-guidelines'
-);

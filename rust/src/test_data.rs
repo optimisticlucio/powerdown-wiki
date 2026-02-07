@@ -1,13 +1,13 @@
 pub fn get_frontpage_ads() -> Vec<String> {
     vec![
-        "/assets/img/ads/its-radical.gif",
-        "/assets/img/ads/jason.png",
-        "/assets/img/ads/Orbeez.jpg",
-        "/assets/img/ads/penny.png",
-        "/assets/img/ads/rabbl.jpg",
-        "/assets/img/ads/dodrinkos.png",
-        "/assets/img/ads/sock.png",
-        "/assets/img/ads/not-a-virus.png",
+        "/static/img/ads/its-radical.gif",
+        "/static/img/ads/jason.png",
+        "/static/img/ads/Orbeez.jpg",
+        "/static/img/ads/penny.png",
+        "/static/img/ads/rabbl.jpg",
+        "/static/img/ads/dodrinkos.png",
+        "/static/img/ads/sock.png",
+        "/staticimg/ads/not-a-virus.png",
     ]
     .into_iter()
     .map(String::from)

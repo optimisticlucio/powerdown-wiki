@@ -29,18 +29,18 @@ lazy_static! {
         FrontpageItem {
             name: "Art",
             url: "/art",
-            image_url: "https://powerdown.wiki/assets/img/art.png"
+            image_url: "/static/img/art.jpg"
         },
         FrontpageItem {
             name: "Characters",
             url: "/characters",
-            image_url: "https://powerdown.wiki/assets/img/characters.png"
+            image_url: "/static/img/characters.png"
         },
         FrontpageItem {
             name: "Stories",
             url: "/stories",
             image_url:
-                "https://powerdown.wiki/assets/img/art-archive/thumbnails/master-tactics.png"
+                "/static/img/stories.jpg"
         }
     ];
 }
