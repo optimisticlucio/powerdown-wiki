@@ -85,9 +85,14 @@ pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
     format!("{}/{}/{}", &env::var("S3_URL").unwrap(), bucket_name, file_key)
 }
 
+// TODO: This is a hotpath, there's gotta be a better way to do this.
 /// Returns the public-facing URL for an S3 object in the public bucket.
 pub fn get_s3_public_object_url(file_key: &str) -> String {
-    get_s3_object_url(&env::var("S3_PUBLIC_BUCKET_NAME").unwrap(), file_key)
+    if let Ok(public_bucket_url) = env::var("S3_PUBLIC_BUCKET_URL") {
+        format!("{}/{}", public_bucket_url, file_key)
+    } else {
+        get_s3_object_url(&env::var("S3_PUBLIC_BUCKET_NAME").unwrap(), file_key)
+    }
 }
 
 /// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key. 

@@ -49,6 +49,8 @@ The various bucket names in S3 for storing the PD-related data. Because every bu
 
 - `S3_SQL_BACKUP_BUCKET_NAME` (`powerdown-sql-backups-storage`): The bucket with backups of the various SQL tables we have going, and it'll read from there to see if there's an existing backup to read from on startup. **Shouldn't be public access**, unless you fancy random people being able to access your OAuth2 access keys.
 
+- `S3_PUBLIC_BUCKET_URL` (Not set by default): If this is set, gives users this URL to view items from the public bucket, rather than pointing to `S3_URL`. For example, by default a url to see `ITEM_KEY` would be `S3_URL`/`S3_PUBLIC_BUCKET_NAME`/`ITEM_KEY`, but if this is set, it would be `S3_PUBLIC_BUCKET_URL`/`ITEM_KEY`
+
 ## Cookies
 
 There are some cookies that we use across the site. Here's the full list of them.

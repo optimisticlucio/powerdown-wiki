@@ -9,6 +9,7 @@ services:
       - POSTGRES_DATABASE=powerdown_db
       - RUST_LOG=debug
       - S3_PUBLIC_BUCKET_NAME=${S3_PUBLIC_BUCKET_NAME:-powerdown-public-storage}
+      - S3_PUBLIC_BUCKET_URL
       - S3_SQL_BACKUP_BUCKET_NAME=${S3_SQL_BACKUP_BUCKET_NAME:-powerdown-sql-backups-storage}
       - DEBUG
       - POSTGRES_USER
