@@ -1,0 +1,38 @@
+{% extends "base-template.html" %}
+
+{% block title %}Admin Panel{% endblock %}
+
+{% block customhead %}<script src="/static/js/admin.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="admin arbitrary wrapper">
+    <h1>Arbitrary Value Modification</h1>
+
+    <p class="text">
+        This page allows you to modify various pieces of data that are related to multiple different site functionings. If you don't know what any of this means <em>message lucio before touching anything.</em>
+        You're an admin, don't go around touching shit randomly.
+    </p>
+
+    <hr>
+
+    <form class="text" autocomplete="off" data-arbitrary-value="discord_invite_url">
+        <h2>Discord Invite Link</h2>
+        {% if let Some(discord_invite_url) = current_discord_invite_url %}
+        <h3>Current Value: {{ discord_invite_url }}</h3>
+        {% else %}
+        <h3>Value is Currently Empty</h3>
+        {% endif %}
+        <p>
+            An invite URL to the PD wiki.  If you don't want people to have access to the discord from the wiki, first <em>disable the invite link that's written here from the server admin settings</em>,
+            and then update this value to be empty. 
+        </p>
+        </p>
+            An empty value in this section will hide any "join the discord!" buttons from the site.
+        </p>
+
+        <input type="text" {% if let Some(discord_invite_url) = current_discord_invite_url %}value="{{discord_invite_url}}"{%endif%}/>
+
+        <button type="button" onclick="updateArbitraryValue(this)">Update Value</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+.admin.wrapper {
+    text-align: center;
+
+    .text {
+        text-align: left;
+    }
+
+    a {
+        color:black;
+        background-color: white;
+        mix-blend-mode: lighten;
+        font-weight: bold;
+        padding: .2em .5ch;
+        text-decoration: none;
+    }
+
+    .buttons {
+        a {
+            all: unset;
+        }
+    }
+
+    &.arbitrary {
+        text-align: left;
+
+        form {
+            padding: 1em;
+            border: 0.5ch dotted white;
+        }
+    }
+}

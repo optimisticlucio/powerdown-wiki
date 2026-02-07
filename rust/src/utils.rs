@@ -81,9 +81,7 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 
 /// Returns the public-facing URL for an S3 object, given its key and bucket.
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
-    // TODO - This is a lot of processing for a hotpath. Gotta be a better way to do this shit.
-    let website_uri = Uri::from_str(&env::var("S3_URL").unwrap()).unwrap();
-    format!("{}://{}/{}/{}", website_uri.scheme_str().unwrap() ,website_uri.authority().unwrap(), bucket_name, file_key)
+    format!("{}/{}/{}", &env::var("S3_URL").unwrap(), bucket_name, file_key)
 }
 
 /// Returns the public-facing URL for an S3 object in the public bucket.

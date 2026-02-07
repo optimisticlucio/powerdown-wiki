@@ -17,6 +17,7 @@ mod patch;
 
 pub use structs::User;
 pub use traits::UsermadePost;
+pub use structs::UserType;
 
 use structs::Oauth2Provider;
 

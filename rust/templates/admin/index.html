@@ -1,0 +1,25 @@
+{% extends "base-template.html" %}
+
+{% block title %}Admin Panel{% endblock %}
+
+{% block customhead %}<script src="/static/js/admin.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="admin wrapper">
+    <h1>Admin Panel</h1>
+    <h2>This is not a place of honor.</h2>
+    <img src="/static/img/admin/good-programmers.png" style="mix-blend-mode: lighten; filter:invert(); max-width: 70%;">
+
+    <br><br>
+
+    <div class="text">
+    <p>If you can see this page, it means you're an admin of the wiki. Congrats! Anyone without access to this page will see a 404. Anywho, here you have quick access to all the areas you'd want as a mod.
+    </div>
+
+    <hr>
+    
+    <div class="buttons">
+        <a href="/admin/arbitrary_values"><button>Arbitrary Value Modification</button></a>
+    </div>
+</div>
+{% endblock %}
