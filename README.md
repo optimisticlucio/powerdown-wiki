@@ -17,8 +17,6 @@ If these are missing when you run docker compose is made, you *will* get a crash
 
 - `WEBSITE_URL`: The URL of the website people are visiting. Needed for stuff like OAuth2 redirect URLs. Do not include trailing slash.
 
-- `S3_URL`: The URL of the S3 website where we're storing all the files. Needed to... well, show people files.
-
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: The user and password used when creating the postgres DB. Given to both the rust app and the postgres container.
 
 - `AWS_ENDPOINT_URL`, `AWS_ACCESS_KEY`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`: Information regarding the location and login data for AWS services, so we can use S3 buckets to store images and video and somesuch. *During development, point this at a LocalStack instance.*
@@ -49,7 +47,7 @@ The various bucket names in S3 for storing the PD-related data. Because every bu
 
 - `S3_SQL_BACKUP_BUCKET_NAME` (`powerdown-sql-backups-storage`): The bucket with backups of the various SQL tables we have going, and it'll read from there to see if there's an existing backup to read from on startup. **Shouldn't be public access**, unless you fancy random people being able to access your OAuth2 access keys.
 
-- `S3_PUBLIC_BUCKET_URL` (Not set by default): If this is set, gives users this URL to view items from the public bucket, rather than pointing to `S3_URL`. For example, by default a url to see `ITEM_KEY` would be `S3_URL`/`S3_PUBLIC_BUCKET_NAME`/`ITEM_KEY`, but if this is set, it would be `S3_PUBLIC_BUCKET_URL`/`ITEM_KEY`
+- `S3_PUBLIC_BUCKET_URL` (Not set by default): If this is set, gives users this URL to view items from the public bucket, rather than pointing to `AWS_ENDPOINT_URL`. For example, by default a url to see `ITEM_KEY` would be `AWS_ENDPOINT_URL`/`S3_PUBLIC_BUCKET_NAME`/`ITEM_KEY`, but if this is set, it would be `S3_PUBLIC_BUCKET_URL`/`ITEM_KEY`
 
 ## Cookies
 
