@@ -10,12 +10,13 @@ const tagsContainer = document.getElementById('tag-search');
 const baseURL = tagsContainer.dataset.baseUrl;
 
 const tagRemoveOnClick = (event) => {
-    const self = event.currentTarget; // or event.target, depending on your HTML structure
+    const self = event.currentTarget; 
     const idx = tags.indexOf(self.parentElement.querySelector(".tag-name").innerHTML);
     if (idx > -1) {
         tags.splice(idx, 1);
         self.parentElement.remove();
     }
+    window.location.href = createTargetUrl();
 };
 
 document.querySelectorAll('.tag-remove').forEach( (tagRemove) => {tagRemove.addEventListener('click', tagRemoveOnClick)});
@@ -75,5 +76,6 @@ tagInput.addEventListener('keydown', (e) => {
         
         tags.pop();
         lastTagElement.remove();
+        window.location.href = createTargetUrl();
     }
 });

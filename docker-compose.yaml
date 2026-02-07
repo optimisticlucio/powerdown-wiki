@@ -42,11 +42,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: "Asia/Jerusalem"
     volumes:
-    #  - pd_postgres:/var/lib/postgresql/data  # TODO: Uncomment once the db is ready
+      - pd_postgres:/var/lib/postgresql/data  
       - ./postgres/init:/docker-entrypoint-initdb.d
-    # TODO: Delete the temporary volumes out once finished with development.
-    tmpfs:
-      - /var/lib/postgresql/data
     
   localstack:
     profiles: [development]
@@ -63,5 +60,4 @@ services:
     volumes:
       - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh"  # Auto-run on ready
       - "/var/run/docker.sock:/var/run/docker.sock"
-    tmpfs:
       - /var/lib/localstack

@@ -147,6 +147,10 @@
             left: 50%;
             top: 50%;
 
+            .pagination-nav {
+                padding: 0 1ch;
+            }
+
             .per-page-navigation {
                 display: flex;
                 position: absolute;
@@ -174,7 +178,6 @@
 
             img {
                 height: 1.5em;
-                margin: auto 1ch;
             }
         }
 
