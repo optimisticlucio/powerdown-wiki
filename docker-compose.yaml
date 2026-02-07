@@ -55,9 +55,13 @@ services:
     environment:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - DEBUG=${DEBUG:-0}
-      - PERSISTENCE=0 # Change this once the server is prod ready.
+      - PERSISTENCE=1 
       - DISABLE_CORS_CHECKS=1
     volumes:
       - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh"  # Auto-run on ready
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - /var/lib/localstack
+      - localstack_data:/var/lib/localstack
+
+volumes:
+  pd_postgres:
+  localstack_data: 
