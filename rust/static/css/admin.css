@@ -26,6 +26,14 @@
         form {
             padding: 1em;
             border: 0.5ch dotted white;
+
+            h2 {
+                color: white;
+            }
+
+            h3 {
+                color: var(--brightest-shade);
+            }
         }
     }
 }

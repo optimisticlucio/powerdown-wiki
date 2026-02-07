@@ -1,4 +1,4 @@
-use super::structs::ArtState;
+use utils::sql::PostState;
 use crate::art::structs::PageArt;
 use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response, PostingSteps};
@@ -63,7 +63,7 @@ pub async fn add_art(
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
             columns.push("post_state".into());
-            values.push(&ArtState::Processing);
+            values.push(&PostState::Processing);
 
             columns.push("page_slug".into());
             values.push(&page_art.base_art.slug);
@@ -261,7 +261,7 @@ pub async fn add_art(
             db_connection
                 .execute(
                     "UPDATE art SET post_state=$1 WHERE id=$2",
-                    &[&ArtState::Public, &art_id],
+                    &[&PostState::Public, &art_id],
                 )
                 .await
                 .map_err(|err| {
@@ -365,7 +365,7 @@ pub async fn edit_art_put_request(
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
             columns.push("post_state".into());
-            values.push(&ArtState::Processing);
+            values.push(&PostState::Processing);
 
             if sent_page_art.base_art.slug != existing_art.base_art.slug {
                 columns.push("page_slug".into());
@@ -539,7 +539,7 @@ pub async fn edit_art_put_request(
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
             
             columns.push("post_state".into());
-            values.push(&ArtState::Public);
+            values.push(&PostState::Public);
 
             // I need to create new_thumbnail_key here so that, incase we use it, it can survive enough.
             let mut new_thumbnail_key = "".to_owned();

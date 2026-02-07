@@ -1,4 +1,5 @@
 use crate::user::User;
+use crate::utils::sql::PostState;
 use crate::utils::{self, PostingSteps, PresignedUrlsResponse, get_temp_s3_presigned_urls, template_to_response};
 use crate::{
     characters::structs::{PageCharacter},
@@ -20,6 +21,12 @@ const CHARACTER_THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCo
 const CHARACTER_IMAGE_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings = utils::file_compression::LossyCompressionSettings {
                             max_width: Some(500),
                             max_height: Some(500),
+                            quality: 90
+                        };
+
+const CHARACTER_LOGO_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings = utils::file_compression::LossyCompressionSettings {
+                            max_width: Some(100),
+                            max_height: Some(100),
                             quality: 90
                         };
 
@@ -146,7 +153,9 @@ pub async fn add_character(
             columns.push("page_image".into());
             values.push(&"missing_img");
 
-            // TODO - ADD A CHARACTER "STATE" SO PEOPLE DON'T SEE POORLY-PROCESSED CHARACTER PAGES.
+            // So people don't see the partially-processed page.
+            columns.push("post_state".into());
+            values.push(&PostState::Processing);
 
             // Now we have the character! Well, most pieces of the character. Let's get their ID.
             // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
@@ -225,7 +234,37 @@ pub async fn add_character(
             columns.push("page_image".into());
             values.push(&main_art_key);
 
-            // TODO - Move optional logo!
+            let compressed_logo_key: String;
+            if let Some(temp_logo_key) = &recieved_page_character.logo_url {
+                let target_key = format!("{target_s3_folder}/logo");
+                compressed_logo_key = utils::move_and_lossily_compress_temp_s3_img(
+                        &s3_client,
+                        &state.config,
+                        &temp_logo_key,
+                        &state.config.s3_public_bucket,
+                        &target_key,
+                        Some(CHARACTER_LOGO_COMPRESSION_SETTINGS)
+                    )
+                    .await
+                    .map_err(|err| {
+                        eprintln!(
+                            "[CHARACTER POSTING] Converting logo of character {character_id} failed, {:?}",
+                            err
+                        );
+
+                        // Delete the processing character before returning error.
+                        let _ = db_connection.execute("DELETE FROM character WHERE id=$1", &[&character_id]);
+
+                        RootErrors::InternalServerError
+                    })?;
+                
+                columns.push("logo".into());
+                values.push(&compressed_logo_key);
+            }
+
+            // This is the final push!
+            columns.push("post_state".into());
+            values.push(&PostState::Public);
 
             // Update the image values of the character
             // SAFETY: No user-passed values are in the query, they're all in `values`

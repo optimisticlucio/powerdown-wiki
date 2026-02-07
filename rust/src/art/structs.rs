@@ -1,4 +1,4 @@
-use crate::user::{User, UsermadePost};
+use crate::{user::{User, UsermadePost}, utils::sql::PostState};
 use chrono::{DateTime, Utc};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
@@ -18,11 +18,11 @@ pub struct BaseArt {
     #[serde(default)]
     pub is_nsfw: bool,
     #[serde(default = "default_art_state")]
-    pub art_state: ArtState,
+    pub art_state: PostState,
 }
 
-fn default_art_state() -> ArtState {
-    ArtState::Public
+fn default_art_state() -> PostState {
+    PostState::Public
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -237,7 +237,7 @@ pub struct ArtSearchParameters {
     pub is_nsfw: bool,
 
     #[serde(default)]
-    pub art_state: ArtState,
+    pub art_state: PostState,
     // TODO: Handle Artist Name
 }
 
@@ -318,7 +318,7 @@ impl Default for ArtSearchParameters {
             page: default_page_number(),
             tags: Vec::new(),
             is_nsfw: false,
-            art_state: ArtState::Public,
+            art_state: PostState::Public,
         }
     }
 }
@@ -339,20 +339,6 @@ where
         .map(|item| item.trim().to_lowercase())
         .filter(|item| !item.is_empty())
         .collect())
-}
-
-#[derive(Clone, FromSql, ToSql, Deserialize, Debug)]
-#[postgres(name = "art_post_state", rename_all = "snake_case")]
-pub enum ArtState {
-    Public,          // Publicly viewable, standard state.
-    PendingApproval, // User-uploaded, pending admin review to be moved to public. Not visible.
-    Processing,      // Currently mid-process by the server and/or database. Should not be viewable.
-}
-
-impl Default for ArtState {
-    fn default() -> Self {
-        Self::Public
-    }
 }
 
 #[derive(Debug, Clone)]

@@ -22,8 +22,16 @@ pub async fn clean_temp_db_entries(state: ServerState) {
         }
     };
 
+    const CHARACTER_DB_CLEANUP_QUERY: &str = "DELETE FROM character WHERE post_state = 'processing' AND last_modified_date < NOW() - INTERVAL '10 minutes'";
+    let character_db_cleanup_rows_modified = match db_connection.execute(CHARACTER_DB_CLEANUP_QUERY, &[]).await {
+        Ok(rows_modified) => rows_modified,
+        Err(err) => {
+            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to clean up character db! {:?}. Continuing cleanup.", err);
+            0
+        }
+    };
 
-    let entries_cleaned_up = art_db_cleanup_rows_modified;
+    let entries_cleaned_up = art_db_cleanup_rows_modified + character_db_cleanup_rows_modified;
 
     println!("[CLEAN TEMP DB ENTRIES] Cleanup complete, {} entries removed.", entries_cleaned_up);
 }

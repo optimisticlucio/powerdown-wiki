@@ -10,7 +10,7 @@ async function updateArbitraryValue(buttonElement) {
         "Content-Type": "application/json"
         },
         body: JSON.stringify({
-        arbitrary_value: formElement.arbitraryValue,
+        arbitrary_value: formElement.dataset.arbitraryValue,
         set_to: userInput
         })
     });

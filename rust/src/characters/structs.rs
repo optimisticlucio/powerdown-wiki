@@ -6,6 +6,8 @@ use postgres_types::{FromSql, ToSql};
 use rand::{distr::Alphanumeric, Rng};
 use serde::Deserialize;
 
+use crate::utils::sql::PostState;
+
 // TODO: Get character ritual info
 
 #[derive(Debug, Clone, Deserialize)]
@@ -24,6 +26,8 @@ pub struct BaseCharacter {
     pub thumbnail_key: String,
     #[serde(default)]
     pub birthday: Option<chrono::NaiveDate>,
+    #[serde(default)]
+    pub state: PostState,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -74,7 +78,7 @@ impl BaseCharacter {
     pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
-            .query("SELECT * FROM character ORDER BY short_name", &[])
+            .query("SELECT * FROM character WHERE post_state='public' ORDER BY short_name", &[])
             .await
             .unwrap();
 
@@ -85,7 +89,7 @@ impl BaseCharacter {
     pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
-            "SELECT * FROM character WHERE EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
+            "SELECT * FROM character WHERE post_state='public' AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()
@@ -104,6 +108,7 @@ impl BaseCharacter {
             thumbnail_key: row.get("thumbnail"),
             slug: row.get("page_slug"),
             birthday: row.get("birthday"),
+            state: row.get("post_state"),
         }
     }
 
@@ -119,8 +124,8 @@ impl BaseCharacter {
         // There's a very slight chance this operation panics on correct behaviour
         // bc it uses random strings. It should probably be fine, but I should fix this someday.
         let insert_operation_result = db_connection.query_one(
-            "INSERT INTO character (is_hidden, page_slug, short_name, subtitles, creator, thumbnail, page_image)
-            VALUES (TRUE, $1, 'TEMP', ARRAY['Something you shouldn''t be seeing!'], 'RNJesus', '', '')
+            "INSERT INTO character (page_slug, short_name, subtitles, creator, thumbnail, page_image, post_state)
+            VALUES ($1, 'TEMP', ARRAY['Something you shouldn''t be seeing!'], 'RNJesus', '', '', 'processing')
             RETURNING id", &[&random_page_slug]).await.unwrap();
 
         insert_operation_result.get(0) // id is int, which converts to i32.
@@ -175,6 +180,7 @@ impl PageCharacter {
                 thumbnail_key: row.get("thumbnail"),
                 slug: row.get("page_slug"),
                 birthday: row.get("birthday"),
+                state: row.get("post_state")
             },
             long_name: row.get("long_name"),
             subtitles: row.get("subtitles"),

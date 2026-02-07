@@ -146,8 +146,6 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
     let page_img_bytes = fs::read(root_path.join("src/assets/img").join(frontmatter.character_img_file.trim_start_matches("/")))
             .map_err(|err| format!("PAGE IMG READ ERR: {}", err.to_string()))?;
 
-    // TODO: HANDLE LOGO
-
     let page_contents = file_content.trim();
     let page_contents = if page_contents.is_empty() {
         None
@@ -179,6 +177,22 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
     utils::send_to_presigned_url(&page_img_key, page_img_bytes).await
         .map_err(|err| format!("Thumbnail Upload Err: {}", err.to_string()))?;
 
+    // Upload logo
+    let logo_url = match frontmatter.logo_file {
+        Some(logo_path) => {
+            let logo_folder = root_path.join("src/assets/img/characters/logos");
+            let path_to_logo = logo_folder.join(&logo_path);
+            let logo_bytes = fs::read(path_to_logo).map_err(|err| format!("LOGO READ ERR: {}", err.to_string()))?;
+
+            let logo_img_key = presigned_url_response.presigned_urls.pop().unwrap();
+            utils::send_to_presigned_url(&logo_img_key, logo_bytes).await
+                .map_err(|err| format!("Logo Upload Err: {}", err.to_string()))?;
+
+            Some(logo_img_key)
+        },
+        None => None
+    };
+
     // Good, we're ready to send.
     let post_character = PageCharacter {
         name: frontmatter.character_title.clone(),
@@ -197,7 +211,7 @@ async fn import_given_character(root_path: &Path, character_file_path: &Path, se
         custom_css: None,
         long_name: frontmatter.inpage_character_title,
         retirement_reason: frontmatter.archival_reason,
-        logo_url: Some("TODO".to_string()),
+        logo_url,
         page_contents
     };
 
