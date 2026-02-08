@@ -40,6 +40,11 @@ async function sendUserModifications() {
         changesDone.pfp_temp_key = s3Url;
     }
 
+    const newCreatorName = document.getElementById("userCreatorName").value.trim();
+    if (newCreatorName) {
+        changesDone.creator_name = newCreatorName;
+    }
+
     const newUserType = document.getElementById("userType")?.value;
     if (newUserType) {
         changesDone.user_type = newUserType;
