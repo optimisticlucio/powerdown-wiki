@@ -19,7 +19,10 @@ pub use structs::{BaseCharacter, PageCharacter};
 pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(character_index))
-        .route_with_tsr("/new", post(post::add_character).get(post::character_posting_page))
+        .route_with_tsr(
+            "/new",
+            post(post::add_character).get(post::character_posting_page),
+        )
         .layer(DefaultBodyLimit::max(10 * 1000 * 1000)) // 10MB Post Limit
         .route_with_tsr("/{character_slug}", get(page::character_page))
 }
@@ -49,8 +52,7 @@ async fn character_index(
         .await
         .map_err(|_| RootErrors::InternalServerError)?;
 
-    let all_characters =
-        BaseCharacter::get_all_characters(&db_connection).await;
+    let all_characters = BaseCharacter::get_all_characters(&db_connection).await;
 
     let mut active_characters: Vec<BaseCharacter> = all_characters
         .clone()

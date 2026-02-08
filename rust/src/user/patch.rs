@@ -1,22 +1,25 @@
 //! # Modifying Users
-//! 
+//!
 //! This file is for PATCH requests for a given user, to modify their values like their permission level, pfp, username, etc.
 
-use crate::utils::file_compression::LossyCompressionSettings;
-use crate::{RootErrors, ServerState, User, utils};
-use crate::utils::{MoveTempS3FileErrs, PostingSteps, PresignedUrlsResponse, get_temp_s3_presigned_urls, template_to_response};
 use super::structs::UserType;
+use crate::utils::file_compression::LossyCompressionSettings;
+use crate::utils::{
+    get_temp_s3_presigned_urls, template_to_response, MoveTempS3FileErrs, PostingSteps,
+    PresignedUrlsResponse,
+};
+use crate::{utils, RootErrors, ServerState, User};
 use askama::Template;
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Response};
 use axum::{http, Json};
-use serde::Deserialize;
 use http::Uri;
+use serde::Deserialize;
 
 const PROFILE_PICTURE_COMPRESSION_SETTINGS: LossyCompressionSettings = LossyCompressionSettings {
     max_height: Some(150),
     max_width: Some(150),
-    quality: 85
+    quality: 85,
 };
 
 #[axum::debug_handler]
@@ -45,14 +48,22 @@ pub async fn patch_user(
     let user_id = match user_id.parse() {
         Err(_) => {
             // If the parse failed, it's 100% a nonexistent user ID. Shoot back 404.
-            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)))
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ));
         }
-        Ok(id) => id
+        Ok(id) => id,
     };
     let modified_user = match User::get_by_id(&db_connection, &user_id).await {
         Some(user) => user,
         None => {
-            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)));
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ));
         }
     };
 
@@ -63,29 +74,28 @@ pub async fn patch_user(
     // Ok we know who's doing it, to who, and that they have *some* permissions to modify this user atleast. Let's start flow.
 
     match posting_step {
-        PostingSteps::RequestPresignedURLs { file_amount} => {
-            let presigned_urls = get_temp_s3_presigned_urls(
-                &state,
-                file_amount as u32,
-                "user")
+        PostingSteps::RequestPresignedURLs { file_amount } => {
+            let presigned_urls = get_temp_s3_presigned_urls(&state, file_amount as u32, "user")
                 .await
                 .map_err(|err| {
-                    eprintln!("[MODIFY USER INFO] Failed getting {} s3 urls! {}", file_amount, err);
+                    eprintln!(
+                        "[MODIFY USER INFO] Failed getting {} s3 urls! {}",
+                        file_amount, err
+                    );
                     RootErrors::InternalServerError
                 })?;
-            
+
             Ok(
-                serde_json::to_string(
-                    &PresignedUrlsResponse{
-                        presigned_urls
-                    }
-                ).unwrap().into_response())
+                serde_json::to_string(&PresignedUrlsResponse { presigned_urls })
+                    .unwrap()
+                    .into_response(),
+            )
         }
         PostingSteps::UploadMetadata(modified_user_info) => {
             // Let's build an update query.
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
-            
+
             if let Some(passed_user_type) = &modified_user_info.user_type {
                 // Can't modify your own type.
                 if modified_user == requesting_user {
@@ -94,12 +104,14 @@ pub async fn patch_user(
 
                 // No one can promote to superadmin, that's only done through direct db modification.
                 if passed_user_type == &UserType::Superadmin {
-                    return Err(RootErrors::Forbidden)
+                    return Err(RootErrors::Forbidden);
                 }
 
                 // Check if it's an admin promotion.
-                if passed_user_type == &UserType::Admin && !requesting_user.user_type.permissions().can_promote_to_admin {
-                    return Err(RootErrors::Forbidden)
+                if passed_user_type == &UserType::Admin
+                    && !requesting_user.user_type.permissions().can_promote_to_admin
+                {
+                    return Err(RootErrors::Forbidden);
                 }
 
                 // If we got here, valid modification. Let's go.
@@ -114,26 +126,30 @@ pub async fn patch_user(
                 let cleaned_pfp_key = match utils::clean_passed_key(passed_pfp_key, &state) {
                     Some(clean_key) => clean_key,
                     None => {
-                        return Err(RootErrors::BadRequest("Passed invalid pfp key.".to_string()));
+                        return Err(RootErrors::BadRequest(
+                            "Passed invalid pfp key.".to_string(),
+                        ));
                     }
                 };
 
                 new_pfp_key = utils::move_and_lossily_compress_temp_s3_img(
-                        &state.s3_client,
-                        &state.config,
-                        &cleaned_pfp_key,
-                        &state.config.s3_public_bucket,
-                        &target_file_key,
-                        Some(PROFILE_PICTURE_COMPRESSION_SETTINGS)).await
-                        .map_err(|err| {
-                            match err {
-                                MoveTempS3FileErrs::UnknownFiletype => RootErrors::BadRequest("Invalid file for profile picture.".to_string()),
-                                _ => {
-                                    eprintln!("[UPDATE USER INFO] Failed to compress user PFP! {}", err);
-                                    RootErrors::InternalServerError
-                                }
-                            }
-                        })?;
+                    &state.s3_client,
+                    &state.config,
+                    &cleaned_pfp_key,
+                    &state.config.s3_public_bucket,
+                    &target_file_key,
+                    Some(PROFILE_PICTURE_COMPRESSION_SETTINGS),
+                )
+                .await
+                .map_err(|err| match err {
+                    MoveTempS3FileErrs::UnknownFiletype => {
+                        RootErrors::BadRequest("Invalid file for profile picture.".to_string())
+                    }
+                    _ => {
+                        eprintln!("[UPDATE USER INFO] Failed to compress user PFP! {}", err);
+                        RootErrors::InternalServerError
+                    }
+                })?;
 
                 columns.push("profile_picture_s3_key".to_string());
                 values.push(&new_pfp_key);
@@ -143,9 +159,11 @@ pub async fn patch_user(
             if let Some(passed_display_name) = &modified_user_info.display_name {
                 sanitized_display_name = match sanitize_display_name(passed_display_name) {
                     None => {
-                        return Err(RootErrors::BadRequest("Invalid username passed.".to_string()))
+                        return Err(RootErrors::BadRequest(
+                            "Invalid username passed.".to_string(),
+                        ))
                     }
-                    Some(name) => name
+                    Some(name) => name,
                 };
 
                 columns.push("display_name".to_string());
@@ -161,7 +179,7 @@ pub async fn patch_user(
 
                 columns.push("creator_name".to_string());
                 // TODO: I should probably make this into its own function later rather than
-                // just reusing the display name function. 
+                // just reusing the display name function.
                 if let Some(creator_name) = sanitize_display_name(creator_name) {
                     sanitized_creator_name = creator_name;
                     values.push(&sanitized_creator_name);
@@ -173,21 +191,25 @@ pub async fn patch_user(
 
             // Did we actually do anything?
             if columns.len() == 0 {
-                return Err(RootErrors::BadRequest("No modifiable data passed.".to_string()));
+                return Err(RootErrors::BadRequest(
+                    "No modifiable data passed.".to_string(),
+                ));
             }
 
             // Send the query and pray
             let update_query = format!(
                 "UPDATE site_user SET {} WHERE id={};",
-                columns.iter().enumerate()
-                    .map(|(index, value)| format!("{}=${}", value, index+1))
+                columns
+                    .iter()
+                    .enumerate()
+                    .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
                 format!("${}", columns.len() + 1)
             );
 
             values.push(&modified_user.id);
-            
+
             db_connection
                 .execute(
                     &update_query,
@@ -226,14 +248,13 @@ pub struct ModifiableUserInfo {
     /// The username that refers to this user when it comes to characters or art posts and such.
     /// If an empty string is passed, set to NULL in the DB.
     #[serde(default)]
-    creator_name: Option<String>
+    creator_name: Option<String>,
 }
-
 
 // Given a display name by the user, cleans it up. Returns None if the username is invalid or can't be easily cleaned.
 fn sanitize_display_name(display_name: &str) -> Option<String> {
     const ALLOWED_SPECIAL_CHARACTERS: &[char] = &[' ', '_', '-', '.', '!', '?', '(', ')', ':'];
-    
+
     // Right now, I just refuse to handle anything non-ascii. I can fix it later.
     if !display_name.is_ascii() {
         return None;
@@ -286,15 +307,23 @@ pub async fn modify_user_page(
     let user_id = match user_id.parse() {
         Err(_) => {
             // If the parse failed, it's 100% a nonexistent user ID. Shoot back 404.
-            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)))
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ));
         }
-        Ok(id) => id
+        Ok(id) => id,
     };
 
     let modified_user = match User::get_by_id(&db_connection, &user_id).await {
         Some(user) => user,
         None => {
-            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)));
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ));
         }
     };
 
@@ -302,16 +331,14 @@ pub async fn modify_user_page(
         return Err(RootErrors::Forbidden);
     }
 
-    Ok(template_to_response(
-        ModifyUserPage {
-            user: Some(requesting_user.clone()),
-            original_uri,
+    Ok(template_to_response(ModifyUserPage {
+        user: Some(requesting_user.clone()),
+        original_uri,
 
-            modifying_user: requesting_user,
+        modifying_user: requesting_user,
 
-            viewed_user: modified_user
-        }
-    ))
+        viewed_user: modified_user,
+    }))
 }
 
 #[derive(Debug, Template)]

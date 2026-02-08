@@ -12,29 +12,29 @@ use tower::ServiceBuilder;
 use tower_cookies::CookieManagerLayer;
 use tower_http::compression::CompressionLayer;
 
+mod admin;
 mod art;
 mod askama;
 mod characters;
 mod errs;
+mod graceful_shutdown;
 mod index;
 mod misc;
+mod nsfw_splash;
+mod refinery_migrations;
+mod scheduled_tasks;
 mod server_state;
 mod static_files;
 mod stories;
 mod test_data;
 mod user;
 mod utils;
-mod scheduled_tasks;
-mod graceful_shutdown;
-mod admin;
-mod refinery_migrations;
-mod nsfw_splash;
 
 pub use errs::RootErrors;
-pub use server_state::ServerState;
-pub use scheduled_tasks::initiate_scheduled_tasks;
 pub use graceful_shutdown::handle_shutdown_signal;
 pub use refinery_migrations::run_migrations;
+pub use scheduled_tasks::initiate_scheduled_tasks;
+pub use server_state::ServerState;
 
 use crate::user::User;
 
@@ -52,7 +52,6 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/user", user::router())
         .nest("/misc", misc::router())
         .nest("/admin", admin::router())
-
         .fallback(fallback)
         .with_state(state)
         .layer(

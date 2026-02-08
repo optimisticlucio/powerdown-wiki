@@ -1,8 +1,8 @@
 use crate::art::structs::BaseArt;
-use crate::{ServerState, RootErrors, User};
+use crate::{RootErrors, ServerState, User};
 use axum::extract::{OriginalUri, Path, State};
+use axum::http;
 use axum::response::{IntoResponse, Response};
-use axum::{http};
 use http::StatusCode;
 
 /// Add comment under a given post.
@@ -32,33 +32,39 @@ pub async fn add_comment(
     let requested_post = match BaseArt::get_by_slug(&db_connection, &art_slug).await {
         Some(art) => art,
         None => {
-            return Err(RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)))
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ))
         }
     };
 
     let sanitized_comment = sanitize_comment_content(&body);
 
     if !comment_content_is_valid(&sanitized_comment) {
-        return Err(RootErrors::BadRequest("Content of comment is invalid.".to_string()));
+        return Err(RootErrors::BadRequest(
+            "Content of comment is invalid.".to_string(),
+        ));
     }
 
     // Lovely! A new comment! Let's post it.
-    const POST_COMMENT_QUERY: &str = "INSERT INTO art_comment (under_post, poster_id, contents) VALUES ($1,$2,$3);";
+    const POST_COMMENT_QUERY: &str =
+        "INSERT INTO art_comment (under_post, poster_id, contents) VALUES ($1,$2,$3);";
 
     db_connection
-            .execute(
-                POST_COMMENT_QUERY,
-                &[&requested_post.id, &requesting_user.id, &sanitized_comment],
-            )
-            .await
-            .map_err(|err| {
-                eprintln!(
-                    "[POST ART COMMENT] Posting a comment on art ID {} failed. {:?}",
-                    requested_post.id,
-                    err
-                );
-                RootErrors::InternalServerError
-            })?;
+        .execute(
+            POST_COMMENT_QUERY,
+            &[&requested_post.id, &requesting_user.id, &sanitized_comment],
+        )
+        .await
+        .map_err(|err| {
+            eprintln!(
+                "[POST ART COMMENT] Posting a comment on art ID {} failed. {:?}",
+                requested_post.id, err
+            );
+            RootErrors::InternalServerError
+        })?;
 
     Ok((StatusCode::CREATED, "").into_response())
 }

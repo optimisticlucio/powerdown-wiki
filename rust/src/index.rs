@@ -13,7 +13,8 @@ use lazy_static::lazy_static;
 use rand::seq::IndexedRandom;
 
 pub fn router() -> Router<ServerState> {
-    Router::new().route("/", get(homepage))
+    Router::new()
+        .route("/", get(homepage))
         .route_with_tsr("/onboarding", get(onboarding))
 }
 
@@ -39,8 +40,7 @@ lazy_static! {
         FrontpageItem {
             name: "Stories",
             url: "/stories",
-            image_url:
-                "/static/img/frontpage/stories.jpg"
+            image_url: "/static/img/frontpage/stories.jpg"
         }
     ];
 }
@@ -74,17 +74,20 @@ async fn homepage(
         let statement =
             "SELECT * FROM quote WHERE association = 'homepage' ORDER BY RANDOM() LIMIT 1;";
 
-        db_connection.query(statement, &[]).await.unwrap()
-            .get(0).unwrap()
+        db_connection
+            .query(statement, &[])
+            .await
+            .unwrap()
+            .get(0)
+            .unwrap()
             .get(0)
     };
 
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     let birthday_characters =
-        characters::BaseCharacter::get_birthday_characters(&db_connection)
-            .await;
-    
+        characters::BaseCharacter::get_birthday_characters(&db_connection).await;
+
     let discord_link = utils::arbitrary_values::get_discord_link(&db_connection).await;
 
     Ok(utils::template_to_response(FrontpageTemplate {
@@ -99,10 +102,9 @@ async fn homepage(
         birthday_characters,
         today_date: &utils::format_date_to_human_readable(chrono::Local::now().into()),
 
-        discord_link
+        discord_link,
     }))
 }
-
 
 #[derive(Debug, Template)]
 #[template(path = "onboarding.html")]
@@ -112,7 +114,6 @@ struct Onboarding {
 
     discord_link: Option<String>,
 }
-
 
 async fn onboarding(
     State(state): State<ServerState>,
@@ -129,12 +130,10 @@ async fn onboarding(
 
     let discord_link = utils::arbitrary_values::get_discord_link(&db_connection).await;
 
-    Ok(utils::template_to_response(
-        Onboarding {
-            user,
-            original_uri,
+    Ok(utils::template_to_response(Onboarding {
+        user,
+        original_uri,
 
-            discord_link
-        }
-    ))
+        discord_link,
+    }))
 }

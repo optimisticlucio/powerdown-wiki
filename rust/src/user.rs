@@ -4,20 +4,23 @@ use crate::{
 };
 use askama::Template;
 use axum::{
-    Router, extract::{OriginalUri, Path, State}, response::{IntoResponse, Redirect, Response}, routing::get
+    extract::{OriginalUri, Path, State},
+    response::{IntoResponse, Redirect, Response},
+    routing::get,
+    Router,
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;
 use tower_cookies::Cookies;
 
 mod oauth;
+mod patch;
 mod structs;
 mod traits;
-mod patch;
 
 pub use structs::User;
-pub use traits::UsermadePost;
 pub use structs::UserType;
+pub use traits::UsermadePost;
 
 use structs::Oauth2Provider;
 
@@ -40,7 +43,7 @@ pub async fn self_user_page(
     match session_user {
         // If they aren't logged in, we have no user data to show em. Toss towards the login page!
         None => Ok(Redirect::to("/user/login").into_response()),
-        Some(viewed_user) => Ok(Redirect::to(&format!("/user/{}", viewed_user.id)).into_response())
+        Some(viewed_user) => Ok(Redirect::to(&format!("/user/{}", viewed_user.id)).into_response()),
     }
 }
 
@@ -60,31 +63,29 @@ pub async fn other_user_page(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: Cookies,
 ) -> Result<Response, RootErrors> {
-    let db_connection = state.db_pool.get().await
-        .map_err(|_err| {
-            RootErrors::InternalServerError
-        })?;
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_err| RootErrors::InternalServerError)?;
 
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     let parsed_user_id: i32 = match user_id.parse() {
         Ok(id) => id,
-        Err(_err) => return Err(RootErrors::NotFound(original_uri, cookie_jar, user))
+        Err(_err) => return Err(RootErrors::NotFound(original_uri, cookie_jar, user)),
     };
 
-    let viewed_user = User::get_by_id(
-            &db_connection, 
-            &parsed_user_id
-        ).await;
-    
+    let viewed_user = User::get_by_id(&db_connection, &parsed_user_id).await;
+
     match viewed_user {
         Some(viewed_user) => Ok(template_to_response(UserPageTemplate {
-                user,
-                original_uri,
+            user,
+            original_uri,
 
-                viewed_user,
-            })),
-        None => Err(RootErrors::NotFound(original_uri, cookie_jar, user))
+            viewed_user,
+        })),
+        None => Err(RootErrors::NotFound(original_uri, cookie_jar, user)),
     }
 }
 

@@ -51,8 +51,7 @@ impl ServerState {
     async fn initialize_s3_connection() -> aws_sdk_s3::Client {
         let sdk_config = aws_config::load_from_env().await;
 
-        let s3_config = aws_sdk_s3::config::Builder::from(&sdk_config)
-            .build();
+        let s3_config = aws_sdk_s3::config::Builder::from(&sdk_config).build();
 
         let s3_client = aws_sdk_s3::Client::from_conf(s3_config);
 

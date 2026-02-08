@@ -64,7 +64,7 @@ pub async fn story_index(
         state.db_pool.get().await.unwrap(),
         (page_number_to_show - 1) * AMOUNT_OF_STORIES_PER_PAGE,
         AMOUNT_OF_STORIES_PER_PAGE,
-        &search_params
+        &search_params,
     )
     .await;
 

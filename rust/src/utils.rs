@@ -1,23 +1,23 @@
 use std::error::Error;
 use std::{env, fmt};
 
-use crate::ServerState;
 use crate::errs::RootErrors;
+use crate::ServerState;
 use askama::Template;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::types::ObjectIdentifier;
 use axum::body::Body;
 use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
+use http::Uri;
+use rand::distr::{Alphanumeric, SampleString};
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
-use rand::distr::{Alphanumeric, SampleString};
-use std::time::Duration;
-use http::Uri;
 use std::str::FromStr;
+use std::time::Duration;
 
-pub mod file_compression;
 pub mod arbitrary_values;
+pub mod file_compression;
 pub mod sql;
 
 #[allow(dead_code)] // This is used by serde multiple times in the app, but the compiler can't tell. Don't delete this, jackass.
@@ -39,7 +39,7 @@ where
 }
 
 pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
-    let day_number =  date.day();
+    let day_number = date.day();
 
     let readable_day = if day_number <= 13 && day_number >= 11 {
         // Handling "11th, 12th, 13th" first.
@@ -88,7 +88,10 @@ pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
         format!("{}/{}/{}", base_url, bucket_name, file_key)
     } else {
         let region = env::var("AWS_REGION").unwrap();
-        format!("https://{}.s3.{}.amazonaws.com/{}", bucket_name, region, file_key)
+        format!(
+            "https://{}.s3.{}.amazonaws.com/{}",
+            bucket_name, region, file_key
+        )
     }
 }
 
@@ -102,7 +105,7 @@ pub fn get_s3_public_object_url(file_key: &str) -> String {
     }
 }
 
-/// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key. 
+/// Given a file on the public bucket, attempts to optimize it and move it to the target bucket under the target key.
 /// Returns the key that it was uploaded to (with the file extension).
 /// Mainly for usage with temp images uploaded by users.
 pub async fn move_temp_s3_file(
@@ -112,16 +115,19 @@ pub async fn move_temp_s3_file(
     target_bucket_name: &str,
     target_file_key: &str,
 ) -> Result<String, MoveTempS3FileErrs> {
-    fn losslessly_convert_based_on_filetype(original_file_bytes: Vec<u8>, mime_type: &str, mime_media_type: &str) -> Option<Vec<u8>> {
+    fn losslessly_convert_based_on_filetype(
+        original_file_bytes: Vec<u8>,
+        mime_type: &str,
+        mime_media_type: &str,
+    ) -> Option<Vec<u8>> {
         match mime_media_type {
             "image" if mime_type == "image/svg+xml" => Some(original_file_bytes), // God SVGs are a fuckin' headache.
-            "image" => Some(file_compression::compress_image_lossless(
-                                            original_file_bytes.to_vec(),
-                                            mime_type
-                                        )
-                                        .unwrap_or(original_file_bytes)), // If can't compress it, just send back the original untouched.
+            "image" => Some(
+                file_compression::compress_image_lossless(original_file_bytes.to_vec(), mime_type)
+                    .unwrap_or(original_file_bytes),
+            ), // If can't compress it, just send back the original untouched.
             "video" => Some(original_file_bytes), // Video compression takes ages, I'm not doing it on-server.
-            _ => None
+            _ => None,
         }
     }
 
@@ -132,10 +138,12 @@ pub async fn move_temp_s3_file(
         target_bucket_name,
         target_file_key,
         losslessly_convert_based_on_filetype,
-        "MOVE TEMP S3 FILE").await
+        "MOVE TEMP S3 FILE",
+    )
+    .await
 }
 
-/// Given an image on the public bucket, attempts to compress it and move it to the target bucket under the target key. 
+/// Given an image on the public bucket, attempts to compress it and move it to the target bucket under the target key.
 /// Returns the key that it was uploaded to (with the file extension).
 /// If passed something that isn't an image, returns UnknownFiletype.
 pub async fn move_and_lossily_compress_temp_s3_img(
@@ -146,13 +154,12 @@ pub async fn move_and_lossily_compress_temp_s3_img(
     target_file_key: &str,
     compression_settings: Option<file_compression::LossyCompressionSettings>,
 ) -> Result<String, MoveTempS3FileErrs> {
-
     fn lossily_compress_img(
         original_file_bytes: Vec<u8>,
         mime_type: &str,
         mime_media_type: &str,
-        compression_settings: Option<file_compression::LossyCompressionSettings>)
-        -> Option<Vec<u8>> {
+        compression_settings: Option<file_compression::LossyCompressionSettings>,
+    ) -> Option<Vec<u8>> {
         // If it's not an image, SHOOT THAT SHIT BACK.
         if mime_media_type != "image" {
             return None;
@@ -164,10 +171,8 @@ pub async fn move_and_lossily_compress_temp_s3_img(
         }
 
         // Now it's gotta be an image. COMPRESS IT.
-        file_compression::compress_image_lossy(
-                original_file_bytes,
-            mime_type,
-            compression_settings).ok()
+        file_compression::compress_image_lossy(original_file_bytes, mime_type, compression_settings)
+            .ok()
     }
 
     move_and_convert_temp_file(
@@ -177,10 +182,12 @@ pub async fn move_and_lossily_compress_temp_s3_img(
         target_bucket_name,
         target_file_key,
         move |x, y, z| lossily_compress_img(x, y, z, compression_settings),
-        "COMPRESS TEMP S3 IMG").await
+        "COMPRESS TEMP S3 IMG",
+    )
+    .await
 }
 
-/// Helper function which downloads a temp file from the public bucket, runs a function on it, and moves it to a chosen final location in any bucket. 
+/// Helper function which downloads a temp file from the public bucket, runs a function on it, and moves it to a chosen final location in any bucket.
 async fn move_and_convert_temp_file<F>(
     s3_client: &aws_sdk_s3::Client,
     server_config: &crate::server_state::config::Config,
@@ -190,7 +197,8 @@ async fn move_and_convert_temp_file<F>(
     file_conversion_operation: F,
     function_name_for_debug_logging: &str,
 ) -> Result<String, MoveTempS3FileErrs>
-where F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>
+where
+    F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>,
 {
     // Download file from S3
     let downloaded_file = s3_client.get_object()
@@ -211,7 +219,7 @@ where F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>
         .into_bytes().to_vec();
 
     // Now let's find out what kind of file this is, and compress it appropriately.
-    // TODO: This section is string-dependent. It works for now, 
+    // TODO: This section is string-dependent. It works for now,
     // but there's gotta be some crate with a MIME type that can make this less error-prone. Rewrite later!
     let mut mime_type = infer::get(&original_file_bytes)
         .map(|file_type| file_type.mime_type())
@@ -226,7 +234,7 @@ where F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>
         })
         .ok_or_else(|| {
             eprintln!(
-                "[{function_name_for_debug_logging}] File key {} has an unknown filetype.", 
+                "[{function_name_for_debug_logging}] File key {} has an unknown filetype.",
                 temp_file_key
             );
             MoveTempS3FileErrs::UnknownFiletype
@@ -243,41 +251,38 @@ where F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>
         "text/plain" => "txt",
         _ => mime_guess::get_mime_extensions_str(mime_type)
             .and_then(|exts| exts.get(0))
-            .unwrap_or(&"bin")
+            .unwrap_or(&"bin"),
     };
 
     // Now run the relevant operation on the file.
-    let converted_file = match file_conversion_operation(original_file_bytes, &mime_type, &mime_media_type) {
-        Some(x) => x,
-        None => {
-            // If the inner function passed none, it's assumed it failed somehow.
-            return Err(MoveTempS3FileErrs::ConversionFailed);
-        }
-    };
+    let converted_file =
+        match file_conversion_operation(original_file_bytes, &mime_type, &mime_media_type) {
+            Some(x) => x,
+            None => {
+                // If the inner function passed none, it's assumed it failed somehow.
+                return Err(MoveTempS3FileErrs::ConversionFailed);
+            }
+        };
 
     // As far as I know, this is only referenced when the browser decides whether to display or download a file.
     // Inline displays in-browser, attach downloads it.
     let file_content_disposition = match mime_media_type {
-        "image" |
-        "video" |
-        "audio" => {
-            "inline"
-        }
-        _ => {
-            "attachment"
-        }
+        "image" | "video" | "audio" => "inline",
+        _ => "attachment",
     };
 
-    let target_key_with_filename = format!("{}.{}",
+    let target_key_with_filename = format!(
+        "{}.{}",
         target_file_key.split(".").next().unwrap(), // Remove a passed extension.
-        mime_type_extension);
+        mime_type_extension
+    );
 
     s3_client.put_object()
         .bucket(target_bucket_name)
         .key(&target_key_with_filename)
         .body(converted_file.into())
         .content_type(mime_type)
-        .content_disposition(file_content_disposition) 
+        .content_disposition(file_content_disposition)
         .send()
         .await
         .map_err(|err| {
@@ -328,8 +333,8 @@ pub enum PostingSteps<T> {
 pub async fn get_temp_s3_presigned_urls(
     state: &crate::ServerState,
     amount_of_presigned_urls_needed: u32,
-    s3_temp_folder_name: &str
-) -> Result<Vec<String>,String> {
+    s3_temp_folder_name: &str,
+) -> Result<Vec<String>, String> {
     let temp_key_tasks: Vec<_> = (0..amount_of_presigned_urls_needed)
         .map(|_| {
             let s3_client = state.s3_client.clone();
@@ -359,9 +364,7 @@ pub async fn get_temp_s3_presigned_urls(
     for task in temp_key_tasks {
         let uri = task
             .await
-            .map_err(|err| {
-                format!("Tokio Join Err! {:?}", err)
-            })?
+            .map_err(|err| format!("Tokio Join Err! {:?}", err))?
             .map_err(|err| {
                 format!(
                     "[ART POST STAGE 1] SDK presigned URL creation err! {:?}",
@@ -376,12 +379,12 @@ pub async fn get_temp_s3_presigned_urls(
     // In production this isn't a thing, so just leave S3_PUBLIC_FACING_URL unset.
     if let Ok(public_base) = env::var("S3_PUBLIC_FACING_URL") {
         let public_uri = Uri::from_str(&public_base).unwrap();
-        
+
         temp_keys_for_presigned = temp_keys_for_presigned
             .iter()
             .map(|presigned_url| {
                 let presigned_uri = Uri::from_str(presigned_url).unwrap();
-                
+
                 // Replace the scheme and authority, keep path and query (including signature params)
                 Uri::builder()
                     .scheme(public_uri.scheme().unwrap().clone())
@@ -393,7 +396,6 @@ pub async fn get_temp_s3_presigned_urls(
             })
             .collect();
     }
-    
 
     Ok(temp_keys_for_presigned)
 }
@@ -412,17 +414,22 @@ pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<Stri
     if key.is_empty() {
         None
     } else {
-        Some(key
-            // To handle both [bucket_name].[domain]/[key] and [domain]/[bucket_name]/[key] cases
-            .trim_start_matches(&format!("/{}", state.config.s3_public_bucket))
-            .trim_start_matches("/")
-            .to_string()
+        Some(
+            key
+                // To handle both [bucket_name].[domain]/[key] and [domain]/[bucket_name]/[key] cases
+                .trim_start_matches(&format!("/{}", state.config.s3_public_bucket))
+                .trim_start_matches("/")
+                .to_string(),
         )
     }
 }
 
 /// Given a list of keys to delete from S3, and the bucket to delete them from, attempts a delete.
-pub async fn delete_keys_from_s3(s3_client: &aws_sdk_s3::Client, bucket_to_delete_from: &str, keys_to_delete: &Vec<String>) -> Result<(), String> {
+pub async fn delete_keys_from_s3(
+    s3_client: &aws_sdk_s3::Client,
+    bucket_to_delete_from: &str,
+    keys_to_delete: &Vec<String>,
+) -> Result<(), String> {
     if keys_to_delete.len() == 0 {
         return Ok(());
     }
@@ -431,18 +438,19 @@ pub async fn delete_keys_from_s3(s3_client: &aws_sdk_s3::Client, bucket_to_delet
         .iter()
         .map(|key| ObjectIdentifier::builder().key(key).build().unwrap())
         .collect();
-    
-    s3_client.delete_objects()
+
+    s3_client
+        .delete_objects()
         .bucket(bucket_to_delete_from)
-        .delete(aws_sdk_s3::types::Delete::builder()
-        .set_objects(
-            Some(files_to_delete))
-            .build()
-            .unwrap()
+        .delete(
+            aws_sdk_s3::types::Delete::builder()
+                .set_objects(Some(files_to_delete))
+                .build()
+                .unwrap(),
         )
         .send()
         .await
-        .map_err(|err| format!("{:?}",err))?;
+        .map_err(|err| format!("{:?}", err))?;
 
     Ok(())
 }
@@ -452,9 +460,11 @@ fn is_an_svg(file: &Vec<u8>) -> bool {
     if let Ok(content) = std::str::from_utf8(&file) {
         let content_lower = content.to_lowercase();
         let trimmed = content_lower.trim_start();
-        
+
         // SVG files typically start with <?xml or <svg, and contain svg namespace
-        (trimmed.starts_with("<?xml") || trimmed.starts_with("<svg") || trimmed.starts_with("<!doctype svg"))
+        (trimmed.starts_with("<?xml")
+            || trimmed.starts_with("<svg")
+            || trimmed.starts_with("<!doctype svg"))
             && content_lower.contains("<svg")
     } else {
         false

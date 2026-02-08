@@ -20,7 +20,7 @@ pub async fn edit_art_page(
         // Remove the end bit, so it talks to /{art_slug} instead of /{art_slug}/edit
         let current_path = original_uri.path();
         let target_button_url = current_path[..current_path.rfind("/").unwrap()].to_string();
-        
+
         Ok(template_to_response(super::post::ArtPostingPage {
             user: requesting_user,
             original_uri,

@@ -1,4 +1,7 @@
-use crate::{user::{User, UsermadePost}, utils::sql::PostState};
+use crate::{
+    user::{User, UsermadePost},
+    utils::sql::PostState,
+};
 use chrono::{DateTime, Utc};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
@@ -15,7 +18,6 @@ pub struct BaseArt {
     pub slug: String,
     #[serde(default)]
     pub is_nsfw: bool,
-
     /*#[serde(default = "default_art_state")]
     pub art_state: PostState,*/
 }
@@ -145,7 +147,7 @@ impl PageArt {
             art_keys,
             creation_date: row.get("creation_date"),
             uploading_user,
-            comments
+            comments,
         }
     }
 
@@ -324,7 +326,7 @@ impl Comment {
         Self {
             posting_user: User::get_by_id(db_connection, &row.get("poster_id")).await,
             posting_time: row.get("posting_time"),
-            contents: row.get("contents")
+            contents: row.get("contents"),
         }
     }
 }

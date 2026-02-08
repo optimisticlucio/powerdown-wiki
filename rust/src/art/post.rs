@@ -1,4 +1,3 @@
-use utils::sql::PostState;
 use crate::art::structs::{BaseArt, PageArt};
 use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response, PostingSteps};
@@ -9,15 +8,19 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
 use http::Uri;
 use tokio::task::JoinSet;
+use utils::sql::PostState;
 
-const INSERT_INTO_ART_FILE_DB_QUERY: &str = "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
-const DELETE_FROM_ART_FILE_DB_QUERY: &str = "DELETE FROM art_file WHERE belongs_to=$1 AND internal_order=$2";
+const INSERT_INTO_ART_FILE_DB_QUERY: &str =
+    "INSERT INTO art_file (belongs_to,internal_order,s3_key) VALUES ($1,$2,$3)";
+const DELETE_FROM_ART_FILE_DB_QUERY: &str =
+    "DELETE FROM art_file WHERE belongs_to=$1 AND internal_order=$2";
 
-const ART_THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings = utils::file_compression::LossyCompressionSettings {
-                            max_width: Some(180),
-                            max_height: Some(150),
-                            quality: 60
-                        };
+const ART_THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings =
+    utils::file_compression::LossyCompressionSettings {
+        max_width: Some(180),
+        max_height: Some(150),
+        quality: 60,
+    };
 
 /// Post Request Handler for art category.
 #[axum::debug_handler]
@@ -35,7 +38,7 @@ pub async fn add_art(
     // Who's trying to do this?
     let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
-        None => return Err(RootErrors::Unauthorized)
+        None => return Err(RootErrors::Unauthorized),
     };
 
     if !requesting_user.user_type.permissions().can_post_art {
@@ -52,16 +55,18 @@ pub async fn add_art(
 
             // Now, let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
-                return Err(RootErrors::BadRequest(
-                    err_explanation,
-                ));
+                return Err(RootErrors::BadRequest(err_explanation));
             }
 
             // Check if this art already exists. If it does, throw an error.
-            if BaseArt::get_by_slug(&db_connection, &page_art.base_art.slug).await.is_some() {
-                return Err(RootErrors::BadRequest(
-                    format!("The slug {} already exists.", &page_art.base_art.slug)
-                ));
+            if BaseArt::get_by_slug(&db_connection, &page_art.base_art.slug)
+                .await
+                .is_some()
+            {
+                return Err(RootErrors::BadRequest(format!(
+                    "The slug {} already exists.",
+                    &page_art.base_art.slug
+                )));
             }
 
             // Makes sense? Good. Our job now.
@@ -88,7 +93,6 @@ pub async fn add_art(
             columns.push("thumbnail".into());
             values.push(&"missing_thumbnail");
 
-            
             if !page_art.tags.is_empty() {
                 columns.push("tags".into());
                 values.push(&page_art.tags);
@@ -104,10 +108,13 @@ pub async fn add_art(
                 values.push(&uploading_user.as_ref().unwrap().id);
             }
 
-            let sanitized_description = page_art.description.map(|description| {
-                // TODO: SANITIZE FOR HTML/COMMONMARK INJECTION
-                description.trim().to_string()
-            }).filter(|description| !description.is_empty());
+            let sanitized_description = page_art
+                .description
+                .map(|description| {
+                    // TODO: SANITIZE FOR HTML/COMMONMARK INJECTION
+                    description.trim().to_string()
+                })
+                .filter(|description| !description.is_empty());
 
             if let Some(description) = &sanitized_description {
                 // If we got here, the description is sanitized and not empty.
@@ -140,25 +147,25 @@ pub async fn add_art(
             let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
 
             let thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
-                    &state.s3_client.clone(),
-                    &state.config,
-                    &page_art.base_art.thumbnail_key,
-                    &state.config.s3_public_bucket,
-                    &target_thumbnail_key,
-                    Some(ART_THUMBNAIL_COMPRESSION_SETTINGS)
-                )
-                .await
-                .map_err(|err| {
-                    eprintln!(
-                        "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {:?}",
-                        err
-                    );
+                &state.s3_client.clone(),
+                &state.config,
+                &page_art.base_art.thumbnail_key,
+                &state.config.s3_public_bucket,
+                &target_thumbnail_key,
+                Some(ART_THUMBNAIL_COMPRESSION_SETTINGS),
+            )
+            .await
+            .map_err(|err| {
+                eprintln!(
+                    "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {:?}",
+                    err
+                );
 
-                    // Delete the processing art before returning error.
-                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                // Delete the processing art before returning error.
+                let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 
-                    RootErrors::InternalServerError
-                })?;
+                RootErrors::InternalServerError
+            })?;
 
             db_connection
                 .execute(
@@ -235,15 +242,16 @@ pub async fn add_art(
             let art_upload_results: Vec<Result<String, String>> = art_upload_tasks.join_all().await;
 
             // Let's get all the errors and the results
-            let (final_art_keys, failed_upload_errs) = art_upload_results
-                .into_iter()
-                .fold((Vec::new(), Vec::new()), |(mut oks, mut errs), result| {
+            let (final_art_keys, failed_upload_errs) = art_upload_results.into_iter().fold(
+                (Vec::new(), Vec::new()),
+                |(mut oks, mut errs), result| {
                     match result {
                         Ok(a) => oks.push(a),
                         Err(b) => errs.push(b),
                     }
                     (oks, errs)
-                });
+                },
+            );
 
             if !failed_upload_errs.is_empty() {
                 // TODO: Handle if part of this method fails. It's already a fail-method, so what then?
@@ -251,7 +259,9 @@ pub async fn add_art(
                 let _ = utils::delete_keys_from_s3(
                     &state.s3_client.clone(),
                     &state.config.s3_public_bucket,
-                    &final_art_keys).await;
+                    &final_art_keys,
+                )
+                .await;
 
                 let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
 
@@ -311,7 +321,7 @@ pub async fn art_posting_page(
         original_uri,
 
         art_being_modified: None,
-        target_button_url: None
+        target_button_url: None,
     }))
 }
 
@@ -360,9 +370,7 @@ pub async fn edit_art_put_request(
 
             // Now let's make sure what we were given is even logical
             if let Err(err_explanation) = validate_recieved_page_art(&sent_page_art) {
-                return Err(RootErrors::BadRequest(
-                    err_explanation,
-                ));
+                return Err(RootErrors::BadRequest(err_explanation));
             }
 
             // TODO: Check validity of art URLs. Don't move them yet, just ensure the user isn't fucking with us.
@@ -412,8 +420,10 @@ pub async fn edit_art_put_request(
             // SAFETY: nothing user-written is passed into the string. User values are in `values`
             let query = format!(
                 "UPDATE art SET {} WHERE id={};",
-                columns.iter().enumerate()
-                    .map(|(index, value)| format!("{}=${}", value, index+1))
+                columns
+                    .iter()
+                    .enumerate()
+                    .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
                 format!("${}", columns.len() + 1)
@@ -447,7 +457,9 @@ pub async fn edit_art_put_request(
 
                 // Converting "as i8" should be fine as long as no one puts over 127 art pieces in the same place.
                 // As of writing this comment, I limit people to 35 at most, so we should be fine.
-                if !previous_art_key_index.is_some_and(|previous_index| previous_index as i8 == new_art_key_index) {
+                if !previous_art_key_index
+                    .is_some_and(|previous_index| previous_index as i8 == new_art_key_index)
+                {
                     // The new art at index i is unlike the previous art at index i.
 
                     let new_art_key = if previous_art_key_index.is_some() {
@@ -464,14 +476,15 @@ pub async fn edit_art_put_request(
                             &state.config,
                             art_key,
                             &state.config.s3_public_bucket,
-                            &target_file_key
-                        ).await
+                            &target_file_key,
+                        )
+                        .await
                         .map_err(|err| {
-                            eprintln!("[MODIFY ART] Failed moving new art for \"{}\", id:{}. Err:{:?}", 
-                                &existing_art.base_art.title,
-                                &existing_art.base_art.id,
-                                err);
-                            
+                            eprintln!(
+                                "[MODIFY ART] Failed moving new art for \"{}\", id:{}. Err:{:?}",
+                                &existing_art.base_art.title, &existing_art.base_art.id, err
+                            );
+
                             RootErrors::InternalServerError
                         })?
                     };
@@ -496,23 +509,26 @@ pub async fn edit_art_put_request(
                     db_connection
                         .execute(
                             INSERT_INTO_ART_FILE_DB_QUERY,
-                            &[&existing_art.base_art.id, &((new_art_key_index+1) as i32), &new_art_key],
+                            &[
+                                &existing_art.base_art.id,
+                                &((new_art_key_index + 1) as i32),
+                                &new_art_key,
+                            ],
                         )
                         .await
                         .map_err(|err| {
                             eprintln!(
                                 "[ART MODIFICATION] Adding a new record to art ID {} failed. {:?}",
-                                existing_art.base_art.id,
-                                err
+                                existing_art.base_art.id, err
                             );
                             RootErrors::InternalServerError
                         })?;
                 }
             }
-            
+
             // We modified all the existing records, cool. Now let's delete any records we didn't get to go over.
             if sent_page_art.art_keys.len() < existing_art.art_keys.len() {
-                for leftover_index in sent_page_art.art_keys.len()..existing_art.art_keys.len() {   
+                for leftover_index in sent_page_art.art_keys.len()..existing_art.art_keys.len() {
                     db_connection
                         .execute(
                             DELETE_FROM_ART_FILE_DB_QUERY,
@@ -531,47 +547,48 @@ pub async fn edit_art_put_request(
             }
 
             // Now that all the new art was moved in, let's delete the art that's no longer present.
-            let art_keys_that_were_removed: Vec<String> = existing_art.art_keys.iter()
-                        .filter(|key| !sent_page_art.art_keys.contains(key))
-                        .cloned()
-                        .collect();
+            let art_keys_that_were_removed: Vec<String> = existing_art
+                .art_keys
+                .iter()
+                .filter(|key| !sent_page_art.art_keys.contains(key))
+                .cloned()
+                .collect();
 
             // TODO: How do we handle this fail? If this fails the post is fine, it's just some leftovers on our side.
             let _ = utils::delete_keys_from_s3(
                 &s3_client,
                 &state.config.s3_public_bucket,
-                &art_keys_that_were_removed)
-                .await;
+                &art_keys_that_were_removed,
+            )
+            .await;
 
             // ---- Now that we finished, set the appropriate art state, and maybe update the thumbnail ----
 
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
-            
+
             columns.push("post_state".into());
             values.push(&PostState::Public);
 
             // I need to create new_thumbnail_key here so that, incase we use it, it can survive enough.
-            let new_thumbnail_key ;
+            let new_thumbnail_key;
             if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
                 new_thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
-                        &state.s3_client.clone(),
-                        &state.config,
-                        &sent_page_art.base_art.thumbnail_key,
-                        &state.config.s3_public_bucket,
-                        &existing_art.base_art.thumbnail_key,
-                        Some(ART_THUMBNAIL_COMPRESSION_SETTINGS)
-                    )
-                    .await
-                    .map_err(|err| {
-                            eprintln!(
-                                "[ART EDIT] Converting thumbnail of art {} failed, {:?}",
-                                existing_art.base_art.id,
-                                err
-                            );
-                            RootErrors::InternalServerError
-                        }
-                    )?;
+                    &state.s3_client.clone(),
+                    &state.config,
+                    &sent_page_art.base_art.thumbnail_key,
+                    &state.config.s3_public_bucket,
+                    &existing_art.base_art.thumbnail_key,
+                    Some(ART_THUMBNAIL_COMPRESSION_SETTINGS),
+                )
+                .await
+                .map_err(|err| {
+                    eprintln!(
+                        "[ART EDIT] Converting thumbnail of art {} failed, {:?}",
+                        existing_art.base_art.id, err
+                    );
+                    RootErrors::InternalServerError
+                })?;
 
                 columns.push("thumbnail".into());
                 values.push(&new_thumbnail_key);
@@ -579,24 +596,24 @@ pub async fn edit_art_put_request(
 
             values.push(&existing_art.base_art.id);
 
-            let update_query = format!("UPDATE art SET {} WHERE id={};",
-                columns.iter().enumerate()
-                    .map(|(index, value)| format!("{}=${}", value, index+1))
+            let update_query = format!(
+                "UPDATE art SET {} WHERE id={};",
+                columns
+                    .iter()
+                    .enumerate()
+                    .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
-                format!("${}", columns.len() + 1));
+                format!("${}", columns.len() + 1)
+            );
 
             db_connection
-                .execute(
-                    &update_query,
-                    &values,
-                )
+                .execute(&update_query, &values)
                 .await
                 .map_err(|err| {
                     eprintln!(
                         "[ART UPLOAD] Setting post state of id {} to public failed?? {:?}",
-                        existing_art.base_art.id,
-                        err
+                        existing_art.base_art.id, err
                     );
                     RootErrors::InternalServerError
                 })?;
@@ -617,17 +634,17 @@ async fn give_user_presigned_s3_urls(
                 .to_string(),
         ))
     } else {
-        let presigned_urls = utils::get_temp_s3_presigned_urls(state, requested_amount_of_urls.into(), "art")
-            .await.map_err(|err| {
-                eprintln!("[ART POST STEP 1] {}", err);
-                RootErrors::InternalServerError
-            })?;
+        let presigned_urls =
+            utils::get_temp_s3_presigned_urls(state, requested_amount_of_urls.into(), "art")
+                .await
+                .map_err(|err| {
+                    eprintln!("[ART POST STEP 1] {}", err);
+                    RootErrors::InternalServerError
+                })?;
 
         // Send back the urls as a json.
-        let response = serde_json::to_string(&utils::PresignedUrlsResponse {
-            presigned_urls,
-        })
-        .unwrap();
+        let response =
+            serde_json::to_string(&utils::PresignedUrlsResponse { presigned_urls }).unwrap();
 
         Ok(response.into_response())
     }
@@ -661,7 +678,7 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
     }
 
     if !utils::is_valid_slug(&recieved_page_art.base_art.slug) {
-        return Err("Given invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string())
+        return Err("Given invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string());
     }
 
     Ok(())
@@ -671,42 +688,52 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
 /// NOTE: Does not make sure the values make _logical_ sense, only that we don't deal with trivially incorrect data.
 fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt, state: &ServerState) {
     // Clean up any empty tags
-    recieved_page_art.tags = recieved_page_art.tags.iter().filter_map(|tag| {
-        // SAFETY: The code doesn't pass the tags directly anywhere and are filtered by askama,
-        // as they never have any parsing-relevant info in them. Well, _shouldn't_ have.
-        // Therefore we don't need to sanitize them here.
-        let trimmed_tag = tag.trim();
-        
-        if trimmed_tag.is_empty() {
-            None
-        }
-        else {
-            Some(trimmed_tag.to_lowercase())
-        }
-    }).collect();
+    recieved_page_art.tags = recieved_page_art
+        .tags
+        .iter()
+        .filter_map(|tag| {
+            // SAFETY: The code doesn't pass the tags directly anywhere and are filtered by askama,
+            // as they never have any parsing-relevant info in them. Well, _shouldn't_ have.
+            // Therefore we don't need to sanitize them here.
+            let trimmed_tag = tag.trim();
+
+            if trimmed_tag.is_empty() {
+                None
+            } else {
+                Some(trimmed_tag.to_lowercase())
+            }
+        })
+        .collect();
 
     // Clean up any empty artist names.
-    recieved_page_art.base_art.creators = recieved_page_art.base_art.creators.iter().filter_map(|creator_name| {
-        // SAFETY: artist names are never passed with the "| safe" tag to askama, assumed to be dangerous anyways.
-        let trimmed_name = creator_name.trim();
-        
-        if trimmed_name.is_empty() {
-            None
-        }
-        else {
-            Some(trimmed_name.to_string())
-        }
-    }).collect();
+    recieved_page_art.base_art.creators = recieved_page_art
+        .base_art
+        .creators
+        .iter()
+        .filter_map(|creator_name| {
+            // SAFETY: artist names are never passed with the "| safe" tag to askama, assumed to be dangerous anyways.
+            let trimmed_name = creator_name.trim();
+
+            if trimmed_name.is_empty() {
+                None
+            } else {
+                Some(trimmed_name.to_string())
+            }
+        })
+        .collect();
 
     // Get only the keys from the URLs the user gave us.
     // We don't need to raise an error if the host is wrong bc if the host is wrong, the key _has_ got to be wrong too.
     // If the host is wrong but the key is correct I legitimately have no idea what the fuck the user is doing.
 
-    recieved_page_art.art_keys = recieved_page_art.art_keys
+    recieved_page_art.art_keys = recieved_page_art
+        .art_keys
         .iter()
         .filter_map(|url| utils::clean_passed_key(url, state))
         .collect();
 
     // If this is invalid, it returns an empty string. I know, not great, is handled by the verification function.
-    recieved_page_art.base_art.thumbnail_key = utils::clean_passed_key(&recieved_page_art.base_art.thumbnail_key, state).unwrap_or_default();
+    recieved_page_art.base_art.thumbnail_key =
+        utils::clean_passed_key(&recieved_page_art.base_art.thumbnail_key, state)
+            .unwrap_or_default();
 }

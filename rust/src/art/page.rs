@@ -1,6 +1,11 @@
 use super::structs;
 use crate::{
-    ServerState, art::structs::Comment, errs::RootErrors, nsfw_splash, user::{User, UsermadePost}, utils::template_to_response
+    art::structs::Comment,
+    errs::RootErrors,
+    nsfw_splash,
+    user::{User, UsermadePost},
+    utils::template_to_response,
+    ServerState,
 };
 use askama::Template;
 use axum::{
@@ -40,7 +45,9 @@ impl<'a> ArtPage<'a> {
     /// Given a URL, returns true if it's one that should be wrapped in a <video> tag.
     /// Assumes the URL has a file extension. If not, this breaks.
     fn url_is_of_video(&self, url: &&String) -> bool {
-        ["mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"].iter().any(|ext| url.ends_with(ext))
+        ["mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"]
+            .iter()
+            .any(|ext| url.ends_with(ext))
     }
 }
 
@@ -57,7 +64,9 @@ pub async fn art_page(
     if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         // If the user is looking for something spicy, make sure we allow them to.
         if requested_art.base_art.is_nsfw {
-            if let Some(nsfw_splash) = nsfw_splash::get_if_user_hasnt_enabled_nsfw(&user, &original_uri, &cookie_jar) {
+            if let Some(nsfw_splash) =
+                nsfw_splash::get_if_user_hasnt_enabled_nsfw(&user, &original_uri, &cookie_jar)
+            {
                 return Ok(nsfw_splash);
             }
         }
@@ -70,11 +79,14 @@ pub async fn art_page(
             .as_ref()
             .is_some_and(|user| requested_art.can_be_modified_by(user));
 
-        let markdownified_description = requested_art.description
+        let markdownified_description = requested_art
+            .description
             .map(|f| markdown_to_html(&f, &comrak::Options::default()));
 
-        let comments_with_sanitized_contents = requested_art.comments
-            .into_iter().map(|comment| {
+        let comments_with_sanitized_contents = requested_art
+            .comments
+            .into_iter()
+            .map(|comment| {
                 // TODO: SANITIZE!!
                 Comment {
                     contents: markdown_to_html(&comment.contents, &comrak::Options::default()),

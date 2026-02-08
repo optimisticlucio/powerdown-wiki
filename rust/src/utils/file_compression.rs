@@ -6,7 +6,7 @@ use std::io::Cursor;
 /// Given an image and its mime type, compresses it as much as losslessly possible.
 pub fn compress_image_lossless(
     image_bytes: Vec<u8>,
-    mime_type: &str
+    mime_type: &str,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Convert the infer type to ImageReader's.
     let format = ImageFormat::from_mime_type(mime_type).unwrap();
@@ -137,30 +137,33 @@ pub fn compress_image_lossy(
 
     // Compress to lossy WebP
     let compressed = compress_to_webp_lossy(&img, settings.quality)?;
-    
+
     Ok(compressed)
 }
 
 fn resize_if_needed(img: DynamicImage, max_width: u32, max_height: u32) -> DynamicImage {
     let (width, height) = (img.width(), img.height());
-    
+
     // Calculate if resizing is needed
     if width <= max_width && height <= max_height {
         return img;
     }
-    
+
     // Calculate the scaling ratio to fit within bounds
     let width_ratio = max_width as f32 / width as f32;
     let height_ratio = max_height as f32 / height as f32;
     let ratio = width_ratio.min(height_ratio);
-    
+
     let new_width = (width as f32 * ratio) as u32;
     let new_height = (height as f32 * ratio) as u32;
-    
+
     img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3)
 }
 
-fn compress_to_webp_lossy(img: &DynamicImage, quality: u8) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+fn compress_to_webp_lossy(
+    img: &DynamicImage,
+    quality: u8,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let rgba = img.to_rgba8();
     let encoder = webp::Encoder::from_rgba(&rgba, img.width(), img.height());
     let webp = encoder.encode(quality as f32);

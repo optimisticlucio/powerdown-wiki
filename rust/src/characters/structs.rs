@@ -36,7 +36,7 @@ pub struct PageCharacter {
     #[serde(default)]
     pub retirement_reason: Option<String>,
     #[serde(default)]
-    pub tag: Option<String>, 
+    pub tag: Option<String>,
 
     #[serde(default)]
     pub logo_url: Option<String>,
@@ -60,10 +60,7 @@ pub struct InfoboxRow {
 
 impl BaseCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
-    pub async fn get_by_slug(
-        db_connection: &Object<Manager>,
-        slug: &String,
-    ) -> Option<Self> {
+    pub async fn get_by_slug(db_connection: &Object<Manager>, slug: &String) -> Option<Self> {
         let character_row = db_connection
             .query_one("SELECT * FROM character WHERE page_slug=$1", &[&slug])
             .await
@@ -76,7 +73,10 @@ impl BaseCharacter {
     pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
-            .query("SELECT * FROM character WHERE post_state='public' ORDER BY short_name", &[])
+            .query(
+                "SELECT * FROM character WHERE post_state='public' ORDER BY short_name",
+                &[],
+            )
             .await
             .unwrap();
 

@@ -1,6 +1,6 @@
 use std::cmp::{self, min};
 
-use crate::{RootErrors, ServerState, nsfw_splash, user::User, utils::template_to_response};
+use crate::{nsfw_splash, user::User, utils::template_to_response, RootErrors, ServerState};
 use askama::Template;
 use axum::{
     extract::{DefaultBodyLimit, OriginalUri, Query, State},
@@ -15,11 +15,11 @@ use http::Uri;
 use structs::ArtSearchParameters;
 use tower_cookies::Cookies;
 
+mod comment;
 mod edit;
 mod page;
 mod post;
 mod structs;
-mod comment;
 
 pub fn router() -> Router<ServerState> {
     Router::new()
@@ -77,7 +77,9 @@ async fn art_index(
 
     // If the user is looking for something spicy, make sure we allow them to.
     if query_params.is_nsfw {
-        if let Some(nsfw_splash) = nsfw_splash::get_if_user_hasnt_enabled_nsfw(&user, &original_uri, &cookie_jar) {
+        if let Some(nsfw_splash) =
+            nsfw_splash::get_if_user_hasnt_enabled_nsfw(&user, &original_uri, &cookie_jar)
+        {
             return Ok(nsfw_splash);
         }
     }
@@ -122,7 +124,9 @@ async fn art_index(
     )
     .await;
 
-    let show_upload_button = user.as_ref().is_some_and(|user| user.user_type.permissions().can_post_art );
+    let show_upload_button = user
+        .as_ref()
+        .is_some_and(|user| user.user_type.permissions().can_post_art);
 
     Ok(template_to_response(ArtIndexPage {
         user,

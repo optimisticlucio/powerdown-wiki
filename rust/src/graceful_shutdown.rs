@@ -1,6 +1,6 @@
-use tokio::signal;
 use crate::scheduled_tasks::run_backup_processes;
 use crate::ServerState;
+use tokio::signal;
 
 pub async fn handle_shutdown_signal(state: ServerState) {
     let ctrl_c = async {
@@ -26,7 +26,7 @@ pub async fn handle_shutdown_signal(state: ServerState) {
     }
 
     println!("[GRACEFUL SHUTDOWN] Recieved shutdown command and existing connections handled! Initiating graceful shutdown protocol.");
-    
+
     run_backup_processes(state).await;
 
     println!("[GRACEFUL SHUTDOWN] Shutdown operation complete. Goodbye!");

@@ -1,4 +1,6 @@
-use powerdown_wiki::{ServerState, handle_shutdown_signal, initiate_scheduled_tasks, run_migrations};
+use powerdown_wiki::{
+    handle_shutdown_signal, initiate_scheduled_tasks, run_migrations, ServerState,
+};
 use std::{env, net::SocketAddr};
 
 #[tokio::main]
@@ -17,8 +19,7 @@ async fn main() {
 
                 if applied_migrations.is_empty() {
                     println!("[STARTUP] No SQL migrations applied!");
-                }
-                else {
+                } else {
                     let readable_migrations = applied_migrations
                         .iter()
                         .map(|migration| migration.name())
@@ -27,9 +28,12 @@ async fn main() {
 
                     println!("[STARTUP] SQL migrations applied: {readable_migrations}");
                 }
-            },
+            }
             Err(err) => {
-                eprintln!("[STARTUP] Migrations failed to run! Terminating server. Err: {:?}", err);
+                eprintln!(
+                    "[STARTUP] Migrations failed to run! Terminating server. Err: {:?}",
+                    err
+                );
                 return ();
             }
         }

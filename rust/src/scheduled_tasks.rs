@@ -1,15 +1,15 @@
 //! # Scheduled Tasks
-//! 
+//!
 //! `scheduled_tasks` is the module handling all the tasks that the server needs to regularly perform,
 //! outside of the context of a given server request.
-//! 
+//!
 //! The `initiate(ServerState)` function is the one the main function should call to initiate all the relevant tasks.
 
+use crate::{scheduled_tasks::lib::clean_temp_db_entries, ServerState};
 use tokio::time::{interval, Duration};
-use crate::{ServerState, scheduled_tasks::lib::clean_temp_db_entries};
 
-mod sql_backup;
 mod lib;
+mod sql_backup;
 
 pub use lib::get_current_human_readable_time;
 pub use sql_backup::run_backup_processes;
@@ -27,8 +27,16 @@ pub fn initiate_scheduled_tasks(state: ServerState) {
     // expensive way to run all these functions that I've seen so far.
     // If you know of a better way, PLEASE.
 
-    tokio::spawn(run_periodically(state.clone(), sql_backup::run_backup_processes, DAY_DURATION));
-    tokio::spawn(run_periodically(state.clone(), clean_temp_db_entries, HOUR_DURATION));
+    tokio::spawn(run_periodically(
+        state.clone(),
+        sql_backup::run_backup_processes,
+        DAY_DURATION,
+    ));
+    tokio::spawn(run_periodically(
+        state.clone(),
+        clean_temp_db_entries,
+        HOUR_DURATION,
+    ));
 }
 
 /// Given a certain task to perform, and how often to perform it, repeatedly calls this task every `frequency`.
@@ -45,4 +53,3 @@ where
         task(state.clone()).await;
     }
 }
-

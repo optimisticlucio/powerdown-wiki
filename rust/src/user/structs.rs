@@ -33,16 +33,16 @@ pub struct User {
     /// The display name is not unique. It can have spaces, etc! If you need something that's 100% tied to this user, use the ID.
     pub display_name: String,
     pub profile_pic_s3_key: Option<String>, // The S3 key of their pfp image. Assumed to be in public bucket.
-    pub last_modified: DateTime<Utc>, // The last time that this user's info was modified.
+    pub last_modified: DateTime<Utc>,       // The last time that this user's info was modified.
     pub creator_name: Option<String>, // The name which identifies this user in art posts and such.
 }
 
 #[derive(FromSql, ToSql, Debug, Clone, Deserialize, PartialEq)]
 #[postgres(name = "user_type", rename_all = "snake_case")]
-#[serde(rename_all = "snake_case")]  // Add this line
+#[serde(rename_all = "snake_case")] // Add this line
 pub enum UserType {
     /// The default user type someone gets when they first sign up.
-    Normal, 
+    Normal,
     /// A user who's been promoted by admins and allowed to post to the site.
     Uploader,
     /// Admins, tasked with handling daily tasks and making sure nothing blows up.
@@ -102,7 +102,10 @@ impl User {
     pub async fn get_by_id(db_connection: &Object<Manager>, given_id: &i32) -> Option<Self> {
         const GET_USER_QUERY: &str = "SELECT * FROM site_user WHERE id=$1";
 
-        let resulted_row = db_connection.query_opt(GET_USER_QUERY, &[&given_id]).await.unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
+        let resulted_row = db_connection
+            .query_opt(GET_USER_QUERY, &[&given_id])
+            .await
+            .unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
 
         match resulted_row {
             None => None,
@@ -147,10 +150,7 @@ impl User {
     }
 
     /// Creates a new user in the DB, returns the created user.
-    pub async fn create_in_db(
-        db_connection: &Object<Manager>,
-        display_name: &str,
-    ) -> Self {
+    pub async fn create_in_db(db_connection: &Object<Manager>, display_name: &str) -> Self {
         let query = "INSERT INTO site_user (id,display_name) VALUES ($1,$2) RETURNING *";
 
         // To make sure the ID is fully unique, we'll create it just before inserting and let the DB assure it is unique.
@@ -194,10 +194,7 @@ impl User {
 
     /// Returns a URL pointing towards this user's user page.
     pub fn get_user_page_url(&self) -> String {
-        format!("{}/user/{}",
-            std::env::var("WEBSITE_URL").unwrap(),
-            self.id
-            )
+        format!("{}/user/{}", std::env::var("WEBSITE_URL").unwrap(), self.id)
     }
 
     // Returns whether another user can modify this user's type.
@@ -213,7 +210,7 @@ impl User {
             // Only those who can promote someone else to admin can modify the perms of other admins.
             UserType::Admin => other.user_type.permissions().can_promote_to_admin,
 
-            _ => other.user_type.permissions().can_modify_users
+            _ => other.user_type.permissions().can_modify_users,
         }
     }
 

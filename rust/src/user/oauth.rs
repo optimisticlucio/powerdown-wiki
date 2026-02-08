@@ -12,7 +12,7 @@ use axum::{
     Router,
 };
 use axum_extra::routing::RouterExt;
-use http::{header::USER_AGENT};
+use http::header::USER_AGENT;
 use serde::Deserialize;
 use std::env;
 
@@ -91,7 +91,7 @@ pub struct GoogleUser {
     //email: String,
     //name: String,       // Their actual IRL full name
     given_name: String, // First name
-    //picture: String,    // URL to their pfp image
+                        //picture: String,    // URL to their pfp image
 }
 
 /// Recieves the Github Oauth callback.
@@ -147,12 +147,10 @@ async fn oauth_process<
     // Did the user give us an authorization code?
     let authorization_code = match query.code {
         None => {
-            return Err(RootErrors::BadRequest(
-                format!(
-                    "Entered {} Authorization Callback without an authorization code.",
-                    process_name_for_debug
-                ),
-            ))
+            return Err(RootErrors::BadRequest(format!(
+                "Entered {} Authorization Callback without an authorization code.",
+                process_name_for_debug
+            )))
         }
         Some(x) => x,
     };
@@ -182,8 +180,7 @@ async fn oauth_process<
         .map_err(|err| {
             println!(
                 "[OAUTH2; {}] Failed sending request for access token: {:?}",
-                process_name_for_debug,
-                err
+                process_name_for_debug, err
             );
             RootErrors::InternalServerError
         })?;
@@ -198,8 +195,7 @@ async fn oauth_process<
         .map_err(|err| {
             println!(
                 "[OAUTH2; {}] Failed reading access token response: {:?}",
-                process_name_for_debug,
-                err
+                process_name_for_debug, err
             );
             RootErrors::InternalServerError
         })?;
@@ -222,8 +218,7 @@ async fn oauth_process<
         .map_err(|err| {
             println!(
                 "[OAUTH2; {}] Failed sending identification request: {:?}",
-                process_name_for_debug,
-                err
+                process_name_for_debug, err
             );
             RootErrors::InternalServerError
         })?;
@@ -231,8 +226,7 @@ async fn oauth_process<
     let user_info: T = identify_request.json().await.map_err(|err| {
         println!(
             "[OAUTH2; {}] Failed reading user's @me info: {:?}",
-            process_name_for_debug,
-            err
+            process_name_for_debug, err
         );
         RootErrors::InternalServerError
     })?;
@@ -276,12 +270,7 @@ async fn oauth_process<
         let account_to_connect_to = if logged_in_user.is_some() {
             logged_in_user.unwrap()
         } else {
-
-            User::create_in_db(
-                &db_connection,
-                &get_display_name(&user_info),
-            )
-            .await
+            User::create_in_db(&db_connection, &get_display_name(&user_info)).await
         };
 
         /* May be needed again in the future, but for now, it did its job. Godspeed you patchy piece of code.
@@ -325,7 +314,6 @@ async fn oauth_process<
 pub struct OAuthQuery {
     // Might need State in the future, but right now, unused.
     //state: Option<String>,
-
     /// The authorization code we send to discord to get the access token and refresh token.
     code: Option<String>,
 }
@@ -336,7 +324,7 @@ pub struct OAuthTokens {
     access_token: String,
     /*
     Other fields that are being passed, but we don't need rn:
-    
+
     token_type: String,
     #[serde(default)]
     expires_in: Option<u64>,

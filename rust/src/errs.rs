@@ -37,9 +37,7 @@ impl IntoResponse for RootErrors {
             )
                 .into_response(),
             Self::RequestTimeout => request_timeout().into_response(),
-            Self::BadRequest(elaboration) => {
-                bad_request(elaboration).into_response()
-            }
+            Self::BadRequest(elaboration) => bad_request(elaboration).into_response(),
             Self::Unauthorized => unauthorized().into_response(),
             Self::Forbidden => forbidden().into_response(),
         }
@@ -87,10 +85,7 @@ fn request_timeout() -> impl IntoResponse {
 }
 
 fn bad_request(elaboration: String) -> impl IntoResponse {
-    (
-        StatusCode::BAD_REQUEST,
-        elaboration,
-    )
+    (StatusCode::BAD_REQUEST, elaboration)
 }
 
 fn unauthorized() -> impl IntoResponse {

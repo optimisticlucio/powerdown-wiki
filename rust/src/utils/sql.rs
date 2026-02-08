@@ -1,6 +1,5 @@
 use postgres_types::{FromSql, ToSql};
-use serde::{Deserialize};
-
+use serde::Deserialize;
 
 /// Enum representing the state of various user posts, like art, characters, and stories.
 #[derive(Clone, FromSql, ToSql, Deserialize, Debug)]
