@@ -41,7 +41,7 @@ where
     Fut: std::future::Future<Output = ()>,
 {
     let mut interval = interval(frequency);
-    interval.tick().await; // Skip the instant first trigger.
+    //interval.tick().await; // Skip the instant first trigger.
     loop {
         interval.tick().await;
         task(state.clone()).await;
