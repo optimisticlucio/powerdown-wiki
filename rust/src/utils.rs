@@ -460,3 +460,9 @@ fn is_an_svg(file: &Vec<u8>) -> bool {
         false
     }
 }
+
+/// Given a string, returns whether we'd accept it as a URL slug.
+pub fn is_valid_slug(slug: &str) -> bool {
+    let re = regex::Regex::new(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$").unwrap();
+    re.is_match(slug)
+}

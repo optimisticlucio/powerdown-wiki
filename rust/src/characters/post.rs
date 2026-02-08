@@ -34,7 +34,6 @@ const CHARACTER_LOGO_COMPRESSION_SETTINGS: utils::file_compression::LossyCompres
 #[axum::debug_handler]
 pub async fn add_character(
     State(state): State<ServerState>,
-    OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
     Json(posting_step): Json<PostingSteps<PageCharacter>>
 ) -> Result<Response, RootErrors> {
@@ -333,6 +332,10 @@ pub async fn character_posting_page(
 
 /// Given a user-created Page Art, validates that it makes sense. If it doesn't, returns a readable explanation why.
 fn validate_recieved_page_character(recieved_page_character: &PageCharacter) -> Result<(), String> {
+    if !utils::is_valid_slug(&recieved_page_character.base_character.slug) {
+        return Err("Given invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string());
+    }
+
     // TODO - Validate
 
     Ok(())

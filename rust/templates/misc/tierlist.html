@@ -1,0 +1,48 @@
+{% extends "base-template.html" %}
+
+{% block title %}Tierlist{% endblock %}
+
+{% block customhead %}<script src="/static/js/tierlist.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper tierlist wide hide-retired hide-hidden">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+                setup_tierlist();
+                });
+    </script>
+    <h1>Tierlist Generator</h1>
+    <p>Because TierMaker can go suck my hog.</p>
+
+    <p>You can edit the tierlist title by double-clicking on it, by the way.</p>
+
+    <hr>
+
+    <div class="buttons">
+        <button onclick="add_tier()">Add Tier</button>
+        <button onclick="delete_last_tier()">Delete Last Tier</button>
+        <button onclick="download_screenshot_of_tierlist()">Add to Cringe Compilation</button>
+    </div>
+
+    <hr>
+    <div class="buttons">
+        <button class="dark" onclick="flip_retired_characters(this)">Show Retired Characters</button>
+        <button class="dark" onclick="flip_hidden_characters(this)">Show Hidden Characters</button>
+    </div>
+    <hr>
+    
+    <div id="tierlist-collector">
+        <h1 id="tierlist-title" contenteditable="true" spellcheck="false">Tierlist Title</h1>
+        <div id="tierlist-holder">
+        </div>
+    </div>
+
+    <div id="tierlist-origin" class="tier">
+        <div class="holder">
+            {%- for character in all_base_characters -%}
+                <img id="icon-{{ character.slug }}" class="character-icon {% if character.is_hidden %}hidden{% endif %} {% if character.is_archived %}retired{% endif %}" src="{{crate::utils::get_s3_public_object_url(character.thumbnail_key)}}">
+            {%- endfor -%}
+        </div>
+    </div>
+</div>
+{% endblock %}

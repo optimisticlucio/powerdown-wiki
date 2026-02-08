@@ -6,13 +6,13 @@ use crate::{
     RootErrors, ServerState,
 };
 use axum::{
-    extract::{OriginalUri, Query, State},
+    extract::{Query, State},
     response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
 };
 use axum_extra::routing::RouterExt;
-use http::{header::USER_AGENT, Uri};
+use http::{header::USER_AGENT};
 use serde::Deserialize;
 use std::env;
 
@@ -31,7 +31,6 @@ pub fn router() -> Router<ServerState> {
 pub async fn discord(
     State(state): State<ServerState>,
     Query(query): Query<OAuthQuery>,
-    OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     oauth_process(
@@ -49,7 +48,6 @@ pub async fn discord(
         "DISCORD_OAUTH2_CLIENT_SECRET",
         state,
         query,
-        original_uri,
         cookie_jar,
     )
     .await
@@ -71,7 +69,6 @@ pub struct DiscordUser {
 pub async fn google(
     State(state): State<ServerState>,
     Query(query): Query<OAuthQuery>,
-    OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     oauth_process(
@@ -83,7 +80,6 @@ pub async fn google(
         "GOOGLE_OAUTH2_CLIENT_SECRET",
         state,
         query,
-        original_uri,
         cookie_jar,
     )
     .await
@@ -92,10 +88,10 @@ pub async fn google(
 #[derive(Debug, Deserialize)]
 pub struct GoogleUser {
     id: String,
-    email: String,
-    name: String,       // Their actual IRL full name
+    //email: String,
+    //name: String,       // Their actual IRL full name
     given_name: String, // First name
-    picture: String,    // URL to their pfp image
+    //picture: String,    // URL to their pfp image
 }
 
 /// Recieves the Github Oauth callback.
@@ -106,7 +102,6 @@ pub struct GoogleUser {
 pub async fn github(
     State(state): State<ServerState>,
     Query(query): Query<OAuthQuery>,
-    OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     oauth_process(
@@ -118,7 +113,6 @@ pub async fn github(
         "GITHUB_OAUTH2_CLIENT_SECRET",
         state,
         query,
-        original_uri,
         cookie_jar,
     )
     .await
@@ -128,7 +122,7 @@ pub async fn github(
 pub struct GithubUser {
     login: String, // The username
     id: i32,
-    avatar_url: String,
+    //avatar_url: String,
 }
 
 async fn oauth_process<
@@ -145,7 +139,6 @@ async fn oauth_process<
     client_secret_cookie_name: &'a str,
     state: ServerState,
     query: OAuthQuery,
-    original_uri: Uri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
@@ -283,18 +276,15 @@ async fn oauth_process<
         let account_to_connect_to = if logged_in_user.is_some() {
             logged_in_user.unwrap()
         } else {
-            // TODO: Download pfp. Insert into the following variable:
-            let user_existing_pfp: Option<Vec<u8>> = None;
 
             User::create_in_db(
-                &state,
                 &db_connection,
                 &get_display_name(&user_info),
-                user_existing_pfp,
             )
             .await
         };
 
+        /* May be needed again in the future, but for now, it did its job. Godspeed you patchy piece of code.
         // -- THE LUCIO OVERRIDE --
         // For debugging where I'll need to recreate the DB often:
         // If Lucio (me) logs into an account, make it superadmin instantly.
@@ -306,12 +296,13 @@ async fn oauth_process<
                 .map_err(|err| {
                     eprintln!("[LUCIO OVERRIDE] Failed to make user superadmin! {:?}. Continuing as normal.", err);
                 })
-                .map(|success| {
+                .map(|_| {
                     println!("[LUCIO OVERRIDE] Converted user ID {} to superadmin! Welcome, me!", account_to_connect_to.id)
                 });
         }
 
         // ------------------------
+        */
 
         // Connect the OAuth method to the user we now have.
         OAuth2Association {
@@ -332,7 +323,9 @@ async fn oauth_process<
 /// Struct to handle query response to the oauth2 login.
 #[derive(Debug, Deserialize)]
 pub struct OAuthQuery {
-    state: Option<String>,
+    // Might need State in the future, but right now, unused.
+    //state: Option<String>,
+
     /// The authorization code we send to discord to get the access token and refresh token.
     code: Option<String>,
 }
@@ -342,6 +335,9 @@ pub struct OAuthQuery {
 #[serde(deny_unknown_fields)]
 pub struct OAuthTokens {
     access_token: String,
+    /*
+    Other fields that are being passed, but we don't need rn:
+    
     token_type: String,
     #[serde(default)]
     expires_in: Option<u64>,
@@ -351,4 +347,5 @@ pub struct OAuthTokens {
     scope: Option<String>,
     #[serde(default)]
     id_token: Option<String>,
+    */
 }

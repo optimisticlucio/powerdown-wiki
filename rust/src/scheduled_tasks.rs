@@ -5,8 +5,6 @@
 //! 
 //! The `initiate(ServerState)` function is the one the main function should call to initiate all the relevant tasks.
 
-use std::ops::Mul;
-
 use tokio::time::{interval, Duration};
 use crate::{ServerState, scheduled_tasks::lib::clean_temp_db_entries};
 

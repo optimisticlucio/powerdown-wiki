@@ -60,10 +60,11 @@ pub async fn story_index(
     // The requested page, with a minimal value of 1 and maximal value of the total pages available.
     let page_number_to_show = cmp::max(1, min(total_page_number, search_params.page));
 
-    let relevant_stories = BaseStory::get_art_from_index(
+    let relevant_stories = BaseStory::get_from_index(
         state.db_pool.get().await.unwrap(),
         (page_number_to_show - 1) * AMOUNT_OF_STORIES_PER_PAGE,
         AMOUNT_OF_STORIES_PER_PAGE,
+        &search_params
     )
     .await;
 

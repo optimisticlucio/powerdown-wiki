@@ -23,7 +23,6 @@ const ART_THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCompress
 #[axum::debug_handler]
 pub async fn add_art(
     State(state): State<ServerState>,
-    OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
     Json(posting_step): Json<PostingSteps<PageArt>>,
 ) -> Result<Response, RootErrors> {
@@ -45,7 +44,7 @@ pub async fn add_art(
 
     match posting_step {
         PostingSteps::RequestPresignedURLs { file_amount } => {
-            give_user_presigned_s3_urls(file_amount, original_uri, cookie_jar, &state).await
+            give_user_presigned_s3_urls(file_amount, &state).await
         }
         PostingSteps::UploadMetadata(mut page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
@@ -353,7 +352,7 @@ pub async fn edit_art_put_request(
 
     match posting_step {
         PostingSteps::RequestPresignedURLs { file_amount } => {
-            give_user_presigned_s3_urls(file_amount, original_uri, cookie_jar, &state).await
+            give_user_presigned_s3_urls(file_amount, &state).await
         }
         PostingSteps::UploadMetadata(mut sent_page_art) => {
             // Let's fix up some values that the user may have passed incorrectly.
@@ -532,10 +531,13 @@ pub async fn edit_art_put_request(
             }
 
             // Now that all the new art was moved in, let's delete the art that's no longer present.
-            let art_keys_that_were_removed: Vec<String> = Vec::new(); // TODO: Get the removed art!
+            let art_keys_that_were_removed: Vec<String> = existing_art.art_keys.iter()
+                        .filter(|key| !sent_page_art.art_keys.contains(key))
+                        .cloned()
+                        .collect();
 
             // TODO: How do we handle this fail? If this fails the post is fine, it's just some leftovers on our side.
-            utils::delete_keys_from_s3(
+            let _ = utils::delete_keys_from_s3(
                 &s3_client,
                 &state.config.s3_public_bucket,
                 &art_keys_that_were_removed)
@@ -550,7 +552,7 @@ pub async fn edit_art_put_request(
             values.push(&PostState::Public);
 
             // I need to create new_thumbnail_key here so that, incase we use it, it can survive enough.
-            let mut new_thumbnail_key = "".to_owned();
+            let new_thumbnail_key ;
             if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
                 new_thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
                         &state.s3_client.clone(),
@@ -607,8 +609,6 @@ pub async fn edit_art_put_request(
 /// Given an amount of urls requested by the user, sends the user back the appropriate amount of new temp S3 presigned URLs. May also request an extra url for the thumbnail.
 async fn give_user_presigned_s3_urls(
     requested_amount_of_urls: u8,
-    original_uri: Uri,
-    cookie_jar: tower_cookies::Cookies,
     state: &ServerState,
 ) -> Result<Response, RootErrors> {
     if requested_amount_of_urls > 35 {
@@ -658,6 +658,10 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
 
     if recieved_page_art.base_art.thumbnail_key.is_empty() {
         return Err("Art must have thumbnail".to_owned());
+    }
+
+    if !utils::is_valid_slug(&recieved_page_art.base_art.slug) {
+        return Err("Given invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string())
     }
 
     Ok(())

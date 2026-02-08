@@ -3,12 +3,7 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
-use rand::{distr::Alphanumeric, Rng};
 use serde::Deserialize;
-
-use crate::utils::sql::PostState;
-
-// TODO: Get character ritual info
 
 #[derive(Debug, Clone, Deserialize)]
 /// Info relevant to absolute most uses of a character
@@ -19,15 +14,13 @@ pub struct BaseCharacter {
     pub is_hidden: bool,
     #[serde(skip)] // This should be learned by reference to other values
     pub is_archived: bool,
-    #[serde(default)]
-    pub is_main_character: bool,
+    /*#[serde(default)]
+    pub is_main_character: bool,*/
     pub slug: String,
     pub name: String,
     pub thumbnail_key: String,
     #[serde(default)]
     pub birthday: Option<chrono::NaiveDate>,
-    #[serde(default)]
-    pub state: PostState,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -56,14 +49,6 @@ pub struct PageCharacter {
     pub custom_css: Option<String>,
     #[serde(default)]
     pub page_contents: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct RitualCharacter {
-    pub base_character: BaseCharacter,
-
-    pub power_name: String,
-    pub power_description: String,
 }
 
 #[derive(Debug, FromSql, ToSql, Clone, Deserialize)]
@@ -115,33 +100,13 @@ impl BaseCharacter {
         BaseCharacter {
             db_id: row.get("id"),
             is_hidden: row.get("is_hidden"),
-            is_main_character: row.get("is_main_character"),
+            //is_main_character: row.get("is_main_character"),
             is_archived: archival_reason.is_some(),
             name: row.get("short_name"),
             thumbnail_key: row.get("thumbnail"),
             slug: row.get("page_slug"),
             birthday: row.get("birthday"),
-            state: row.get("post_state"),
         }
-    }
-
-    /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
-    /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
-    pub async fn get_unused_id(db_connection: Object<Manager>) -> i32 {
-        let random_page_slug: String = rand::rng()
-            .sample_iter(&Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect();
-
-        // There's a very slight chance this operation panics on correct behaviour
-        // bc it uses random strings. It should probably be fine, but I should fix this someday.
-        let insert_operation_result = db_connection.query_one(
-            "INSERT INTO character (page_slug, short_name, subtitles, creator, thumbnail, page_image, post_state)
-            VALUES ($1, 'TEMP', ARRAY['Something you shouldn''t be seeing!'], 'RNJesus', '', '', 'processing')
-            RETURNING id", &[&random_page_slug]).await.unwrap();
-
-        insert_operation_result.get(0) // id is int, which converts to i32.
     }
 }
 
@@ -187,13 +152,12 @@ impl PageCharacter {
             base_character: BaseCharacter {
                 db_id: row.get("id"),
                 is_hidden: row.get("is_hidden"),
-                is_main_character: row.get("is_main_character"),
+                //is_main_character: row.get("is_main_character"),
                 is_archived: retirement_reason.is_some(),
                 name: row.get("short_name"),
                 thumbnail_key: row.get("thumbnail"),
                 slug: row.get("page_slug"),
                 birthday: row.get("birthday"),
-                state: row.get("post_state")
             },
             long_name: row.get("long_name"),
             subtitles: row.get("subtitles"),
@@ -229,5 +193,3 @@ impl Ord for PageCharacter {
         self.base_character.cmp(&other.base_character)
     }
 }
-
-// TODO: impl RitualCharacter

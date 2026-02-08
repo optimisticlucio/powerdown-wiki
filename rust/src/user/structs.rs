@@ -148,10 +148,8 @@ impl User {
 
     /// Creates a new user in the DB, returns the created user.
     pub async fn create_in_db(
-        server_state: &ServerState,
         db_connection: &Object<Manager>,
         display_name: &str,
-        pfp_file: Option<Vec<u8>>,
     ) -> Self {
         let query = "INSERT INTO site_user (id,display_name) VALUES ($1,$2) RETURNING *";
 
@@ -174,8 +172,6 @@ impl User {
         let successfully_created_user = created_user.unwrap();
 
         // User is created? Splendid. Now let's get some info that we're either unsure about or is dependent on the ID.
-
-        // TODO - HANDLE PFP
 
         successfully_created_user
     }
@@ -442,13 +438,6 @@ impl Oauth2Provider {
             Oauth2Provider::Discord => "https://discord.com/api/users/@me".to_string(),
             Oauth2Provider::Google => "https://www.googleapis.com/oauth2/v2/userinfo".to_string(),
             Oauth2Provider::Github => "https://api.github.com/user".to_string(),
-        }
-    }
-
-    /// Returns a URL pointing towards an existing pfp the user has on the provider, if one exists
-    pub async fn get_existing_user_pfp(&self, access_token: &str) -> Option<String> {
-        match self {
-            _ => None,
         }
     }
 

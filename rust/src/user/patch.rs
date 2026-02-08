@@ -8,7 +8,7 @@ use crate::utils::{MoveTempS3FileErrs, PostingSteps, PresignedUrlsResponse, get_
 use super::structs::UserType;
 use askama::Template;
 use axum::extract::{OriginalUri, Path, State};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{IntoResponse, Response};
 use axum::{http, Json};
 use serde::Deserialize;
 use http::Uri;

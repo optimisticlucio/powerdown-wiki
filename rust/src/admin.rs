@@ -5,7 +5,7 @@ use crate::{
 };
 use askama::Template;
 use axum::{
-    Router, extract::{OriginalUri, Path, State}, response::{IntoResponse, Redirect, Response}, routing::get
+    Router, extract::{OriginalUri, State}, response::{Response}, routing::get
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;

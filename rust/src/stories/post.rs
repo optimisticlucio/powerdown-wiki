@@ -89,6 +89,7 @@ async fn set_columns_and_values_for_sql_query<'a>(
         values.push(custom_css);
     }
 
+    /*  TODO: Handle other story links
     if let Some(prev_story) = &page_story.previous_story_slug {
         // TODO: CHECK IF SLUG EXISTS, IF NOT, POINT TO NOTHING. IF DOES, GET ID.
     }
@@ -96,6 +97,7 @@ async fn set_columns_and_values_for_sql_query<'a>(
     if let Some(next_story) = &page_story.next_story_slug {
         // TODO: CHECK IF SLUG EXISTS, IF NOT, POINT TO NOTHING. IF DOES, GET ID.
     }
+    */
 
     if let Some(editors_note) = &page_story.editors_note {
         columns.push("editors_note".to_string());
