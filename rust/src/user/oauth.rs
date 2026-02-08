@@ -332,7 +332,6 @@ pub struct OAuthQuery {
 
 /// Struct to handle the end of the oauth handshake
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct OAuthTokens {
     access_token: String,
     /*

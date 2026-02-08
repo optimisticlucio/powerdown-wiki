@@ -22,6 +22,7 @@
     <div class="right">
         {% if let Some(user) = user %}
         <a href="/user">
+            <span class="username">{{ user.display_name }}</span>
             <img class="profile-pic" src="{{user.get_pfp_url()}}" />
         </a>
         {% else %}
