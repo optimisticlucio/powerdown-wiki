@@ -83,14 +83,13 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 // TODO: This is a hotpath, there's gotta be a better way to do this shit.
 /// Returns the public-facing URL for an S3 object, given its key and bucket.
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
-    let public_url = env::var("S3_PUBLIC_FACING_URL")
-        .unwrap_or_else(|_| {
-            // Default to AWS S3 virtual-hosted-style URL
-            let region = env::var("AWS_REGION").unwrap_or_else(|_| "eu-north-1".to_string());
-            format!("https://{}.s3.{}.amazonaws.com", bucket_name, region)
-        });
-    
-    format!("{}/{}", public_url, file_key)
+    // Check if we have an explicit public-facing URL base (for LocalStack or CloudFront)
+    if let Ok(base_url) = env::var("S3_PUBLIC_FACING_URL") {
+        format!("{}/{}/{}", base_url, bucket_name, file_key)
+    } else {
+        let region = env::var("AWS_REGION").unwrap();
+        format!("https://{}.s3.{}.amazonaws.com/{}", bucket_name, region, file_key)
+    }
 }
 
 // TODO: This is a hotpath, there's gotta be a better way to do this.
