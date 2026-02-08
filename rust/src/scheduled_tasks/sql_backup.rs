@@ -67,6 +67,14 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
 
     println!("[SQL BACKUP] pg_dump filesize is {} bytes.", pg_dump_metadata.len());
 
+    if pg_dump_metadata.len() == 0 {
+        println!("[SQL BACKUP] SQL failed to backup!");
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "pg_dump created empty file"
+        )));
+    }
+
     // DB contents were successfully dumped to `PG_DUMP_FILENAME`, move em to S3 and clean up.
 
     let pg_dump_file = std::fs::read(PG_DUMP_FILENAME)
