@@ -45,11 +45,12 @@ pub async fn add_character(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        Some(user) => user,
+        None => return Err(RootErrors::Unauthorized)
+    };
 
-    // TODO: Disable uploading by non-logged in users after uploading the static site backlog.
-
-    if requesting_user.as_ref().is_some_and(|user| !user.user_type.permissions().can_post_characters) {
+    if !requesting_user.user_type.permissions().can_post_characters {
         return Err(RootErrors::Forbidden);
     }
 
