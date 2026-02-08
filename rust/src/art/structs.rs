@@ -3,8 +3,6 @@ use chrono::{DateTime, Utc};
 use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
-use postgres_types::{FromSql, ToSql};
-use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -17,12 +15,9 @@ pub struct BaseArt {
     pub slug: String,
     #[serde(default)]
     pub is_nsfw: bool,
-    #[serde(default = "default_art_state")]
-    pub art_state: PostState,
-}
 
-fn default_art_state() -> PostState {
-    PostState::Public
+    /*#[serde(default = "default_art_state")]
+    pub art_state: PostState,*/
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -88,32 +83,7 @@ impl BaseArt {
             thumbnail_key: row.get("thumbnail"),
             slug: row.get("page_slug"),
             is_nsfw: row.get("is_nsfw"),
-            art_state: row.get("post_state"),
         }
-    }
-
-    /// Gets an unused ID in the DB, by creating a temp object in the DB and extracting its ID.
-    /// WARNING: Remember to clean up the temp object if you end up not using the given ID.
-    pub async fn get_unused_id(db_connection: &Object<Manager>) -> i32 {
-        let random_page_slug: String = rand::rng()
-            .sample_iter(&Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect();
-
-        // There's a very slight chance this operation panics on correct behaviour
-        // bc it uses random strings. It should probably be fine, but I should fix this someday.
-        let insert_operation_result = db_connection
-            .query_one(
-                "INSERT INTO art (post_state, page_slug, title, creators, thumbnail)
-            VALUES ('pending', $1, 'TEMP', ARRAY['RNJesus'], '')
-            RETURNING id",
-                &[&random_page_slug],
-            )
-            .await
-            .unwrap();
-
-        insert_operation_result.get(0) // id is int, which converts to i32.
     }
 
     /// Returns the proper URL for the thumbnail.
