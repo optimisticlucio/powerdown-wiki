@@ -65,7 +65,7 @@ You should assume, whenever possible, that these keys aren't assigned. They're c
 
 - `USER_SESSION_ID`: The session ID of the user currently logged in; self-explanatory. This cookie should be set to expire before the server's expiration date for the same session hits, purely for convenience.
 
-- `NSFW_WARNING_SHOWN`: This cookie is set if the user has been shown the NSFW "are you sure you want to see this" warning and said "yes, I do." It should have an expiry date of about a day.
+- `NSFW_WARNING_SHOWN`: This cookie is set if the user has been shown the NSFW "are you sure you want to see this" warning and said "yes, I do." It should have an expiry date of about a day. If the cookie is set at all, we can assume its value is true.
 
 ## Arbitrary Values
 

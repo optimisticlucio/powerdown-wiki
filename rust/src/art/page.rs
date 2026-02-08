@@ -1,6 +1,6 @@
 use super::structs;
 use crate::{
-    ServerState, art::structs::Comment, errs::RootErrors, user::{User, UsermadePost}, utils::template_to_response
+    ServerState, art::structs::Comment, errs::RootErrors, nsfw_splash, user::{User, UsermadePost}, utils::template_to_response
 };
 use askama::Template;
 use axum::{
@@ -55,6 +55,13 @@ pub async fn art_page(
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
+        // If the user is looking for something spicy, make sure we allow them to.
+        if requested_art.base_art.is_nsfw {
+            if let Some(nsfw_splash) = nsfw_splash::get_if_user_hasnt_enabled_nsfw(&user, &original_uri, &cookie_jar) {
+                return Ok(nsfw_splash);
+            }
+        }
+
         let (older_art_url, newer_art_url) =
             get_older_and_newer_art_slugs(&art_slug, &query_params, &db_connection).await;
         let art_urls = requested_art.get_art_urls();

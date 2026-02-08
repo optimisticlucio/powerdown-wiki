@@ -1,6 +1,6 @@
 use std::cmp::{self, min};
 
-use crate::{user::User, utils::template_to_response, RootErrors, ServerState};
+use crate::{RootErrors, ServerState, nsfw_splash, user::User, utils::template_to_response};
 use askama::Template;
 use axum::{
     extract::{DefaultBodyLimit, OriginalUri, Query, State},
@@ -74,6 +74,13 @@ async fn art_index(
     let db_connection = state.db_pool.get().await.unwrap();
 
     let user: Option<User> = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+
+    // If the user is looking for something spicy, make sure we allow them to.
+    if query_params.is_nsfw {
+        if let Some(nsfw_splash) = nsfw_splash::get_if_user_hasnt_enabled_nsfw(&user, &original_uri, &cookie_jar) {
+            return Ok(nsfw_splash);
+        }
+    }
 
     let random_quote = {
         let association = if query_params.is_nsfw {

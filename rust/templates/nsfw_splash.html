@@ -1,0 +1,20 @@
+{% extends "base-template.html" %}
+
+{% block title %}TITS AHOY{% endblock %}
+
+{% block content %}
+<div class="wrapper wide nsfw-warning">
+    <img src="/static/img/alert.png">
+    <div>
+        <h1 style="font-size: 6em;">WARNING</h1>
+        <p style="font-size: 3em">BOOBS BEYOND THIS POINT</p>
+        <p style="font-size: 2.5em">MAYBE EVEN A PENIS</p>
+        <p style="font-size: 2em">YOU HAVE BEEN WARNED</p>
+        <br>
+        <div class="buttons">
+            <button class="button light" onclick="document.cookie='NSFW_WARNING_SHOWN=true;path=/;max-age=43200;';window.location.reload();">hehe titties</button>
+            <button class="button dark" onclick="if(history.length > 1) history.back(); else window.location.href='/';">ew no</button> 
+        </div>
+    </div>
+</div>
+{% endblock %}

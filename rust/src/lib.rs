@@ -28,6 +28,7 @@ mod scheduled_tasks;
 mod graceful_shutdown;
 mod admin;
 mod refinery_migrations;
+mod nsfw_splash;
 
 pub use errs::RootErrors;
 pub use server_state::ServerState;
