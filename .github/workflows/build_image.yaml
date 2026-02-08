@@ -1,9 +1,9 @@
 #
 name: Create and publish a Docker image
 
-# Configures this workflow to run on request rather than on push. For now I don't trust this action. Later it can be automated.
+# Not like doing it on push costs me money.
 on:
-  workflow_dispatch
+  push
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:

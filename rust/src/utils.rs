@@ -82,7 +82,7 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 
 /// Returns the public-facing URL for an S3 object, given its key and bucket.
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
-    format!("{}/{}/{}", &env::var("AWS_ENDPOINT_URL").unwrap(), bucket_name, file_key)
+    format!("{}/{}/{}", &env::var("S3_PUBLIC_FACING_URL").unwrap(), bucket_name, file_key)
 }
 
 // TODO: This is a hotpath, there's gotta be a better way to do this.
@@ -366,7 +366,7 @@ pub async fn get_temp_s3_presigned_urls(
     }
 
     // When doing development, these point to the relative URL of the docker container, which is.. not good.
-    let s3_website_uri = Uri::from_str(&env::var("AWS_ENDPOINT_URL").unwrap()).unwrap(); 
+    let s3_website_uri = Uri::from_str(&env::var("S3_PUBLIC_FACING_URL").unwrap()).unwrap(); 
     temp_keys_for_presigned = temp_keys_for_presigned
         .iter()
         .map(|presigned_url| {

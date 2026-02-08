@@ -29,18 +29,18 @@ lazy_static! {
         FrontpageItem {
             name: "Art",
             url: "/art",
-            image_url: "/static/img/art.jpg"
+            image_url: "/static/img/frontpage/art.jpg"
         },
         FrontpageItem {
             name: "Characters",
             url: "/characters",
-            image_url: "/static/img/characters.png"
+            image_url: "/static/img/frontpage/characters.png"
         },
         FrontpageItem {
             name: "Stories",
             url: "/stories",
             image_url:
-                "/static/img/stories.jpg"
+                "/static/img/frontpage/stories.jpg"
         }
     ];
 }
