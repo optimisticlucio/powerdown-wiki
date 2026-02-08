@@ -67,7 +67,7 @@ impl BaseArt {
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
         let query = format!(
-            "SELECT * FROM art {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
+            "SELECT * FROM art {} ORDER BY creation_date DESC, page_slug LIMIT $1 OFFSET $2",
             query_where
         );
 
