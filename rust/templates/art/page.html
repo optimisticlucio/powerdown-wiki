@@ -33,6 +33,9 @@
         <a href="/art/{{ newer_url }}{{ user_search_params.to_uri_parameters(false) }}" class="arrow">
             <img src="/static/img/ui/next_arrow_left.png">
         </a>
+        {% else %}
+        <div class="arrow">
+        </div>
         {% endif %}
 
         <div class="info">
@@ -53,6 +56,9 @@
         <a href="/art/{{ older_url }}{{ user_search_params.to_uri_parameters(false) }}" class="arrow">
             <img src="/static/img/ui/prev_arrow_right.png">
         </a>
+        {% else %}
+        <div class="arrow">
+        </div>
         {% endif %}
     </div>
 

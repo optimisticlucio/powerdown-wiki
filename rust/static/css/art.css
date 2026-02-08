@@ -75,9 +75,11 @@
 
         .arrow {
             display: flex;
+            width: 12%;
+            justify-content: center;
+
             img {
-                width: 70px;
-                margin: 2em;
+                width: 80%;
                 object-fit: contain;
             }
         }
@@ -88,7 +90,7 @@
             text-align: left;
             padding: 1em 2em;
             font-size: 0.8em;
-            flex-grow: 1;
+            width: 70%;
 
             h1 {
                 color: white;
@@ -114,6 +116,10 @@
                     color: white;
                     text-decoration: none;
                 }
+            }
+
+            .content {
+                font-size: 1.25em;
             }
         }
     }
