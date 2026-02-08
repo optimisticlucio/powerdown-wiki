@@ -372,20 +372,28 @@ pub async fn get_temp_s3_presigned_urls(
         temp_keys_for_presigned.push(uri);
     }
 
-    // When doing development, these point to the relative URL of the docker container, which is.. not good.
-    let s3_website_uri = Uri::from_str(&env::var("S3_PUBLIC_FACING_URL").unwrap()).unwrap(); 
-    temp_keys_for_presigned = temp_keys_for_presigned
-        .iter()
-        .map(|presigned_url| {
-            let presigned_uri = Uri::from_str(presigned_url).unwrap();
-            let corrected_uri = Uri::builder()
-                .authority(s3_website_uri.authority().unwrap().clone())
-                .scheme(s3_website_uri.scheme_str().unwrap()) 
-                .path_and_query(presigned_uri.path_and_query().unwrap().clone())
-                .build().unwrap();
-            corrected_uri.to_string()
-        })
-        .collect();
+    // In development (LocalStack), presigned URLs point to internal docker hostnames. Which is a problem.
+    // In production this isn't a thing, so just leave S3_PUBLIC_FACING_URL unset.
+    if let Ok(public_base) = env::var("S3_PUBLIC_FACING_URL") {
+        let public_uri = Uri::from_str(&public_base).unwrap();
+        
+        temp_keys_for_presigned = temp_keys_for_presigned
+            .iter()
+            .map(|presigned_url| {
+                let presigned_uri = Uri::from_str(presigned_url).unwrap();
+                
+                // Replace the scheme and authority, keep path and query (including signature params)
+                Uri::builder()
+                    .scheme(public_uri.scheme().unwrap().clone())
+                    .authority(public_uri.authority().unwrap().clone())
+                    .path_and_query(presigned_uri.path_and_query().unwrap().clone())
+                    .build()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+    }
+    
 
     Ok(temp_keys_for_presigned)
 }
