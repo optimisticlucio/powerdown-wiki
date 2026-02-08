@@ -5,6 +5,8 @@
 //! 
 //! The `initiate(ServerState)` function is the one the main function should call to initiate all the relevant tasks.
 
+use std::ops::Mul;
+
 use tokio::time::{interval, Duration};
 use crate::{ServerState, scheduled_tasks::lib::clean_temp_db_entries};
 
@@ -27,8 +29,8 @@ pub fn initiate_scheduled_tasks(state: ServerState) {
     // expensive way to run all these functions that I've seen so far.
     // If you know of a better way, PLEASE.
 
-    tokio::spawn(run_periodically(state.clone(), sql_backup::run_backup_processes, DAY_DURATION.checked_div(2).unwrap()));
-    tokio::spawn(run_periodically(state.clone(), clean_temp_db_entries, HOUR_DURATION));
+    tokio::spawn(run_periodically(state.clone(), sql_backup::run_backup_processes, DAY_DURATION));
+    tokio::spawn(run_periodically(state.clone(), clean_temp_db_entries, MINUTE_DURATION.saturating_mul(10)));
 }
 
 /// Given a certain task to perform, and how often to perform it, repeatedly calls this task every `frequency`.

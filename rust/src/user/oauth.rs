@@ -300,7 +300,7 @@ async fn oauth_process<
         // If Lucio (me) logs into an account, make it superadmin instantly.
         // Remove this once we go into production and I can set myself as superadmin in the DB.
 
-        if provider == Oauth2Provider::Discord && user_id == "1352633375243899006" {
+        /*if provider == Oauth2Provider::Discord && user_id == "1352633375243899006" {
             const SUPERADMIN_QUERY: &str = "UPDATE site_user SET user_type='superadmin' WHERE id=$1";
             let _ = db_connection.execute(SUPERADMIN_QUERY, &[&account_to_connect_to.id]).await
                 .map_err(|err| {
@@ -309,7 +309,7 @@ async fn oauth_process<
                 .map(|success| {
                     println!("[LUCIO OVERRIDE] Converted user ID {} to superadmin! Welcome, me!", account_to_connect_to.id)
                 });
-        }
+        }*/
 
         // ------------------------
 
