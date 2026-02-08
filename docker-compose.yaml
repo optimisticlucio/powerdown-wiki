@@ -15,7 +15,7 @@ services:
       - S3_PUBLIC_BUCKET_NAME=${S3_PUBLIC_BUCKET_NAME:-powerdown-public-storage}
       - S3_PUBLIC_BUCKET_URL
       - S3_SQL_BACKUP_BUCKET_NAME=${S3_SQL_BACKUP_BUCKET_NAME:-powerdown-sql-backups-storage}
-      - S3_PUBLIC_FACING_URL=${S3_PUBLIC_FACING_URL:-${AWS_ENDPOINT_URL}}
+      - S3_PUBLIC_FACING_URL
       - DEBUG
       - POSTGRES_USER
       - POSTGRES_PASSWORD

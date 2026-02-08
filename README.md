@@ -45,7 +45,7 @@ Each variable will have its default value listed in parantheses.
 - `COMPOSE_PROFILES`: Not one I made, it's from docker; if set to `development`, it'll start up the localstack image for local development. If unset or set to anything else, you only get the rust and postgres images.
 - `DISABLE_MIGRATIONS`: If set to anything, SQL migrations are not run when the server starts up. By default, migrations are checked on every startup. Frankly I'm not sure why you'd wanna do this, but ais suggested to have this.
 - `WEB_PORT`: The port that should be accessed to see the website. By default it's set to port 8080.
-- `S3_PUBLIC_FACING_URL`: Incase `AWS_ENDPOINT_URL` isn't accessible to the end user (for example, if you're using localstack). If unset, will point to `AWS_ENDPOINT_URL` whenever serving S3 links. If set, will point to whatever URL is listed here instead.
+- `S3_PUBLIC_FACING_URL`: Incase `AWS_ENDPOINT_URL` isn't accessible to the end user (for example, if you're using localstack). If unset, the server will attempt to build an S3 URL from the `AWS_REGION` and bucketname on request.
 
 #### Bucket Names
 
