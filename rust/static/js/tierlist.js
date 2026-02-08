@@ -1,8 +1,6 @@
 function setup_tierlist() {
     var tiers = document.querySelectorAll(".tier");
-    console.log()
     tiers.forEach(function(tier) {
-        console.log(tier);
         setup_tier(tier);
     });
 
@@ -93,7 +91,6 @@ function colorpicker_oninput(caller) {
     name_div.style.backgroundColor = color;
     
     let brightness = getBrightness(color);
-    console.log(brightness);
     if (brightness > 0.6) {
         name_div.style.color = "black";
     }

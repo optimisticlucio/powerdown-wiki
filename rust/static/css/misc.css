@@ -23,7 +23,7 @@
     }
 
     #tierlist-collector {
-        background-color: var(--darker-shade);
+        background-color: var(--darkest-shade);
 
         &.hide-settings {
             .settings {
@@ -37,7 +37,7 @@
     }
 
     .tier {
-        background-color: var(--darker-shade);
+        background-color: var(--darkest-shade);
         min-height: 100px;
         height: min-content;
         width: 100%;
@@ -88,7 +88,7 @@
             font-weight: bold;
         }
         .holder {
-            background-color: var(--darker-shade);
+            background-color: var(--darkest-shade);
             display: flex;
             flex-direction: row;
             align-items: start;
