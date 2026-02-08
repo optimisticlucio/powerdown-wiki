@@ -33,6 +33,10 @@ These variables aren't *required*, as they have default values incase they're mi
 
 Each variable will have its default value listed in parantheses.
 
+#### To Modify on Production
+
+- `BACKEND_IMAGE`: If this is set to anything, the backend rust image is pulled from the listed docker image, rather than compiling it locally. If not set, it just runs rust chef and compiles it on the given machine. **You probably want to set this to `ghcr.io/optimisticlucio/powerdown-wiki:latest` in production.** I set it up like this rather than making two different docker files so if I change something in the docker-compose regarding ENV or whatever I won't need to go back and update it on a second docker compose. Keeping consistency between production and testing enviroments yknow?
+
 #### General
 
 - `DEBUG`: If this is set to *anything*, it triggers debug mode. Currently, it only adds a giant banner on the site saying "THIS IS A TEST SITE". Obviously this should be unset in production.

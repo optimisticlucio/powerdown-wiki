@@ -1,5 +1,6 @@
 services:
   rust-backend:
+    image: ${BACKEND_IMAGE:-}
     build: rust/.
     tty: true
     stdin_open: true
