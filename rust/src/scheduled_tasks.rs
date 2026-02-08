@@ -30,7 +30,7 @@ pub fn initiate_scheduled_tasks(state: ServerState) {
     // If you know of a better way, PLEASE.
 
     tokio::spawn(run_periodically(state.clone(), sql_backup::run_backup_processes, DAY_DURATION));
-    tokio::spawn(run_periodically(state.clone(), clean_temp_db_entries, MINUTE_DURATION.saturating_mul(10)));
+    tokio::spawn(run_periodically(state.clone(), clean_temp_db_entries, HOUR_DURATION));
 }
 
 /// Given a certain task to perform, and how often to perform it, repeatedly calls this task every `frequency`.
