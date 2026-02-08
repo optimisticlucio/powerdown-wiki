@@ -78,10 +78,7 @@ fn page_not_found(
 }
 
 fn request_timeout() -> impl IntoResponse {
-    (
-        StatusCode::REQUEST_TIMEOUT,
-        "Request took too long".to_string(),
-    )
+    (StatusCode::REQUEST_TIMEOUT, "Request took too long")
 }
 
 fn bad_request(elaboration: String) -> impl IntoResponse {
@@ -90,12 +87,12 @@ fn bad_request(elaboration: String) -> impl IntoResponse {
 
 fn unauthorized() -> impl IntoResponse {
     (StatusCode::UNAUTHORIZED,
-    format!("If you see this, you tried doing some action that needs to be logged in without being logged in. Log in dickhead."))
+    "If you see this, you tried doing some action that needs to be logged in without being logged in. Log in dickhead.")
 }
 
 fn forbidden() -> impl IntoResponse {
     (
         StatusCode::FORBIDDEN,
-        format!("You do not have the necessary permissions to do whatever you were trying to do."),
+        "You do not have the necessary permissions to do whatever you were trying to do.",
     )
 }

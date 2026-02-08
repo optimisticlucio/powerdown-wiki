@@ -7,7 +7,6 @@ use axum::{
     Router,
 };
 use axum_extra::routing::RouterExt;
-use chrono;
 use http::Uri;
 
 mod page;
@@ -90,7 +89,7 @@ async fn character_index(
                 .query(statement, &[])
                 .await
                 .unwrap()
-                .get(0)
+                .first()
                 .unwrap()
                 .get(0),
             _ => "Insert funny text here.".to_owned(), // "Oh shit it broke" text that won't seem too odd for a random user.

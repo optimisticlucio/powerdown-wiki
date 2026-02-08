@@ -112,13 +112,13 @@ impl BaseCharacter {
 
 impl PartialEq for BaseCharacter {
     fn eq(&self, other: &Self) -> bool {
-        (self.db_id == other.db_id) && (self.slug == self.slug)
+        (self.db_id == other.db_id) && (self.slug == other.slug)
     }
 }
 
 impl PartialOrd for BaseCharacter {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.name.partial_cmp(&other.name)
+        Some(self.cmp(other))
     }
 }
 
@@ -182,7 +182,7 @@ impl PartialEq for PageCharacter {
 
 impl PartialOrd for PageCharacter {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.base_character.partial_cmp(&other.base_character)
+        Some(self.cmp(other))
     }
 }
 

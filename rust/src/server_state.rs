@@ -41,11 +41,9 @@ impl ServerState {
         db_config.password = env::var("POSTGRES_PASSWORD").ok();
         db_config.user = env::var("POSTGRES_USER").ok();
 
-        let db_pool = db_config
+        db_config
             .create_pool(Some(deadpool::Runtime::Tokio1), NoTls)
-            .unwrap();
-
-        db_pool
+            .unwrap()
     }
 
     async fn initialize_s3_connection() -> aws_sdk_s3::Client {
@@ -53,8 +51,6 @@ impl ServerState {
 
         let s3_config = aws_sdk_s3::config::Builder::from(&sdk_config).build();
 
-        let s3_client = aws_sdk_s3::Client::from_conf(s3_config);
-
-        s3_client
+        aws_sdk_s3::Client::from_conf(s3_config)
     }
 }

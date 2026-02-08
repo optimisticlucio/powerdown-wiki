@@ -103,9 +103,9 @@ pub async fn add_art(
 
             let uploading_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-            if uploading_user.is_some() {
+            if let Some(uploading_user) = &uploading_user {
                 columns.push("uploading_user_id".into());
-                values.push(&uploading_user.as_ref().unwrap().id);
+                values.push(&uploading_user.id);
             }
 
             let sanitized_description = page_art
@@ -136,7 +136,7 @@ pub async fn add_art(
                 .query_one(&query, &values)
                 .await
                 .map_err(|err| {
-                    eprintln!("[ART UPLOAD] Initial DB upload failed! {:?}", err);
+                    eprintln!("[ART UPLOAD] Initial DB upload failed! {err:?}");
                     RootErrors::InternalServerError
                 })?
                 .get(0);
@@ -146,7 +146,7 @@ pub async fn add_art(
 
             let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
 
-            let thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
+            let thumbnail_key = match utils::move_and_lossily_compress_temp_s3_img(
                 &state.s3_client.clone(),
                 &state.config,
                 &page_art.base_art.thumbnail_key,
@@ -155,35 +155,38 @@ pub async fn add_art(
                 Some(ART_THUMBNAIL_COMPRESSION_SETTINGS),
             )
             .await
-            .map_err(|err| {
-                eprintln!(
-                    "[ART UPLOAD] Converting thumbnail of art {art_id} failed, {:?}",
-                    err
-                );
+            {
+                Err(err) => {
+                    eprintln!("[ART UPLOAD] Converting thumbnail of art {art_id} failed, {err:?}");
 
-                // Delete the processing art before returning error.
-                let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                    // Delete the processing art before returning error.
+                    let _ = db_connection
+                        .execute("DELETE FROM art WHERE id=$1", &[&art_id])
+                        .await;
 
-                RootErrors::InternalServerError
-            })?;
+                    return Err(RootErrors::InternalServerError);
+                }
+                Ok(x) => x,
+            };
 
-            db_connection
+            if let Err(err) = db_connection
                 .execute(
                     "UPDATE art SET thumbnail=$1 WHERE id=$2",
                     &[&thumbnail_key, &art_id],
                 )
                 .await
-                .map_err(|err| {
-                    eprintln!(
-                        "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {:?}",
-                        err
-                    );
+            {
+                eprintln!(
+                    "[ART UPLOAD] Updating thumbnail key in DB of art {art_id} failed, {err:?}",
+                );
 
-                    // Delete the processing art before returning error.
-                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                // Delete the processing art before returning error.
+                let _ = db_connection
+                    .execute("DELETE FROM art WHERE id=$1", &[&art_id])
+                    .await;
 
-                    RootErrors::InternalServerError
-                })?;
+                return Err(RootErrors::InternalServerError);
+            };
 
             // ---- Now that the main art file is up, upload the individual art pieces. ----
 
@@ -195,8 +198,6 @@ pub async fn add_art(
             for (s3_key, index) in temp_file_keys.iter().zip(1i32..) {
                 // Clone everything to move it into the async move.
                 let s3_key = s3_key.clone();
-                let index = index.clone();
-                let art_id = art_id.clone();
                 let s3_client = state.s3_client.clone();
                 let public_bucket_key = state.config.s3_public_bucket.clone();
                 let config = state.config.clone();
@@ -222,17 +223,15 @@ pub async fn add_art(
                         &file_key,
                     )
                     .await
-                    .map_err(|err| format!("{:?}", err))?;
+                    .map_err(|err| format!("{err:?}"))?;
 
-                    let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
-                    values.push(&art_id);
-                    values.push(&index);
-                    values.push(&final_file_key);
+                    let values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> =
+                        vec![&art_id, &index, &final_file_key];
 
                     db_connection
                         .execute(INSERT_INTO_ART_FILE_DB_QUERY, &values)
                         .await
-                        .map_err(|err| format!("{:?}", err))?;
+                        .map_err(|err| format!("{err:?}"))?;
 
                     Ok(final_file_key)
                 });
@@ -263,7 +262,9 @@ pub async fn add_art(
                 )
                 .await;
 
-                let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                let _ = db_connection
+                    .execute("DELETE FROM art WHERE id=$1", &[&art_id])
+                    .await;
 
                 eprintln!(
                     "[ART POST] Failed to move files from temp to permanent location! [{}]",
@@ -275,23 +276,24 @@ pub async fn add_art(
 
             // ---- Now that we finished, set the appropriate art state. ----
 
-            db_connection
+            if let Err(err) = db_connection
                 .execute(
                     "UPDATE art SET post_state=$1 WHERE id=$2",
                     &[&PostState::Public, &art_id],
                 )
                 .await
-                .map_err(|err| {
-                    eprintln!(
-                        "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {:?}",
-                        err
-                    );
+            {
+                eprintln!(
+                    "[ART UPLOAD] Setting post state of id {art_id} to public failed?? {err:?}",
+                );
 
-                    // Delete the processing art before returning error.
-                    let _ = db_connection.execute("DELETE FROM art WHERE id=$1", &[&art_id]);
+                // Delete the processing art before returning error.
+                let _ = db_connection
+                    .execute("DELETE FROM art WHERE id=$1", &[&art_id])
+                    .await;
 
-                    RootErrors::InternalServerError
-                })?;
+                return Err(RootErrors::InternalServerError);
+            };
 
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         }
@@ -419,14 +421,14 @@ pub async fn edit_art_put_request(
 
             // SAFETY: nothing user-written is passed into the string. User values are in `values`
             let query = format!(
-                "UPDATE art SET {} WHERE id={};",
+                "UPDATE art SET {} WHERE id=${};",
                 columns
                     .iter()
                     .enumerate()
                     .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
-                format!("${}", columns.len() + 1)
+                columns.len() + 1
             );
 
             values.push(&existing_art.base_art.id);
@@ -457,8 +459,8 @@ pub async fn edit_art_put_request(
 
                 // Converting "as i8" should be fine as long as no one puts over 127 art pieces in the same place.
                 // As of writing this comment, I limit people to 35 at most, so we should be fine.
-                if !previous_art_key_index
-                    .is_some_and(|previous_index| previous_index as i8 == new_art_key_index)
+                if previous_art_key_index
+                    .is_none_or(|previous_index| previous_index as i8 != new_art_key_index)
                 {
                     // The new art at index i is unlike the previous art at index i.
 
@@ -597,14 +599,14 @@ pub async fn edit_art_put_request(
             values.push(&existing_art.base_art.id);
 
             let update_query = format!(
-                "UPDATE art SET {} WHERE id={};",
+                "UPDATE art SET {} WHERE id=${};",
                 columns
                     .iter()
                     .enumerate()
                     .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
-                format!("${}", columns.len() + 1)
+                columns.len() + 1
             );
 
             db_connection
@@ -638,7 +640,7 @@ async fn give_user_presigned_s3_urls(
             utils::get_temp_s3_presigned_urls(state, requested_amount_of_urls.into(), "art")
                 .await
                 .map_err(|err| {
-                    eprintln!("[ART POST STEP 1] {}", err);
+                    eprintln!("[ART POST STEP 1] {err}");
                     RootErrors::InternalServerError
                 })?;
 

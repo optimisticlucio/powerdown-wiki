@@ -41,7 +41,7 @@ where
 pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
     let day_number = date.day();
 
-    let readable_day = if day_number <= 13 && day_number >= 11 {
+    let readable_day = if (11..13).contains(&day_number) {
         // Handling "11th, 12th, 13th" first.
         format!("{day_number}th")
     } else {
@@ -85,13 +85,10 @@ pub fn template_to_response<T: Template>(template: T) -> Response<Body> {
 pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
     // Check if we have an explicit public-facing URL base (for LocalStack or CloudFront)
     if let Ok(base_url) = env::var("S3_PUBLIC_FACING_URL") {
-        format!("{}/{}/{}", base_url, bucket_name, file_key)
+        format!("{base_url}/{bucket_name}/{file_key}")
     } else {
         let region = env::var("AWS_REGION").unwrap();
-        format!(
-            "https://{}.s3.{}.amazonaws.com/{}",
-            bucket_name, region, file_key
-        )
+        format!("https://{bucket_name}.s3.{region}.amazonaws.com/{file_key}",)
     }
 }
 
@@ -99,7 +96,7 @@ pub fn get_s3_object_url(bucket_name: &str, file_key: &str) -> String {
 /// Returns the public-facing URL for an S3 object in the public bucket.
 pub fn get_s3_public_object_url(file_key: &str) -> String {
     if let Ok(public_bucket_url) = env::var("S3_PUBLIC_BUCKET_URL") {
-        format!("{}/{}", public_bucket_url, file_key)
+        format!("{public_bucket_url}/{file_key}")
     } else {
         get_s3_object_url(&env::var("S3_PUBLIC_BUCKET_NAME").unwrap(), file_key)
     }
@@ -207,13 +204,13 @@ where
         .send()
         .await
         .map_err(|err| {
-            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {:?}", err);
+            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during download: {err:?}");
             MoveTempS3FileErrs::DownloadFailed
         })?;
 
     let original_file_bytes = downloaded_file.body
         .collect().await.map_err(|err| {
-            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {:?}", err);
+            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error in byte collection: {err:?}");
             MoveTempS3FileErrs::ConversionFailed
         })?
         .into_bytes().to_vec();
@@ -234,8 +231,7 @@ where
         })
         .ok_or_else(|| {
             eprintln!(
-                "[{function_name_for_debug_logging}] File key {} has an unknown filetype.",
-                temp_file_key
+                "[{function_name_for_debug_logging}] File key {temp_file_key} has an unknown filetype."
             );
             MoveTempS3FileErrs::UnknownFiletype
         })?;
@@ -250,13 +246,13 @@ where
         // Handle cases where mime_guess returns a weird file extension.
         "text/plain" => "txt",
         _ => mime_guess::get_mime_extensions_str(mime_type)
-            .and_then(|exts| exts.get(0))
+            .and_then(|exts| exts.first())
             .unwrap_or(&"bin"),
     };
 
     // Now run the relevant operation on the file.
     let converted_file =
-        match file_conversion_operation(original_file_bytes, &mime_type, &mime_media_type) {
+        match file_conversion_operation(original_file_bytes, mime_type, mime_media_type) {
             Some(x) => x,
             None => {
                 // If the inner function passed none, it's assumed it failed somehow.
@@ -286,7 +282,7 @@ where
         .send()
         .await
         .map_err(|err| {
-            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {:?}", err);
+            eprintln!("[{function_name_for_debug_logging}] Failed to move temp file {temp_file_key} to target {target_file_key} due to an error during upload: {err:?}");
             MoveTempS3FileErrs::UploadFailed
         })?;
 
@@ -364,13 +360,8 @@ pub async fn get_temp_s3_presigned_urls(
     for task in temp_key_tasks {
         let uri = task
             .await
-            .map_err(|err| format!("Tokio Join Err! {:?}", err))?
-            .map_err(|err| {
-                format!(
-                    "[ART POST STAGE 1] SDK presigned URL creation err! {:?}",
-                    err
-                )
-            })?;
+            .map_err(|err| format!("Tokio Join Err! {err:?}"))?
+            .map_err(|err| format!("[ART POST STAGE 1] SDK presigned URL creation err! {err:?}"))?;
 
         temp_keys_for_presigned.push(uri);
     }
@@ -407,7 +398,7 @@ pub struct PresignedUrlsResponse {
 }
 
 /// Given a user-given key for the S3, returns Some(String) if the key was successfully cleaned. None if the key is empty or otherwise invalid.
-pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<String> {
+pub fn clean_passed_key(passed_url: &str, state: &ServerState) -> Option<String> {
     let parsed_url = Uri::from_str(passed_url).ok()?;
     let key = parsed_url.path();
 
@@ -428,9 +419,9 @@ pub fn clean_passed_key(passed_url: &String, state: &ServerState) -> Option<Stri
 pub async fn delete_keys_from_s3(
     s3_client: &aws_sdk_s3::Client,
     bucket_to_delete_from: &str,
-    keys_to_delete: &Vec<String>,
+    keys_to_delete: &[String],
 ) -> Result<(), String> {
-    if keys_to_delete.len() == 0 {
+    if keys_to_delete.is_empty() {
         return Ok(());
     }
 
@@ -450,14 +441,14 @@ pub async fn delete_keys_from_s3(
         )
         .send()
         .await
-        .map_err(|err| format!("{:?}", err))?;
+        .map_err(|err| format!("{err:?}"))?;
 
     Ok(())
 }
 
 /// Given a file, returns whether I think its an SVG. For some reason, this is a headache to do.
-fn is_an_svg(file: &Vec<u8>) -> bool {
-    if let Ok(content) = std::str::from_utf8(&file) {
+fn is_an_svg(file: &[u8]) -> bool {
+    if let Ok(content) = std::str::from_utf8(file) {
         let content_lower = content.to_lowercase();
         let trimmed = content_lower.trim_start();
 

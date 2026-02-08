@@ -92,15 +92,14 @@ async fn art_index(
         };
 
         let statement = format!(
-            "SELECT * FROM quote WHERE association = '{}' ORDER BY RANDOM() LIMIT 1;",
-            association
+            "SELECT * FROM quote WHERE association = '{association}' ORDER BY RANDOM() LIMIT 1;",
         );
 
         db_connection
             .query(&statement, &[])
             .await
             .unwrap()
-            .get(0)
+            .first()
             .unwrap()
             .get(0)
     };
@@ -119,7 +118,7 @@ async fn art_index(
     let art_pieces = structs::BaseArt::get_art_from_index(
         &db_connection,
         (page_number_to_show - 1) * AMOUNT_OF_ART_PER_PAGE,
-        AMOUNT_OF_ART_PER_PAGE.into(),
+        AMOUNT_OF_ART_PER_PAGE,
         &query_params,
     )
     .await;
@@ -189,7 +188,7 @@ pub async fn get_total_amount_of_art(
     let query_where = search_params.get_postgres_where(&mut query_params);
 
     // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
-    let query = format!("SELECT COUNT(page_slug) FROM art {}", query_where);
+    let query = format!("SELECT COUNT(page_slug) FROM art {query_where}");
 
     let row = db_connection.query_one(&query, &query_params).await?;
 

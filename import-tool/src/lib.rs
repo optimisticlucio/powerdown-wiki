@@ -1,70 +1,69 @@
-use std::{io, path::{Path, PathBuf}};
 use owo_colors::OwoColorize;
 use reqwest::Url;
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 mod art_archive;
 mod characters;
 mod stories;
 pub mod utils;
 
-pub fn read_line() -> Result<String, io::Error>{
+pub fn read_line() -> Result<String, io::Error> {
     let mut input_string = String::new();
 
-    io::stdin()
-        .read_line(&mut input_string)?;
+    io::stdin().read_line(&mut input_string)?;
 
-    return Ok(input_string);
+    Ok(input_string)
 }
 
 pub fn select_main_folder() -> PathBuf {
-    println!("Please input the path of the {} folder inside of unbridled-confidence:", 
-    "pd-archive".bold());
+    println!(
+        "Please input the path of the {} folder inside of unbridled-confidence:",
+        "pd-archive".bold()
+    );
 
-    loop {
-        let chosen_option = read_line().unwrap();
+    let chosen_option = read_line().unwrap();
 
-        let trimmed_option = chosen_option.trim();
+    let trimmed_option = chosen_option.trim();
 
-        // TODO: Ensure that it's a valid path, and that it does match the structure of pd-archive. If not, ask for another path.
+    // TODO: Ensure that it's a valid path, and that it does match the structure of pd-archive. If not, ask for another path.
 
-        return PathBuf::from(trimmed_option);
-    }
+    PathBuf::from(trimmed_option)
 }
-
 
 pub async fn select_server_url() -> Url {
     println!("Please input the URL of the server we're targeting:");
 
-    loop {
-        let chosen_option = read_line().unwrap();
+    let chosen_option = read_line().unwrap();
 
-        let trimmed_option = chosen_option.trim();
+    let trimmed_option = chosen_option.trim();
 
-        let target_url = Url::parse(trimmed_option).unwrap(); // TODO: Handle parse error
+    let target_url = Url::parse(trimmed_option).unwrap(); // TODO: Handle parse error
 
-        let health_check = reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(5))
-                .build()
-                .unwrap()
-                .head(target_url.to_owned())
-                .send()
-                .await;
+    let health_check = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .unwrap()
+        .head(target_url.to_owned())
+        .send()
+        .await;
 
-        if let Err(error) = health_check {
-            println!("Invalid Url: {}", error.to_string());
-            panic!();
-        }
-
-        // TODO: Ensure that this URL is also of PD and not just a random alive site.
-
-        return target_url; 
+    if let Err(error) = health_check {
+        println!("Invalid Url: {error}");
+        panic!();
     }
+
+    // TODO: Ensure that this URL is also of PD and not just a random alive site.
+
+    target_url
 }
 
 /// Selects what to import, and then runs the relevant piece of code.
 pub async fn select_import_type(root_path: &Path, server_url: &Url) -> () {
     println!(
-"\nWhat would you like to import?
+        "\nWhat would you like to import?
 (1) Characters.
 (2) Art.
 (3) Stories.
@@ -93,13 +92,15 @@ pub async fn select_import_type(root_path: &Path, server_url: &Url) -> () {
             }
 
             "9" => {
-                unimplemented!("Haven't implemented full import yet. You don't need it yet, calm down.");
+                unimplemented!(
+                    "Haven't implemented full import yet. You don't need it yet, calm down."
+                );
             }
 
             "0" => {
                 break;
             }
-            _ => println!("{}", "I didn't quite get that.".yellow())
+            _ => println!("{}", "I didn't quite get that.".yellow()),
         }
     }
 }

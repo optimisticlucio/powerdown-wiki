@@ -10,10 +10,7 @@ pub async fn clean_temp_db_entries(state: ServerState) {
     let db_connection = match state.db_pool.get().await {
         Ok(ok) => ok,
         Err(err) => {
-            eprintln!(
-                "[CLEAN TEMP DB ENTRIES] Failed to get sql connection! {:?}",
-                err
-            );
+            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to get sql connection! {err:?}");
             return;
         }
     };
@@ -25,8 +22,7 @@ pub async fn clean_temp_db_entries(state: ServerState) {
         Ok(rows_modified) => rows_modified,
         Err(err) => {
             eprintln!(
-                "[CLEAN TEMP DB ENTRIES] Failed to clean up art db! {:?}. Continuing cleanup.",
-                err
+                "[CLEAN TEMP DB ENTRIES] Failed to clean up art db! {err:?}. Continuing cleanup."
             );
             0
         }
@@ -39,17 +35,14 @@ pub async fn clean_temp_db_entries(state: ServerState) {
     {
         Ok(rows_modified) => rows_modified,
         Err(err) => {
-            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to clean up character db! {:?}. Continuing cleanup.", err);
+            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to clean up character db! {err:?}. Continuing cleanup.");
             0
         }
     };
 
     let entries_cleaned_up = art_db_cleanup_rows_modified + character_db_cleanup_rows_modified;
 
-    println!(
-        "[CLEAN TEMP DB ENTRIES] Cleanup complete, {} entries removed.",
-        entries_cleaned_up
-    );
+    println!("[CLEAN TEMP DB ENTRIES] Cleanup complete, {entries_cleaned_up} entries removed.");
 }
 
 // Returns the current UTC time and date in a human-readable format.

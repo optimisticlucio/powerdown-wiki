@@ -107,10 +107,7 @@ impl User {
             .await
             .unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
 
-        match resulted_row {
-            None => None,
-            Some(row) => Some(Self::from_row(row)),
-        }
+        resulted_row.map(Self::from_row)
     }
 
     /// Given a valid site_user row, converts it to a User struct.
@@ -131,7 +128,7 @@ impl User {
         cookie_jar: &Cookies,
     ) -> Option<Self> {
         let user_session_id = cookie_jar.get("USER_SESSION_ID")?;
-        let user_session = UserSession::get_by_id(&db_connection, user_session_id.value()).await?;
+        let user_session = UserSession::get_by_id(db_connection, user_session_id.value()).await?;
 
         Some(user_session.user)
     }
@@ -146,7 +143,7 @@ impl User {
             .get()
             .await
             .map_err(|_| RootErrors::InternalServerError)?;
-        Ok(User::get_from_cookie_jar(&db_connection, &cookie_jar).await)
+        Ok(User::get_from_cookie_jar(&db_connection, cookie_jar).await)
     }
 
     /// Creates a new user in the DB, returns the created user.
@@ -169,18 +166,14 @@ impl User {
             }
         }
 
-        let successfully_created_user = created_user.unwrap();
-
-        // User is created? Splendid. Now let's get some info that we're either unsure about or is dependent on the ID.
-
-        successfully_created_user
+        created_user.unwrap()
     }
 
     /// Returns a URL pointing towards a default pfp image.
     pub fn get_default_pfp_url(&self) -> &'static str {
-        let default_pfp_index = (self.id.abs() as usize) % USER_DEFAULT_PFPS.len();
+        let default_pfp_index = (self.id.unsigned_abs() as usize) % USER_DEFAULT_PFPS.len();
 
-        return USER_DEFAULT_PFPS[default_pfp_index];
+        USER_DEFAULT_PFPS[default_pfp_index]
     }
 
     /// Returns a URL pointing towards the given user's PFP.
@@ -272,7 +265,7 @@ impl UserType {
 
 impl std::fmt::Display for UserType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -392,7 +385,7 @@ impl Oauth2Provider {
                 let client_id = env::var("DISCORD_OAUTH2_CLIENT_ID").unwrap();
                 let redirect_uri = self.get_redirect_uri();
                 // The format for scopes is "scope1+scope2+scope3"
-                const SCOPES: &'static str = "identify";
+                const SCOPES: &str = "identify";
 
                 let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
 
@@ -402,10 +395,10 @@ impl Oauth2Provider {
                 let client_id = env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap();
                 let redirect_uri = self.get_redirect_uri();
                 // The format for scopes is "scope1+scope2+scope3"
-                const SCOPES: &'static str = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid";
+                const SCOPES: &str = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid";
 
                 let encoded_redirect_uri = urlencoding::encode(&redirect_uri);
-                let encoded_scopes = urlencoding::encode(&SCOPES);
+                let encoded_scopes = urlencoding::encode(SCOPES);
 
                 format!("https://accounts.google.com/o/oauth2/auth?client_id={client_id}&response_type=code&redirect_uri={encoded_redirect_uri}&scope={encoded_scopes}")
             }

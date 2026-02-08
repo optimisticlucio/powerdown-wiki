@@ -78,10 +78,7 @@ pub async fn patch_user(
             let presigned_urls = get_temp_s3_presigned_urls(&state, file_amount as u32, "user")
                 .await
                 .map_err(|err| {
-                    eprintln!(
-                        "[MODIFY USER INFO] Failed getting {} s3 urls! {}",
-                        file_amount, err
-                    );
+                    eprintln!("[MODIFY USER INFO] Failed getting {file_amount} s3 urls! {err}");
                     RootErrors::InternalServerError
                 })?;
 
@@ -146,7 +143,7 @@ pub async fn patch_user(
                         RootErrors::BadRequest("Invalid file for profile picture.".to_string())
                     }
                     _ => {
-                        eprintln!("[UPDATE USER INFO] Failed to compress user PFP! {}", err);
+                        eprintln!("[UPDATE USER INFO] Failed to compress user PFP! {err}");
                         RootErrors::InternalServerError
                     }
                 })?;
@@ -190,7 +187,7 @@ pub async fn patch_user(
             }
 
             // Did we actually do anything?
-            if columns.len() == 0 {
+            if columns.is_empty() {
                 return Err(RootErrors::BadRequest(
                     "No modifiable data passed.".to_string(),
                 ));
@@ -198,14 +195,14 @@ pub async fn patch_user(
 
             // Send the query and pray
             let update_query = format!(
-                "UPDATE site_user SET {} WHERE id={};",
+                "UPDATE site_user SET {} WHERE id=${};",
                 columns
                     .iter()
                     .enumerate()
                     .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
-                format!("${}", columns.len() + 1)
+                columns.len() + 1
             );
 
             values.push(&modified_user.id);

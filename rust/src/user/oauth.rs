@@ -125,6 +125,8 @@ pub struct GithubUser {
     //avatar_url: String,
 }
 
+#[allow(clippy::too_many_arguments)] // I do not have the mental capacity to make this more readable.
+                                     // If you see this comment and have a problem with it - you do it, then <3
 async fn oauth_process<
     'a,
     T: serde::de::DeserializeOwned,
@@ -148,8 +150,7 @@ async fn oauth_process<
     let authorization_code = match query.code {
         None => {
             return Err(RootErrors::BadRequest(format!(
-                "Entered {} Authorization Callback without an authorization code.",
-                process_name_for_debug
+                "Entered {process_name_for_debug} Authorization Callback without an authorization code."
             )))
         }
         Some(x) => x,
@@ -157,10 +158,7 @@ async fn oauth_process<
 
     // First, talk to the Google servers to see what account we just got access to.
     let access_token_request_client = reqwest::ClientBuilder::default().build().map_err(|err| {
-        println!(
-            "[OAUTH2; {}] Failed to build request client: {:?}",
-            process_name_for_debug, err
-        );
+        println!("[OAUTH2; {process_name_for_debug}] Failed to build request client: {err:?}",);
         RootErrors::InternalServerError
     })?;
 
@@ -179,8 +177,7 @@ async fn oauth_process<
         .await
         .map_err(|err| {
             println!(
-                "[OAUTH2; {}] Failed sending request for access token: {:?}",
-                process_name_for_debug, err
+                "[OAUTH2; {process_name_for_debug}] Failed sending request for access token: {err:?}",
             );
             RootErrors::InternalServerError
         })?;
@@ -194,8 +191,7 @@ async fn oauth_process<
         })
         .map_err(|err| {
             println!(
-                "[OAUTH2; {}] Failed reading access token response: {:?}",
-                process_name_for_debug, err
+                "[OAUTH2; {process_name_for_debug}] Failed reading access token response: {err:?}",
             );
             RootErrors::InternalServerError
         })?;
@@ -205,8 +201,7 @@ async fn oauth_process<
         .build()
         .map_err(|err| {
             println!(
-                "[OAUTH2; {}] Failed to build identification request client: {:?}",
-                process_name_for_debug, err
+                "[OAUTH2; {process_name_for_debug}] Failed to build identification request client: {err:?}"
             );
             RootErrors::InternalServerError
         })?
@@ -217,17 +212,13 @@ async fn oauth_process<
         .await
         .map_err(|err| {
             println!(
-                "[OAUTH2; {}] Failed sending identification request: {:?}",
-                process_name_for_debug, err
+                "[OAUTH2; {process_name_for_debug}] Failed sending identification request: {err:?}"
             );
             RootErrors::InternalServerError
         })?;
 
     let user_info: T = identify_request.json().await.map_err(|err| {
-        println!(
-            "[OAUTH2; {}] Failed reading user's @me info: {:?}",
-            process_name_for_debug, err
-        );
+        println!("[OAUTH2; {process_name_for_debug}] Failed reading user's @me info: {err:?}");
         RootErrors::InternalServerError
     })?;
 
@@ -267,8 +258,8 @@ async fn oauth_process<
         // TODO: Check if logged in user has a different connection already. If so, throw an error.
 
         // If the user isn't logged in, create a new account for them.
-        let account_to_connect_to = if logged_in_user.is_some() {
-            logged_in_user.unwrap()
+        let account_to_connect_to = if let Some(user) = logged_in_user {
+            user
         } else {
             User::create_in_db(&db_connection, &get_display_name(&user_info)).await
         };
@@ -295,7 +286,7 @@ async fn oauth_process<
 
         // Connect the OAuth method to the user we now have.
         OAuth2Association {
-            provider: provider,
+            provider,
             provider_user_id: user_id,
         }
         .associate_with_user(&db_connection, &account_to_connect_to)

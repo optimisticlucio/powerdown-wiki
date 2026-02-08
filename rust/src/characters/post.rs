@@ -62,7 +62,7 @@ pub async fn add_character(
                 get_temp_s3_presigned_urls(&state, file_amount.into(), "characters")
                     .await
                     .map_err(|err| {
-                        eprintln!("[POSTING CHARACTER] Failed to get presigned URLs! {}", err);
+                        eprintln!("[POSTING CHARACTER] Failed to get presigned URLs! {err}");
                         RootErrors::InternalServerError
                     })?;
 
@@ -195,52 +195,60 @@ pub async fn add_character(
 
             // Move thumbnail.
             let thumbnail_target_s3_key = format!("{target_s3_folder}/thumbnail");
-            let thumbnail_s3_key = utils::move_and_lossily_compress_temp_s3_img(
-                    &s3_client,
-                    &state.config,
-                    &recieved_page_character.base_character.thumbnail_key,
-                    &state.config.s3_public_bucket,
-                    &thumbnail_target_s3_key,
-                    Some(CHARACTER_THUMBNAIL_COMPRESSION_SETTINGS)
-                )
-                .await
-                .map_err(|err| {
+            let thumbnail_s3_key = match utils::move_and_lossily_compress_temp_s3_img(
+                &s3_client,
+                &state.config,
+                &recieved_page_character.base_character.thumbnail_key,
+                &state.config.s3_public_bucket,
+                &thumbnail_target_s3_key,
+                Some(CHARACTER_THUMBNAIL_COMPRESSION_SETTINGS),
+            )
+            .await
+            {
+                Ok(x) => x,
+                Err(err) => {
                     eprintln!(
-                        "[CHARACTER POSTING] Converting thumbnail of character {character_id} failed, {:?}",
-                        err
-                    );
+                        "[CHARACTER POSTING] Converting thumbnail of character {character_id} failed, {err:?}",
+                        );
 
                     // Delete the processing character before returning error.
-                    let _ = db_connection.execute("DELETE FROM character WHERE id=$1", &[&character_id]);
+                    let _ = db_connection
+                        .execute("DELETE FROM character WHERE id=$1", &[&character_id])
+                        .await;
 
-                    RootErrors::InternalServerError
-                })?;
+                    return Err(RootErrors::InternalServerError);
+                }
+            };
 
             columns.push("thumbnail".into());
             values.push(&thumbnail_s3_key);
 
             // Move main page art
             let main_art_target_s3_key = format!("{target_s3_folder}/page_art");
-            let main_art_key = utils::move_and_lossily_compress_temp_s3_img(
-                    &s3_client,
-                    &state.config,
-                    &recieved_page_character.page_img_key,
-                    &state.config.s3_public_bucket,
-                    &main_art_target_s3_key,
-                    Some(CHARACTER_IMAGE_COMPRESSION_SETTINGS)
-                )
-                .await
-                .map_err(|err| {
+            let main_art_key = match utils::move_and_lossily_compress_temp_s3_img(
+                &s3_client,
+                &state.config,
+                &recieved_page_character.page_img_key,
+                &state.config.s3_public_bucket,
+                &main_art_target_s3_key,
+                Some(CHARACTER_IMAGE_COMPRESSION_SETTINGS),
+            )
+            .await
+            {
+                Ok(x) => x,
+                Err(err) => {
                     eprintln!(
-                        "[CHARACTER POSTING] Converting main art of character {character_id} failed, {:?}",
-                        err
+                        "[CHARACTER POSTING] Converting main art of character {character_id} failed, {err:?}",
                     );
 
                     // Delete the processing character before returning error.
-                    let _ = db_connection.execute("DELETE FROM character WHERE id=$1", &[&character_id]);
+                    let _ = db_connection
+                        .execute("DELETE FROM character WHERE id=$1", &[&character_id])
+                        .await;
 
-                    RootErrors::InternalServerError
-                })?;
+                    return Err(RootErrors::InternalServerError);
+                }
+            };
 
             columns.push("page_image".into());
             values.push(&main_art_key);
@@ -248,26 +256,30 @@ pub async fn add_character(
             let compressed_logo_key: String;
             if let Some(temp_logo_key) = &recieved_page_character.logo_url {
                 let target_key = format!("{target_s3_folder}/logo");
-                compressed_logo_key = utils::move_and_lossily_compress_temp_s3_img(
-                        &s3_client,
-                        &state.config,
-                        &temp_logo_key,
-                        &state.config.s3_public_bucket,
-                        &target_key,
-                        Some(CHARACTER_LOGO_COMPRESSION_SETTINGS)
-                    )
-                    .await
-                    .map_err(|err| {
+                compressed_logo_key = match utils::move_and_lossily_compress_temp_s3_img(
+                    &s3_client,
+                    &state.config,
+                    temp_logo_key,
+                    &state.config.s3_public_bucket,
+                    &target_key,
+                    Some(CHARACTER_LOGO_COMPRESSION_SETTINGS),
+                )
+                .await
+                {
+                    Ok(x) => x,
+                    Err(err) => {
                         eprintln!(
-                            "[CHARACTER POSTING] Converting logo of character {character_id} failed, {:?}",
-                            err
-                        );
+                                "[CHARACTER POSTING] Converting logo of character {character_id} failed, {err:?}",
+                            );
 
                         // Delete the processing character before returning error.
-                        let _ = db_connection.execute("DELETE FROM character WHERE id=$1", &[&character_id]);
+                        let _ = db_connection
+                            .execute("DELETE FROM character WHERE id=$1", &[&character_id])
+                            .await;
 
-                        RootErrors::InternalServerError
-                    })?;
+                        return Err(RootErrors::InternalServerError);
+                    }
+                };
 
                 columns.push("logo".into());
                 values.push(&compressed_logo_key);
@@ -280,33 +292,30 @@ pub async fn add_character(
             // Update the image values of the character
             // SAFETY: No user-passed values are in the query, they're all in `values`
             let query = format!(
-                "UPDATE character SET {} WHERE id={};",
+                "UPDATE character SET {} WHERE id=${};",
                 columns
                     .iter()
                     .enumerate()
                     .map(|(index, value)| format!("{}=${}", value, index + 1))
                     .collect::<Vec<_>>()
                     .join(","),
-                format!("${}", columns.len() + 1)
+                columns.len() + 1
             );
 
             values.push(&character_id);
 
-            db_connection
-                .execute(&query, &values)
-                .await
-                .map_err(|err| {
-                    println!(
-                        "[CHARACTER POSTING] Error in db query execution!\nQuery: {}\nError: {:?}",
-                        query, err
+            if let Err(err) = db_connection.execute(&query, &values).await {
+                println!(
+                        "[CHARACTER POSTING] Error in db query execution!\nQuery: {query}\nError: {err:?}",
                     );
 
-                    // Delete the processing character before returning error.
-                    let _ = db_connection
-                        .execute("DELETE FROM character WHERE id=$1", &[&character_id]);
+                // Delete the processing character before returning error.
+                let _ = db_connection
+                    .execute("DELETE FROM character WHERE id=$1", &[&character_id])
+                    .await;
 
-                    RootErrors::InternalServerError
-                })?;
+                return Err(RootErrors::InternalServerError);
+            };
 
             Ok(Redirect::to(&format!(
                 "/characters/{}",

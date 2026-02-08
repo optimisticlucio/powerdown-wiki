@@ -78,7 +78,7 @@ async fn homepage(
             .query(statement, &[])
             .await
             .unwrap()
-            .get(0)
+            .first()
             .unwrap()
             .get(0)
     };
@@ -96,7 +96,7 @@ async fn homepage(
 
         buttons: &FRONTPAGE_ITEMS,
         random_quote: &random_subtitle,
-        random_ad: &test_data::get_frontpage_ads()
+        random_ad: test_data::get_frontpage_ads()
             .choose(&mut rand::rng())
             .unwrap(),
         birthday_characters,

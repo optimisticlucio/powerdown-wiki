@@ -12,8 +12,7 @@ pub async fn get_discord_link(db_connection: &Object<Manager>) -> Option<String>
         .await
         .map_err(|err| {
             eprintln!(
-                "[GET DISCORD LINK] Failed reading `discord_invite_url`! Returning None. Err: {:?}",
-                err
+                "[GET DISCORD LINK] Failed reading `discord_invite_url`! Returning None. Err: {err:?}",
             )
         })
         .ok()?;

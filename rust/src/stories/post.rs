@@ -33,10 +33,7 @@ pub async fn add_story(
         .execute(&query, &values)
         .await
         .map_err(|err| {
-            println!(
-                "[STORY] Error in db query execution!\nQuery: {}\nError: {:?}",
-                query, err
-            );
+            println!("[STORY] Error in db query execution!\nQuery: {query}\nError: {err:?}",);
             RootErrors::InternalServerError
         })?;
 

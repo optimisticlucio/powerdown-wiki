@@ -67,8 +67,7 @@ impl BaseStory {
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
         let query = format!(
-            "SELECT * FROM story {} ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
-            query_where
+            "SELECT * FROM story {query_where} ORDER BY creation_date DESC LIMIT $1 OFFSET $2",
         );
 
         let requested_rows = db_connection
@@ -89,7 +88,7 @@ impl BaseStory {
         let query_where = search_params.get_postgres_where(&mut query_params);
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
-        let query = format!("SELECT COUNT(page_slug) FROM story {}", query_where);
+        let query = format!("SELECT COUNT(page_slug) FROM story {query_where}");
 
         let row = db_connection.query_one(&query, &query_params).await?;
 

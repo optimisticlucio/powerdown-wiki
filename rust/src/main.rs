@@ -30,11 +30,8 @@ async fn main() {
                 }
             }
             Err(err) => {
-                eprintln!(
-                    "[STARTUP] Migrations failed to run! Terminating server. Err: {:?}",
-                    err
-                );
-                return ();
+                eprintln!("[STARTUP] Migrations failed to run! Terminating server. Err: {err:?}",);
+                return;
             }
         }
     }

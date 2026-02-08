@@ -53,7 +53,7 @@ pub async fn character_page(
         let retirement_reason = chosen_char
             .retirement_reason
             .as_ref()
-            .map(|f| markdown_to_html(&f, &comrak::Options::default()));
+            .map(|f| markdown_to_html(f, &comrak::Options::default()));
 
         Ok(template_to_response(CharacterPage {
             user: requesting_user,

@@ -18,15 +18,12 @@ pub async fn run_backup_processes(state: ServerState) {
     );
 
     if let Err(err) = backup_db(state.clone()).await {
-        eprintln!("[SQL BACKUP PROCESSES] Failed to backup DB! err: {:?}", err);
+        eprintln!("[SQL BACKUP PROCESSES] Failed to backup DB! err: {err:?}");
         return;
     }
 
     if let Err(err) = clean_up_old_backups(state.clone()).await {
-        eprintln!(
-            "[SQL BACKUP PROCESSES] Failed to clean old backups! err: {:?}",
-            err
-        );
+        eprintln!("[SQL BACKUP PROCESSES] Failed to clean old backups! err: {err:?}");
         return;
     }
 
@@ -46,7 +43,7 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
     let mut pg_dump_command = Command::new("pg_dump");
 
     pg_dump_command
-        .args(&[
+        .args([
             "-h",
             "postgres", // The container name
             "-p",
@@ -68,15 +65,14 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
             return Err(Box::new(err));
         }
         Ok(ok) => {
-            println!("[SQL BACKUP] pg_dump successful! {:?}", ok);
+            println!("[SQL BACKUP] pg_dump successful! {ok:?}");
         }
     }
 
     // Check filesize of pg_dump, for my own sanity.
 
-    let pg_dump_metadata = std::fs::metadata(PG_DUMP_FILENAME).map_err(|err| {
+    let pg_dump_metadata = std::fs::metadata(PG_DUMP_FILENAME).inspect_err(|_| {
         eprintln!("[SQL BACKUP] Reading pg_dump metadata failed! Passing err to calling function.");
-        err
     })?;
 
     println!(
@@ -124,10 +120,7 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
     if let Err(err) = std::fs::remove_file(PG_DUMP_FILENAME) {
         // If this fails, it doesn't harm the rest of the function. It's just... well, sub-optimal.
         // If it starts causing problems, someone can go in there and delete the file themselves.
-        eprintln!(
-            "[SQL BACKUP] Removing local file failed! Proceeding as normal. Err: {:?}",
-            err
-        );
+        eprintln!("[SQL BACKUP] Removing local file failed! Proceeding as normal. Err: {err:?}",);
     };
 
     Ok(())
@@ -276,14 +269,11 @@ async fn clean_up_old_backups(state: ServerState) -> Result<(), Box<dyn std::err
     let _ = crate::utils::delete_keys_from_s3(
         &s3_client,
         &state.config.s3_sql_backup_bucket,
-        &backup_keys_to_delete.into(),
+        &backup_keys_to_delete,
     )
     .await
     .map_err(|err| {
-        eprintln!(
-            "[CLEANUP SQL BACKUPS] Failed deleting old backups! err: {}",
-            err
-        );
+        eprintln!("[CLEANUP SQL BACKUPS] Failed deleting old backups! err: {err}",);
     });
 
     Ok(())

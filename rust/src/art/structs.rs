@@ -64,8 +64,7 @@ impl BaseArt {
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
         let query = format!(
-            "SELECT * FROM art {} ORDER BY creation_date DESC, page_slug LIMIT $1 OFFSET $2",
-            query_where
+            "SELECT * FROM art {query_where} ORDER BY creation_date DESC, page_slug LIMIT $1 OFFSET $2"
         );
 
         let requested_art_rows = db_connection
@@ -131,7 +130,7 @@ impl PageArt {
 
         let uploading_user_id: Option<i32> = row.get("uploading_user_id");
         let uploading_user = if let Some(user_id) = uploading_user_id {
-            User::get_by_id(&db_connection, &user_id).await
+            User::get_by_id(db_connection, &user_id).await
         } else {
             None
         };
@@ -143,7 +142,7 @@ impl PageArt {
         PageArt {
             base_art,
             description: row.get("description"),
-            tags: row.try_get("tags").unwrap_or(Vec::new()),
+            tags: row.try_get("tags").unwrap_or_default(),
             art_keys,
             creation_date: row.get("creation_date"),
             uploading_user,
