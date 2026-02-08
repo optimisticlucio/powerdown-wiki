@@ -1,5 +1,5 @@
 use utils::sql::PostState;
-use crate::art::structs::PageArt;
+use crate::art::structs::{BaseArt, PageArt};
 use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response, PostingSteps};
 use crate::{errs::RootErrors, ServerState};
@@ -54,6 +54,13 @@ pub async fn add_art(
             if let Err(err_explanation) = validate_recieved_page_art(&page_art) {
                 return Err(RootErrors::BadRequest(
                     err_explanation,
+                ));
+            }
+
+            // Check if this art already exists. If it does, throw an error.
+            if BaseArt::get_by_slug(&db_connection, &page_art.base_art.slug).await.is_some() {
+                return Err(RootErrors::BadRequest(
+                    format!("The slug {} already exists.", &page_art.base_art.slug)
                 ));
             }
 

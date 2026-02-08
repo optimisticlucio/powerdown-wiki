@@ -1,3 +1,4 @@
+use crate::characters::BaseCharacter;
 use crate::user::User;
 use crate::utils::sql::PostState;
 use crate::utils::{self, PostingSteps, PresignedUrlsResponse, get_temp_s3_presigned_urls, template_to_response};
@@ -78,14 +79,12 @@ pub async fn add_character(
                 return Err(RootErrors::BadRequest(err_string));
             }
 
-            // Now the character is ready to send to the DB.
-            let db_connection = state.db_pool.get().await.map_err(|_| {
-                println!(
-                    "[CHARACTER POST ERR] Couldn't get DB connection for {}",
-                    &recieved_page_character.base_character.name
-                );
-                RootErrors::InternalServerError
-            })?;
+            // Check if this character already exists. If it does, throw an error.
+            if BaseCharacter::get_by_slug(&db_connection, &recieved_page_character.base_character.slug).await.is_some() {
+                return Err(RootErrors::BadRequest(
+                    format!("The slug {} already exists.", &recieved_page_character.base_character.slug)
+                ));
+            }
 
             // Let's build our query.
             let mut columns: Vec<String> = Vec::new();
