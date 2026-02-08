@@ -49,12 +49,6 @@ jobs:
             rust/target
           key: ${{ runner.os }}-rust-default-${{ hashFiles('rust/Cargo.toml') }}
 
-      - name: Migrate Database
-        run: >-
-          for sql_file in postgres/init/*; do
-            psql -f "$sql_file" "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}/${POSTGRES_DATABASE}"
-          done
-
       - name: Build
         run: cd rust && cargo build --all-features
 
