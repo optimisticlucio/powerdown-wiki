@@ -7,7 +7,7 @@ pub fn get_frontpage_ads() -> Vec<String> {
         "/static/img/ads/rabbl.jpg",
         "/static/img/ads/dodrinkos.png",
         "/static/img/ads/sock.png",
-        "/staticimg/ads/not-a-virus.png",
+        "/static/img/ads/not-a-virus.png",
     ]
     .into_iter()
     .map(String::from)
