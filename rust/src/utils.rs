@@ -467,3 +467,9 @@ pub fn is_valid_slug(slug: &str) -> bool {
     let re = regex::Regex::new(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$").unwrap();
     re.is_match(slug)
 }
+
+/// Given a string, returns whether we'd accept it as a post tag.
+pub fn is_valid_tag(tag: &str) -> bool {
+    let re = regex::Regex::new(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$").unwrap();
+    re.is_match(tag)
+}

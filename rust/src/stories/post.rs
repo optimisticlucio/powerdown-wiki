@@ -1,10 +1,11 @@
 use super::structs::PageStory;
-use crate::{RootErrors, ServerState};
+use crate::{RootErrors, ServerState, User};
 use axum::extract::{Json, State};
 use axum::response::{IntoResponse, Redirect};
 
 pub async fn add_story(
     State(state): State<ServerState>,
+    cookie_jar: tower_cookies::Cookies,
     Json(recieved_story): Json<PageStory>,
 ) -> Result<impl IntoResponse, RootErrors> {
     let db_connection = state
@@ -12,6 +13,17 @@ pub async fn add_story(
         .get()
         .await
         .map_err(|_| RootErrors::InternalServerError)?;
+
+    // Who's trying to do this?
+    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        Some(user) => user,
+        None => return Err(RootErrors::Unauthorized),
+    };
+
+    // Right now story posting is kinda shit, so only allow superadmins to do so until fixed.
+    if requesting_user.user_type != crate::user::UserType::Superadmin {
+        return Err(RootErrors::Forbidden);
+    }
 
     // Let's build our query.
     let (columns, values) =

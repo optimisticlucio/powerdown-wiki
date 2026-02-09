@@ -356,10 +356,28 @@ pub async fn character_posting_page(
 /// Given a user-created Page Art, validates that it makes sense. If it doesn't, returns a readable explanation why.
 fn validate_recieved_page_character(recieved_page_character: &PageCharacter) -> Result<(), String> {
     if !utils::is_valid_slug(&recieved_page_character.base_character.slug) {
-        return Err("Given invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string());
+        return Err("Invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string());
     }
 
-    // TODO - Validate
+    if recieved_page_character.base_character.name.len() > 10 {
+        return Err("Long character title. Their name/title should be 10 characters or less. Use the Long Name section if they have a fancier title!".to_string());
+    }
+
+    if recieved_page_character.infobox.is_empty() {
+        return Err(
+            "Empty Infobox. Give the people something interesting to learn about them!".to_string(),
+        );
+    }
+
+    if recieved_page_character
+        .tag
+        .as_ref()
+        .is_some_and(|tag| !utils::is_valid_tag(tag))
+    {
+        return Err(
+            "Invalid character tag. Tags must be made of lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string()
+        );
+    }
 
     Ok(())
 }
@@ -401,5 +419,15 @@ fn sanitize_recieved_page_character(
         .filter(|custom_css| custom_css.is_empty())
         .map(|s| s.to_string());
 
-    // TODO - Finish Sanitization
+    recieved_page_character.page_contents = recieved_page_character
+        .page_contents
+        .as_ref()
+        .map(|contents| ammonia::clean_text(contents));
+
+    recieved_page_character.retirement_reason = recieved_page_character
+        .retirement_reason
+        .as_ref()
+        .map(|reason: &String| ammonia::clean_text(reason));
+
+    // TODO - Sanitize CSS sections
 }

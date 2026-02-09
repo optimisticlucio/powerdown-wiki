@@ -658,6 +658,14 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
         return Err("Art page needs to have art in it".to_owned());
     }
 
+    if recieved_page_art
+        .art_keys
+        .iter()
+        .any(|tag| utils::is_valid_tag(tag))
+    {
+        return Err("Tags secton contain an invalid tag. Tags must be lowercase letters, numbers, and may include hyphens and underscores in the middle.".to_owned());
+    }
+
     if recieved_page_art.base_art.creators.is_empty() {
         return Err("No artists given".to_owned());
     }
@@ -738,4 +746,9 @@ fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt, state: &ServerSta
     recieved_page_art.base_art.thumbnail_key =
         utils::clean_passed_key(&recieved_page_art.base_art.thumbnail_key, state)
             .unwrap_or_default();
+
+    recieved_page_art.description = recieved_page_art
+        .description
+        .as_ref()
+        .map(|description| ammonia::clean_text(description));
 }
