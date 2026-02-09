@@ -6,7 +6,7 @@
 //! The `initiate(ServerState)` function is the one the main function should call to initiate all the relevant tasks.
 
 use crate::{scheduled_tasks::lib::clean_temp_db_entries, ServerState};
-use tokio::time::{interval, Duration};
+use tokio_cron_scheduler::{Job, JobScheduler};
 
 mod lib;
 mod sql_backup;
@@ -15,41 +15,71 @@ pub use lib::get_current_human_readable_time;
 pub use sql_backup::run_backup_processes;
 
 /// Sets up all the periodic tasks that the server needs to do, so they'll run at the appropriate times.
-pub fn initiate_scheduled_tasks(state: ServerState) {
-    // Durations frequently used, for convenience.
-    const MINUTE_DURATION: Duration = Duration::from_secs(60);
-    const HOUR_DURATION: Duration = MINUTE_DURATION.saturating_mul(60);
-    const DAY_DURATION: Duration = HOUR_DURATION.saturating_mul(24);
+pub async fn initiate_scheduled_tasks(state: ServerState) {
+    // This section uses `tokio_cron_scheduler` to make sure that these tasks occur consistently on given
+    // times of day, so that restarting the server doesn't restart the clock on when a given task should
+    // be run. The syntax here is from the `croner` library so you can check it aswell for info,
+    // but in short:
+    //
+    // [seconds] [minute] [hour] [day of month] [month] [day of week]
+    // - * is a wildcard, meaning any value applies
+    // - (*/num) means every value that cleanly divides by num. For example, (*/15) is once every 15 min.
+    // - There's some shorthands, for example @hourly and @daily, that replace this entire pattern.
 
-    // Ok so - I tried making this neater with like, a list and such,
-    // but I was running into headaches with types and boxing and such.
-    // This may be repetitive, but it's the easiest and least computationally
-    // expensive way to run all these functions that I've seen so far.
-    // If you know of a better way, PLEASE.
+    let job_scheduler = JobScheduler::new()
+        .await
+        .expect("[JOB SCHEDULER] Failed creating job scheduler!");
 
-    tokio::spawn(run_periodically(
-        state.clone(),
-        sql_backup::run_backup_processes,
-        DAY_DURATION,
-    ));
-    tokio::spawn(run_periodically(
-        state.clone(),
-        clean_temp_db_entries,
-        HOUR_DURATION,
-    ));
-}
+    // I tried making this iterate over a list of tasks, and every time I ran into some other bug.
+    // If you can fix it, PLEASE DO. This is nigh unreadable.
 
-/// Given a certain task to perform, and how often to perform it, repeatedly calls this task every `frequency`.
-/// The task in question is assumed to need the ServerState struct.
-async fn run_periodically<F, Fut>(state: ServerState, task: F, frequency: Duration)
-where
-    F: Fn(ServerState) -> Fut,
-    Fut: std::future::Future<Output = ()>,
-{
-    let mut interval = interval(frequency);
-    interval.tick().await; // Skip the instant first trigger.
-    loop {
-        interval.tick().await;
-        task(state.clone()).await;
-    }
+    // Clean temp db entries once an hour.
+    let cloned_state = state.clone();
+
+    job_scheduler
+        .add(
+            Job::new_async("@hourly", move |_uuid, _scheduler| {
+                let state = cloned_state.clone();
+                Box::pin(async move {
+                    clean_temp_db_entries(&state).await;
+                })
+            })
+            .inspect_err(|err| {
+                eprintln!("[JOB SCHEDULER] Failed creating clean_temp_db_entries job: {err:?}")
+            })
+            .unwrap(),
+        )
+        .await
+        .inspect_err(|err| {
+            eprintln!("[JOB SCHEDULER] Failed adding clean_temp_db_entries job to list: {err:?}")
+        })
+        .unwrap();
+
+    // Backup DB once a day.
+    let cloned_state = state.clone();
+
+    job_scheduler
+        .add(
+            Job::new_async("@daily", move |_uuid, _scheduler| {
+                let state = cloned_state.clone();
+                Box::pin(async move {
+                    sql_backup::run_backup_processes(&state).await;
+                })
+            })
+            .inspect_err(|err| {
+                eprintln!("[JOB SCHEDULER] Failed creating run_backup_processes job: {err:?}")
+            })
+            .unwrap(),
+        )
+        .await
+        .inspect_err(|err| {
+            eprintln!("[JOB SCHEDULER] Failed adding run_backup_processes job to list: {err:?}")
+        })
+        .unwrap();
+
+    job_scheduler
+        .start()
+        .await
+        .inspect_err(|err| eprintln!("[JOB SCHEDULER] Failed starting job scheduler: {err:?}"))
+        .unwrap();
 }

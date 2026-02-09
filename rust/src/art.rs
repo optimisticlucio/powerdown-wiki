@@ -37,6 +37,9 @@ pub fn router() -> Router<ServerState> {
         .route_with_tsr("/{art_slug}/edit", get(edit::edit_art_page))
 }
 
+/// To keep things consistent, whenever you need to present art to the user, sort it by this.
+const SQL_ORDER_BY_STATEMENT: &str = "ORDER BY creation_date DESC, page_slug";
+
 #[derive(Debug, Template)]
 #[template(path = "art/index.html")]
 struct ArtIndexPage<'a> {

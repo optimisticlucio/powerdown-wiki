@@ -1,4 +1,4 @@
-use super::structs;
+use super::{structs, SQL_ORDER_BY_STATEMENT};
 use crate::{
     art::structs::Comment,
     errs::RootErrors,
@@ -136,8 +136,8 @@ async fn get_older_and_newer_art_slugs(
         FROM (
             SELECT
                 page_slug,
-                LAG(page_slug) OVER (ORDER BY creation_date, page_slug) AS previous_slug,
-                LEAD(page_slug) OVER (ORDER BY creation_date, page_slug) AS next_slug
+                LEAD(page_slug) OVER ({SQL_ORDER_BY_STATEMENT}) AS previous_slug,
+                LAG(page_slug) OVER ({SQL_ORDER_BY_STATEMENT}) AS next_slug
             FROM art
             {}
         ) AS pages_with_navigation

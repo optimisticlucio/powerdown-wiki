@@ -27,7 +27,7 @@ pub async fn handle_shutdown_signal(state: ServerState) {
 
     println!("[GRACEFUL SHUTDOWN] Recieved shutdown command and existing connections handled! Initiating graceful shutdown protocol.");
 
-    run_backup_processes(state).await;
+    run_backup_processes(&state).await;
 
     println!("[GRACEFUL SHUTDOWN] Shutdown operation complete. Goodbye!");
 }

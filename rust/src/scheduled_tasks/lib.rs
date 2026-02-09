@@ -1,7 +1,7 @@
 use crate::ServerState;
 
 // Cleans all seemingly-orphaned temp db entries, like a failed file upload or somesuch.
-pub async fn clean_temp_db_entries(state: ServerState) {
+pub async fn clean_temp_db_entries(state: &ServerState) {
     println!(
         "[CLEAN TEMP DB ENTRIES] System time is {}, cleaning up old DB entries.",
         get_current_human_readable_time()

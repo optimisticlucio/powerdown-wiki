@@ -41,7 +41,7 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
-    initiate_scheduled_tasks(state.clone());
+    initiate_scheduled_tasks(state.clone()).await;
     println!("[STARTUP] Scheduled tasks initialized");
 
     println!("[STARTUP] Serving website!");

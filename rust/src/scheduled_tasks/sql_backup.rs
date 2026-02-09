@@ -11,18 +11,18 @@ use crate::ServerState;
 const S3_SQL_BACKUP_PREFIX: &str = "sql_backups";
 
 /// Runs all processes related to SQL backup, including cleaning up old revisions.
-pub async fn run_backup_processes(state: ServerState) {
+pub async fn run_backup_processes(state: &ServerState) {
     println!(
         "[SQL BACKUP PROCESSES] System time is {}, initiating sql backup.",
         get_current_human_readable_time()
     );
 
-    if let Err(err) = backup_db(state.clone()).await {
+    if let Err(err) = backup_db(state).await {
         eprintln!("[SQL BACKUP PROCESSES] Failed to backup DB! err: {err:?}");
         return;
     }
 
-    if let Err(err) = clean_up_old_backups(state.clone()).await {
+    if let Err(err) = clean_up_old_backups(state).await {
         eprintln!("[SQL BACKUP PROCESSES] Failed to clean old backups! err: {err:?}");
         return;
     }
@@ -34,7 +34,7 @@ pub async fn run_backup_processes(state: ServerState) {
 }
 
 /// When run, backs up the entire sql db to the private S3 bucket.
-async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>> {
+async fn backup_db(state: &ServerState) -> Result<(), Box<dyn std::error::Error>> {
     const PG_DUMP_FILENAME: &str = "pg_dump";
 
     // The command currently assumes the DB is a parallel docker container.
@@ -105,7 +105,7 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
 
     s3_client
         .put_object()
-        .bucket(state.config.s3_sql_backup_bucket)
+        .bucket(&state.config.s3_sql_backup_bucket)
         .key(&pg_dump_target_filename)
         .body(pg_dump_file.into())
         .content_type("application/octet-stream")
@@ -131,7 +131,7 @@ async fn backup_db(state: ServerState) -> Result<(), Box<dyn std::error::Error>>
 /// Between 4 days ago and a week ago, 1 backup is stored per day (the earliest backup is kept each day).
 /// Between a week + a day ago and a month ago, 1 backup is stored per week (the sunday backup).
 /// From a month + a day ago onward, one backup is kept per month (the earliest sunday).
-async fn clean_up_old_backups(state: ServerState) -> Result<(), Box<dyn std::error::Error>> {
+async fn clean_up_old_backups(state: &ServerState) -> Result<(), Box<dyn std::error::Error>> {
     let s3_client = state.s3_client.clone();
 
     // First, get all of the backups currently on s3.

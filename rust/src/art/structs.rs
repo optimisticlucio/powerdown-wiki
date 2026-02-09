@@ -1,3 +1,4 @@
+use super::SQL_ORDER_BY_STATEMENT;
 use crate::{
     user::{User, UsermadePost},
     utils::sql::PostState,
@@ -63,9 +64,8 @@ impl BaseArt {
         let query_where = search_parameters.get_postgres_where(&mut query_parameters);
 
         // This is safe bc query_where is entirely made within our code, and all the user-given info is in query_params.
-        let query = format!(
-            "SELECT * FROM art {query_where} ORDER BY creation_date DESC, page_slug LIMIT $1 OFFSET $2"
-        );
+        let query =
+            format!("SELECT * FROM art {query_where} {SQL_ORDER_BY_STATEMENT} LIMIT $1 OFFSET $2");
 
         let requested_art_rows = db_connection
             .query(&query, &query_parameters)
