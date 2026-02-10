@@ -1,12 +1,12 @@
-name: 'Rust'
+name: "Rust"
 
 on:
   pull_request:
     paths:
-      - 'rust/Cargo.toml'
-      - 'rust/Cargo.lock'
-      - 'rust/src/**'
-      - '.github/workflows/rust.yaml'
+      - "rust/Cargo.toml"
+      - "rust/Cargo.lock"
+      - "rust/src/**"
+      - ".github/workflows/rust.yaml"
   push:
     branches:
       - main
@@ -16,8 +16,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     env:
-      # -TODO- uncomment this when warnings are fixed!
-      ## RUSTFLAGS: -D warnings
+      RUSTFLAGS: -D warnings
       POSTGRES_HOST: localhost
       POSTGRES_DATABASE: postgres
       POSTGRES_USER: postgres
@@ -77,7 +76,7 @@ jobs:
       - name: Machete
         uses: bnjbvr/cargo-machete@main
         with:
-          args: 'rust'
+          args: "rust"
 
       # Code style
       - name: Rustfmt
