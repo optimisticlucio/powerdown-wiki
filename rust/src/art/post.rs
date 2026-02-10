@@ -703,7 +703,13 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
         return Err("Invalid page title".to_owned());
     }
 
-    if recieved_page_art.creation_date > chrono::offset::Local::now().date_naive() {
+    // Comparing creation date against tomorrow rather than today to account for timezones.
+    let tomorrow = chrono::offset::Local::now()
+        .date_naive()
+        .checked_add_days(chrono::Days::new(1))
+        .unwrap();
+
+    if recieved_page_art.creation_date > tomorrow {
         return Err("Art can't be made in the future.".to_owned());
     }
 
