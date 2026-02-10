@@ -10,12 +10,21 @@ use axum_extra::routing::RouterExt;
 use http::Uri;
 
 mod arbitrary_values;
+mod art_archival_project;
 
 pub fn router() -> Router<ServerState> {
-    Router::new().route("/", get(admin_panel)).route_with_tsr(
-        "/arbitrary_values",
-        get(arbitrary_values::arbitrary_value_panel).patch(arbitrary_values::patch_arbitrary_value),
-    )
+    Router::new()
+        .route("/", get(admin_panel))
+        .route_with_tsr(
+            "/arbitrary_values",
+            get(arbitrary_values::arbitrary_value_panel)
+                .patch(arbitrary_values::patch_arbitrary_value),
+        )
+        .route_with_tsr(
+            "/art_archival_project",
+            get(art_archival_project::view_archival_progress)
+                .patch(art_archival_project::update_archival_progress),
+        )
 }
 
 #[derive(Debug, Template)]

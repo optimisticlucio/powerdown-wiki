@@ -24,3 +24,13 @@
         height: 7em;
     }
 }
+
+.uploaderBar {
+    display: flex;
+    position: relative;
+    justify-content: space-between;
+    width: 100%;
+
+    background-color: var(--darkest-shade);
+    padding: 1ch;
+}

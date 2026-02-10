@@ -1,0 +1,151 @@
+{% extends "base-template.html" %}
+
+{% block title %}Art Archival Project{% endblock %}
+
+{% block customhead %}<script src="/static/js/admin.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="admin wrapper">
+    <h1>THE ART ARCHIVAL PROJECT</h1>
+    <h2>THERE IS SO MUCH PORN</h2>
+
+    <img src="/static/img/admin/so-much-porn-ted.gif">
+
+    <hr>
+
+    <h2>WHAT IS THIS PAGE</h2>
+
+    <div class="text">
+        <p>
+            Discord is eating shit. It's eating shit faster with every passing day. The server has so much art that it'd be a shame to let the forces of entropy get rid of it all. As such, we're archiving the entire fucking thing.
+        </p>
+
+        <p>
+            We're going in the art channels and grabbing anything that's there.
+            
+        </p>
+
+        <p>
+        When you start archiving a given image, <b>react to it with the handy 📷 emote,</b> so if anyone else is archiving at the same time you don't end up doing double work.
+            If you see an image that doesn't need to be archived for one reason or another, <b>react to it with the ❌ emote,</b> so we know you didn't just forget to do it.
+        </p>
+
+        <p>
+            Also, <b>PLEASE try to avoid skipping stuff.</b> Once you move the progress market past a certain image, we all assume it's been archived. 
+            If do you skip something, (it happens, all good,) leave the link <em>before</em> whatever you skipped so someone else can archive it later.
+        </p>
+
+        <p>
+            We good? We good. Let's get to it.
+        </p>
+    </div>
+
+    <hr>
+    <h3>SFW Art Progress</h3>
+    <div class="text">
+        <p>
+            Going forwards, we are currently at <a href="{{ old_sfw_pin.get_clickable_discord_url() }}">{{ old_sfw_pin.get_readable_date() }}</a>. <em>Note that we didn't use to have a separation between NSFW and SFW art. Beware tits!</em>
+        </p>
+
+        <br />
+
+        <details>
+            <summary>Update Old SFW Art Progress Here</summary>
+            <form autocomplete="off" data-pin-name="OldSfw">
+                <label>Date: <input type="date" value="{{old_sfw_pin.date}}" /></label> / 
+                <label>Link: <input type="text" value="{{old_sfw_pin.link}}" /></label>
+
+                <button type="button" class="dark" onclick="updateArchivingProgressPin(this)">Update</button>
+            </form>
+        </details>
+
+        <br /> 
+
+        <p>
+            Going backwards, we are currently at <a href="{{ new_sfw_pin.get_clickable_discord_url() }}">{{ new_sfw_pin.get_readable_date() }}</a>.
+        </p>
+
+        <br />
+        <details>
+            <summary>Update New SFW Art Progress Here</summary>
+            <form autocomplete="off" data-pin-name="NewSfw">
+                <label>Date: <input type="date" value="{{new_sfw_pin.date}}" /></label> / 
+                <label>Link: <input type="text" value="{{new_sfw_pin.link}}" /></label>
+
+                <button type="button" class="dark" onclick="updateArchivingProgressPin(this)">Update</button>
+            </form>
+        </details>
+
+        <br />
+
+        <p>
+            {{ old_sfw_pin.get_days_to_archive(new_sfw_pin) | safe }}
+        </p>
+    </div>
+
+    <hr>
+    <h3>NSFW Art Progress</h3>
+    <div class="text">
+        <p>
+            Note that because we were teenagers, there were some creators that made content that, while questionable even at the time, is unjustifiable to keep around anymore. As such, consult this here section to see what artists' art we WILL NOT save.
+        </p>
+
+        <details>
+            <summary>WHY ARE THERE KIDS AT THE STRIP CLUB</summary>
+            <p>
+                DO NOT ARCHIVE ANY ART BY THESE PEOPLE, PRIOR TO THE DATES LISTED:
+            </p>
+            <ul>
+                <li><b>Ravon X</b>, prior to 2023. (TODO - find what his actual birth date is)</li>
+                <li><b>AgentMooka</b>, prior to July 2023.</li>
+                <li><b>Kn0wledge</b>, prior to 2022. (TODO - find what his actual birth date is)</li>
+                <li><b>dapips</b>, prior to 2021.8.31. </li>
+            </ul>
+        </details>
+
+        <p>
+            Additionally, we only created a separate NSFW chat in may 2021, so <a href="discord://-/channels/533387376676831246/843828578537570304/843829218416656405" >switch to archiving from there when relevant</a>.
+        </p>
+
+        <hr>
+
+        <p>
+            Going forwards, we are currently at <a href="{{ old_nsfw_pin.get_clickable_discord_url() }}">{{ old_nsfw_pin.get_readable_date() }}</a>.
+        </p>
+
+        <br />
+        <details>
+            <summary>Update Old NSFW Art Progress Here</summary>
+            <form autocomplete="off" data-pin-name="OldNsfw">
+                <label>Date: <input type="date" value="{{old_nsfw_pin.date}}" /></label> / 
+                <label>Link: <input type="text" value="{{old_nsfw_pin.link}}" /></label>
+
+                <button type="button" class="dark" onclick="updateArchivingProgressPin(this)">Update</button>
+            </form>
+        </details>
+
+        <br />
+
+        <p>
+            Going backwards, we are currently at <a href="{{ new_nsfw_pin.get_clickable_discord_url() }}">{{ new_nsfw_pin.get_readable_date() }}</a>.
+        </p>
+        <br />
+
+        <details>
+            <summary>Update New SFW Art Progress Here</summary>
+            <form autocomplete="off" data-pin-name="NewNsfw">
+                <label>Date: <input type="date" value="{{new_nsfw_pin.date}}" /></label> / 
+                <label>Link: <input type="text" value="{{new_nsfw_pin.link}}" /></label>
+
+                <button type="button" class="dark" onclick="updateArchivingProgressPin(this)">Update</button>
+            </form>
+        </details>
+
+        <br />
+
+        <p>
+            {{ old_nsfw_pin.get_days_to_archive(new_nsfw_pin) | safe }}
+        </p>
+    </div>
+</div>
+{% endblock %}

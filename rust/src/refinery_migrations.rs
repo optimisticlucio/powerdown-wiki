@@ -2,13 +2,11 @@
 //!
 //! This section handles SQL migrations using the Refinery crate.
 //! To add a new migration, create a new file in the /rust/refinery_migrations directory with the naming scheme:
-//! V[YYYYMMMDDHHmm]__[description].sql
+//! V[num]__[description].sql
 //!
-//! For example, if you made a migration on Dec 24th, 2021, at 10:41, to give users profile pics, you may name it
-//! V202112241041__profilepics.sql
-//!
-//!
-//! The few files at the top which violate this naming scheme are the files initially used to create the DB.
+//! The migrations have to be sequential because... well, I accidentally set it to be sequential and it's too late to back out now.
+//! Thankfully, the sequential migrations force any pull requests to be fully up-to-date with main,
+//! so there's a much lower likelyhood we accidentally fuck something up with these migrations. So, yay?
 use std::ops::DerefMut;
 
 use crate::ServerState;

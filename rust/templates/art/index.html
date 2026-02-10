@@ -52,7 +52,10 @@
     </div>
 
     {% if show_upload_button %}
-    <a href="/art/new"><button class="light">Upload new art!</button></a>
+    <div class="uploaderBar">
+        <a href="/art/new"><button class="light">Upload new art!</button></a>
+        <a href="/admin/art_archival_project"><button class="light">Art Archival Project</button></a>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
