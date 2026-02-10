@@ -61,11 +61,20 @@ async fn backup_db(state: &ServerState) -> Result<(), Box<dyn std::error::Error>
 
     match pg_dump_command.output().await {
         Err(err) => {
-            eprintln!("[SQL BACKUP] pg_dump failed! Passing err to calling function.");
+            eprintln!(
+                "[SQL BACKUP] pg_dump command failed to execute! Passing err to calling function."
+            );
             return Err(Box::new(err));
         }
-        Ok(ok) => {
-            println!("[SQL BACKUP] pg_dump successful! {ok:?}");
+        Ok(command_result) => {
+            if command_result.status.success() {
+                println!("[SQL BACKUP] pg_dump successful! {command_result:?}");
+            } else {
+                println!("[SQL BACKUP] pg_dump failed! {command_result:?}");
+                return Err(Box::new(std::io::Error::other(format!(
+                    "{command_result:?}" //TODO: There's gotta be a better error text to pass.
+                ))));
+            }
         }
     }
 
