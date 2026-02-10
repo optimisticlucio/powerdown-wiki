@@ -423,15 +423,5 @@ fn sanitize_recieved_page_character(
         .filter(|custom_css| custom_css.is_empty())
         .map(|s| s.to_string());
 
-    recieved_page_character.page_contents = recieved_page_character
-        .page_contents
-        .as_ref()
-        .map(|contents| ammonia::clean_text(contents));
-
-    recieved_page_character.retirement_reason = recieved_page_character
-        .retirement_reason
-        .as_ref()
-        .map(|reason: &String| ammonia::clean_text(reason));
-
     // TODO - Sanitize CSS sections
 }

@@ -46,7 +46,7 @@ pub async fn character_page(
     let db_connection = state.db_pool.get().await.unwrap();
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    if let Some(chosen_char) = PageCharacter::get_by_slug(character_slug, db_connection).await {
+    if let Some(chosen_char) = PageCharacter::get_by_slug(&db_connection, &character_slug).await {
         let parsed_content = chosen_char.page_contents.map(|contents| {
             parse_character_page_contents(&contents).unwrap_or("PARSING FAILED!".to_owned())
         });

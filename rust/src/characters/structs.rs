@@ -5,6 +5,8 @@ use postgres::Row;
 use postgres_types::{FromSql, ToSql};
 use serde::Deserialize;
 
+use crate::user::{User, UsermadePost};
+
 #[derive(Debug, Clone, Deserialize)]
 /// Info relevant to absolute most uses of a character
 pub struct BaseCharacter {
@@ -132,10 +134,7 @@ impl Ord for BaseCharacter {
 
 impl PageCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
-    pub async fn get_by_slug(
-        slug: String,
-        db_connection: Object<Manager>,
-    ) -> Option<PageCharacter> {
+    pub async fn get_by_slug(db_connection: &Object<Manager>, slug: &str) -> Option<PageCharacter> {
         let character_row = db_connection
             .query_one("SELECT * FROM character WHERE page_slug=$1", &[&slug])
             .await
@@ -191,5 +190,15 @@ impl Eq for PageCharacter {}
 impl Ord for PageCharacter {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.base_character.cmp(&other.base_character)
+    }
+}
+
+impl UsermadePost for PageCharacter {
+    fn can_be_modified_by(&self, user: &User) -> bool {
+        user.user_type.permissions().can_modify_others_content
+            || user
+                .creator_name
+                .as_ref()
+                .is_some_and(|creator_name| &self.creator == creator_name)
     }
 }

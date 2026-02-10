@@ -11,22 +11,81 @@
     <div id="errorDisplay" style="color:red;">
     </div>
 
-    <label for="characterName">First Name / Title (Penny <s>Nelson</s>, <s>Dr.</s> Goldman):</label>
+    <label for="characterName">First Name / Short Title:</label>
     <input type="text" id="characterName" required minLength="1"
         {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.name}}" {% endif %}/>
     </br>
 
-    <label for="characterSlug">Page URL (if empty, I'll just copy the name):</label>
-    <input type="text" id="characterSlug"
-        {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.slug}}" {% endif %}/>
+    {# TODO: Handle long name #}
 
+    {# TODO: Handle subtitles #}
+
+    <label for="characterCreatorName">Creator Name:</label>
+    <input type="text" id="characterCreatorName" required minLength="1"
+        {%- if let Some(page_character) = character_being_modified %} value="{{page_character.creator}}" {% endif %}/>
     </br>
 
     <label for="characterThumbnail">Thumbnail:</label>
     <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
 
-    <div id="characterThumbnail">
+    <div id="characterThumbnail" class="imageHolder">
     </div>
+
+    </br>
+
+    <label for="characterLogo">Logo:</label>
+    <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
+
+    <div id="characterLogo" class="imageHolder">
+    </div>
+
+    <label for="characterBirthday">Birthday: (The year doesn't matter)</label>
+    <input type="date" id="characterBirthday"
+        {%- if let Some(page_character) = character_being_modified -%} 
+        {%- if let Some(birthday) = page_character.base_character.birthday%}
+        value="{{birthday}}" 
+        {%- endif -%}
+        {%- endif -%}/>
+    </br>
+
+    <label for="characterImage">Page Image:</label>
+    <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
+
+    <div id="characterImage" class="imageHolder">
+    </div>
+
+    </br>
+
+    <details>
+        <summary>
+            Advanced Settings
+        </summary>
+
+        <label for="characterSlug">Page URL (if empty, It'll just copy the name):</label>
+        <input type="text" id="characterSlug"
+            {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.slug}}" {% endif %}/>
+        </br>
+
+        <label for="characterIsHidden">Hide Character: (Won't show up in the character page!)</label>
+        <input type="checkbox" id="characterIsHidden" name="characterIsHidden" 
+        {%- if let Some(page_character) = character_being_modified %}
+            {%- if page_character.base_character.is_hidden -%}
+            checked
+            {%- endif -%}
+            {% endif %} />
+        
+        <label for="characterRetirementReason">Retirement Reason:</label>
+        <input type="text" id="characterRetirementReason"
+            {%- if let Some(page_character) = character_being_modified %}
+                {%- if let Some(retirement_reason) = page_character.retirement_reason -%}
+                    value="{{retirement_reason}}"
+                {%- endif -%}
+                {%- endif -%}/>
+        </br>
+    </details>
+
+    <label for="characterPageContents">Page Text: (Markdown-compatible! Y'know, like, the formatting discord messages use.) </label>
+    <textarea id="characterPageContents">{%- if let Some(page_character) = character_being_modified %}{%- if let Some(page_contents) = page_character.page_contents %}{{page_contents}}{% endif %}{% endif %}</textarea>
 
     </br>
 

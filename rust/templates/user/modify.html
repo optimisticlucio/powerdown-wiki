@@ -27,11 +27,15 @@
             <input type="file" id="userProfilePicture" accept="image/*">
         </label>
 
+        <br/>
+
         {% if viewed_user.can_have_user_type_modified_by(modifying_user) %}
             <label for="userCreatorName">
             Creator Name: (The nickname used to refer to them in the art archive and character page)
             <input type="text" id="userCreatorName" {% if let Some(creator_name) = viewed_user.creator_name %}placeholder="{{ creator_name }}"{% endif %}/>
             </label>
+
+            <br/>
 
             <label for="userType">
                 Modify User Type from {{ viewed_user.user_type }}:

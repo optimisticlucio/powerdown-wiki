@@ -9,6 +9,7 @@ use axum::{
 use axum_extra::routing::RouterExt;
 use http::Uri;
 
+mod edit;
 mod page;
 mod post;
 pub mod structs;
@@ -24,6 +25,7 @@ pub fn router() -> Router<ServerState> {
         )
         .layer(DefaultBodyLimit::max(10 * 1000 * 1000)) // 10MB Post Limit
         .route_with_tsr("/{character_slug}", get(page::character_page))
+        .route_with_tsr("/{character_slug}/edit", get(edit::edit_character_page))
 }
 
 #[derive(Debug, Template)]
@@ -38,6 +40,8 @@ struct CharacterIndex<'a> {
     birthday_characters: &'a Vec<BaseCharacter>,
     birthday_character_names: &'a str,
     date_today_readable: &'a str,
+
+    show_upload_button: bool,
 }
 
 async fn character_index(
@@ -50,6 +54,8 @@ async fn character_index(
         .get()
         .await
         .map_err(|_| RootErrors::InternalServerError)?;
+
+    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     let all_characters = BaseCharacter::get_all_characters(&db_connection).await;
 
@@ -96,8 +102,12 @@ async fn character_index(
         }
     };
 
+    let show_upload_button = user
+        .as_ref()
+        .is_some_and(|user| user.user_type.permissions().can_post_characters);
+
     Ok(utils::template_to_response(CharacterIndex {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        user,
         original_uri,
         random_subtitle: &random_subtitle,
         active_characters: &active_characters,
@@ -105,5 +115,6 @@ async fn character_index(
         birthday_characters: &birthday_characters,
         date_today_readable: &date_today_readable,
         birthday_character_names: &birthday_character_names,
+        show_upload_button,
     }))
 }

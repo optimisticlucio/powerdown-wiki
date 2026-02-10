@@ -776,9 +776,4 @@ fn sanitize_recieved_page_art(recieved_page_art: &mut PageArt, state: &ServerSta
     recieved_page_art.base_art.thumbnail_key =
         utils::clean_passed_key(&recieved_page_art.base_art.thumbnail_key, state)
             .unwrap_or_default();
-
-    recieved_page_art.description = recieved_page_art
-        .description
-        .as_ref()
-        .map(|description| ammonia::clean_text(description));
 }

@@ -71,8 +71,8 @@ pub async fn add_comment(
 
 /// Given the textual content of a given comment, cleans up anything that may cause issues for the code.
 fn sanitize_comment_content(original_comment: &str) -> String {
-    // Using clean_text instead of clean because I assume zero html in this section.
-    ammonia::clean_text(original_comment.trim())
+    // TODO: Sanitize it better, this is super minimal.
+    original_comment.trim().to_string()
 }
 
 /// Given the textual content of a given comment, returns whether it has anything contentwise that may cause problems.

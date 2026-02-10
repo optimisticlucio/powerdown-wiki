@@ -11,7 +11,6 @@ use axum::response::{Html, IntoResponse, Response};
 use chrono::{DateTime, Datelike, Utc};
 use http::Uri;
 use rand::distr::{Alphanumeric, SampleString};
-use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::time::Duration;
@@ -19,24 +18,6 @@ use std::time::Duration;
 pub mod arbitrary_values;
 pub mod file_compression;
 pub mod sql;
-
-#[allow(dead_code)] // This is used by serde multiple times in the app, but the compiler can't tell. Don't delete this, jackass.
-pub fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Debug, Deserialize)]
-    #[serde(untagged)]
-    enum StringOrVec {
-        Single(String),
-        Multiple(Vec<String>),
-    }
-
-    match StringOrVec::deserialize(deserializer)? {
-        StringOrVec::Single(s) => Ok(vec![s]),
-        StringOrVec::Multiple(v) => Ok(v),
-    }
-}
 
 pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
     let day_number = date.day();

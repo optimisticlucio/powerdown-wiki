@@ -57,7 +57,6 @@
     <label for="postCreationDate">Creation Date:</label>
     <input type="date" id="postCreationDate" required min="2016-01-01"
         {%- if let Some(page_art) = art_being_modified %} value="{{page_art.creation_date}}" {% endif %}/>
-
     </br>
 
     <label for="postIsNsfw">Post is NSFW: <input type="checkbox" id="postIsNsfw"
@@ -68,14 +67,13 @@
     <label for="postArtists">Artists (If multiple, separate with commas!): </label>
     <input type="text" id="postArtists" required minLength="1"
         {%- if let Some(page_art) = art_being_modified %} value="{{page_art.base_art.creators | join(", ")}}" {% endif %}/>
-
     </br>
 
     <label for="postTags">Tags (If multiple, separate with commas!): </label>
     <input type="text" id="postTags"
         {%- if let Some(page_art) = art_being_modified %} value="{{page_art.tags | join(", ")}}" {% endif %}/>
 
-    <p>Images:</p> <input type="file" accept="image/*" onchange="addNewImage(event)"/> </br>
+    <p>Images:</p> <input type="file" accept="image/*,video/*" onchange="addNewImage(event)"/> </br>
 
     <div id="postImages" class="imageHolder">
     </div>
