@@ -144,7 +144,8 @@ pub async fn add_art(
             // ---- We have the ID? process the thumbnail and update. ----
             let target_s3_folder = format!("art/{art_id}");
 
-            let target_thumbnail_key = format!("{target_s3_folder}/thumbnail");
+            let random_string = utils::get_random_string(6);
+            let target_thumbnail_key = format!("{target_s3_folder}/thumbnail_{random_string}");
 
             let thumbnail_key = match utils::move_and_lossily_compress_temp_s3_img(
                 &state.s3_client.clone(),
@@ -556,18 +557,25 @@ pub async fn edit_art_put_request(
                 .cloned()
                 .collect();
 
-            // TODO: How do we handle this fail? If this fails the post is fine, it's just some leftovers on our side.
-            let _ = utils::delete_keys_from_s3(
+            if let Err(err) = utils::delete_keys_from_s3(
                 &s3_client,
                 &state.config.s3_public_bucket,
                 &art_keys_that_were_removed,
             )
-            .await;
+            .await
+            {
+                eprintln!(
+                    "[ART MODIFICATION] Failed deleting old art keys! Keys: {}, Err: {err:?}",
+                    art_keys_that_were_removed.join(",")
+                );
+            };
 
             // ---- Now that we finished, set the appropriate art state, and maybe update the thumbnail ----
 
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+            let mut s3_keys_to_delete: Vec<String> = Vec::new();
 
             columns.push("post_state".into());
             values.push(&PostState::Public);
@@ -575,12 +583,15 @@ pub async fn edit_art_put_request(
             // I need to create new_thumbnail_key here so that, incase we use it, it can survive enough.
             let new_thumbnail_key;
             if sent_page_art.base_art.thumbnail_key != existing_art.base_art.thumbnail_key {
+                let random_string = utils::get_random_string(6);
+                let target_thumbnail_key = format!("{target_s3_folder}/thumbnail_{random_string}");
+
                 new_thumbnail_key = utils::move_and_lossily_compress_temp_s3_img(
                     &state.s3_client.clone(),
                     &state.config,
                     &sent_page_art.base_art.thumbnail_key,
                     &state.config.s3_public_bucket,
-                    &existing_art.base_art.thumbnail_key,
+                    &target_thumbnail_key,
                     Some(ART_THUMBNAIL_COMPRESSION_SETTINGS),
                 )
                 .await
@@ -591,6 +602,8 @@ pub async fn edit_art_put_request(
                     );
                     RootErrors::InternalServerError
                 })?;
+
+                s3_keys_to_delete.push(existing_art.base_art.thumbnail_key);
 
                 columns.push("thumbnail".into());
                 values.push(&new_thumbnail_key);
@@ -619,6 +632,17 @@ pub async fn edit_art_put_request(
                     );
                     RootErrors::InternalServerError
                 })?;
+
+            // Upload over! Lovely. Now clean up that thumbnail if it was changed and go home.
+            if let Err(err) = utils::delete_keys_from_s3(
+                &s3_client,
+                &state.config.s3_public_bucket,
+                &s3_keys_to_delete,
+            )
+            .await
+            {
+                eprintln!("[ART MODIFICATION] Failed to clean up redundant S3 keys! Proceeding as normal. Keys: {}. Err: {err:?}", s3_keys_to_delete.join(","));
+            };
 
             Ok(Redirect::to(&format!("/art/{}", sent_page_art.base_art.slug)).into_response())
         }

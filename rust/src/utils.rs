@@ -338,7 +338,7 @@ pub async fn get_temp_s3_presigned_urls(
             let s3_temp_folder_name = s3_temp_folder_name.to_string();
 
             tokio::spawn(async move {
-                let random_key = Alphanumeric.sample_string(&mut rand::rng(), 64);
+                let random_key = get_random_string(64);
                 let temp_art_key = format!("temp/{s3_temp_folder_name}/{random_key}");
 
                 // get s3 to open a presigned URL for the temp key.
@@ -472,4 +472,10 @@ pub fn is_valid_slug(slug: &str) -> bool {
 pub fn is_valid_tag(tag: &str) -> bool {
     let re = regex::Regex::new(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$").unwrap();
     re.is_match(tag)
+}
+
+/// Returns a randomly generated string of alphanumerics of a given length.
+/// Include a random string whenever you upload to S3 to deal with cache issues!
+pub fn get_random_string(length: u32) -> String {
+    Alphanumeric.sample_string(&mut rand::rng(), length as usize)
 }

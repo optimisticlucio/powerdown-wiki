@@ -194,7 +194,8 @@ pub async fn add_character(
             let s3_client = state.s3_client.clone();
 
             // Move thumbnail.
-            let thumbnail_target_s3_key = format!("{target_s3_folder}/thumbnail");
+            let random_string = utils::get_random_string(6);
+            let thumbnail_target_s3_key = format!("{target_s3_folder}/thumbnail_{random_string}");
             let thumbnail_s3_key = match utils::move_and_lossily_compress_temp_s3_img(
                 &s3_client,
                 &state.config,
@@ -224,7 +225,8 @@ pub async fn add_character(
             values.push(&thumbnail_s3_key);
 
             // Move main page art
-            let main_art_target_s3_key = format!("{target_s3_folder}/page_art");
+            let random_string = utils::get_random_string(6);
+            let main_art_target_s3_key = format!("{target_s3_folder}/page_art_{random_string}");
             let main_art_key = match utils::move_and_lossily_compress_temp_s3_img(
                 &s3_client,
                 &state.config,
@@ -255,7 +257,9 @@ pub async fn add_character(
 
             let compressed_logo_key: String;
             if let Some(temp_logo_key) = &recieved_page_character.logo_url {
-                let target_key = format!("{target_s3_folder}/logo");
+                let random_string = utils::get_random_string(6);
+                let target_key = format!("{target_s3_folder}/logo_{random_string}");
+
                 compressed_logo_key = match utils::move_and_lossily_compress_temp_s3_img(
                     &s3_client,
                     &state.config,

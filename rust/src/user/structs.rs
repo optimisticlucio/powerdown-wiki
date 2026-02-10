@@ -3,14 +3,13 @@ use deadpool::managed::Object;
 use deadpool_postgres::Manager;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
-use rand::distr::SampleString;
-use rand::{distr::Alphanumeric, Rng};
+use rand::Rng;
 use serde::Deserialize;
 use std::env;
 use tower_cookies::cookie;
 use tower_cookies::{cookie::SameSite, Cookie, Cookies};
 
-use crate::{RootErrors, ServerState};
+use crate::{utils, RootErrors, ServerState};
 
 /// Relative links to various default profile pictures users may have.
 const USER_DEFAULT_PFPS: [&str; 9] = [
@@ -322,7 +321,7 @@ impl UserSession {
             "INSERT INTO user_session (user_id, session_id) VALUES ($1, $2) RETURNING *";
 
         loop {
-            let random_session_id = Alphanumeric.sample_string(&mut rand::rng(), 64);
+            let random_session_id = utils::get_random_string(64);
 
             let resulted_row = db_connection
                 .query_one(QUERY, &[&user.id, &random_session_id])

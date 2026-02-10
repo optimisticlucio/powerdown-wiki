@@ -93,6 +93,9 @@ pub async fn patch_user(
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
+            let mut s3_keys_to_delete: Vec<String> = Vec::new();
+            let s3_client = state.s3_client.clone();
+
             if let Some(passed_user_type) = &modified_user_info.user_type {
                 // Can't modify your own type.
                 if modified_user == requesting_user {
@@ -119,7 +122,9 @@ pub async fn patch_user(
             // Creating the variable outside the if statement for lifetime reasons.
             let new_pfp_key: String;
             if let Some(passed_pfp_key) = &modified_user_info.pfp_temp_key {
-                let target_file_key = format!("user/{}/profile_picture", &modified_user.id);
+                let random_string = utils::get_random_string(6);
+                let target_file_key =
+                    format!("user/{}/profile_picture_{random_string}", &modified_user.id);
                 let cleaned_pfp_key = match utils::clean_passed_key(passed_pfp_key, &state) {
                     Some(clean_key) => clean_key,
                     None => {
@@ -130,7 +135,7 @@ pub async fn patch_user(
                 };
 
                 new_pfp_key = utils::move_and_lossily_compress_temp_s3_img(
-                    &state.s3_client,
+                    &s3_client,
                     &state.config,
                     &cleaned_pfp_key,
                     &state.config.s3_public_bucket,
@@ -147,6 +152,10 @@ pub async fn patch_user(
                         RootErrors::InternalServerError
                     }
                 })?;
+
+                if let Some(previous_pfp_key) = &modified_user.profile_pic_s3_key {
+                    s3_keys_to_delete.push(previous_pfp_key.to_owned());
+                }
 
                 columns.push("profile_picture_s3_key".to_string());
                 values.push(&new_pfp_key);
@@ -222,6 +231,19 @@ pub async fn patch_user(
                     );
                     RootErrors::InternalServerError
                 })?;
+
+            // Successfully updated the user! Lovely. Now let's clean up some stuff.
+            // If anything fails here, DO NOT PANIC. The action was done successfully! Simply print an error and continue!
+
+            if let Err(err) = utils::delete_keys_from_s3(
+                &s3_client,
+                &state.config.s3_public_bucket,
+                &s3_keys_to_delete,
+            )
+            .await
+            {
+                eprintln!("[USER MODIFICATION] Failed to clean up redundant S3 keys! Proceeding as normal. Keys: {}. Err: {err:?}", s3_keys_to_delete.join(","));
+            };
 
             Ok(axum::http::StatusCode::NO_CONTENT.into_response())
         }
