@@ -117,6 +117,7 @@ pub async fn move_temp_s3_file(
         target_file_key,
         losslessly_convert_based_on_filetype,
         "MOVE TEMP S3 FILE",
+        None,
     )
     .await
 }
@@ -161,11 +162,13 @@ pub async fn move_and_lossily_compress_temp_s3_img(
         target_file_key,
         move |x, y, z| lossily_compress_img(x, y, z, compression_settings),
         "COMPRESS TEMP S3 IMG",
+        Some("webp"),
     )
     .await
 }
 
 /// Helper function which downloads a temp file from the public bucket, runs a function on it, and moves it to a chosen final location in any bucket.
+#[allow(clippy::too_many_arguments)] // It's probably right, but I'm lazy rn
 async fn move_and_convert_temp_file<F>(
     s3_client: &aws_sdk_s3::Client,
     server_config: &crate::server_state::config::Config,
@@ -174,6 +177,7 @@ async fn move_and_convert_temp_file<F>(
     target_file_key: &str,
     file_conversion_operation: F,
     function_name_for_debug_logging: &str,
+    override_file_extension: Option<&str>,
 ) -> Result<String, MoveTempS3FileErrs>
 where
     F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>,
@@ -253,7 +257,7 @@ where
     let target_key_with_filename = format!(
         "{}.{}",
         target_file_key.split(".").next().unwrap(), // Remove a passed extension.
-        mime_type_extension
+        override_file_extension.unwrap_or(mime_type_extension)
     );
 
     s3_client.put_object()
