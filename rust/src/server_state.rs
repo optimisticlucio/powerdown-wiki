@@ -49,8 +49,13 @@ impl ServerState {
     async fn initialize_s3_connection() -> aws_sdk_s3::Client {
         let sdk_config = aws_config::load_from_env().await;
 
-        let s3_config = aws_sdk_s3::config::Builder::from(&sdk_config).build();
+        let mut s3_config_builder = aws_sdk_s3::config::Builder::from(&sdk_config);
 
-        aws_sdk_s3::Client::from_conf(s3_config)
+        // If we're in local debugging mode, I am assuming that path style is the only thing that'll work properly.
+        if std::env::var("DEBUG").is_ok() {
+            s3_config_builder = s3_config_builder.force_path_style(true);
+        }
+
+        aws_sdk_s3::Client::from_conf(s3_config_builder.build())
     }
 }
