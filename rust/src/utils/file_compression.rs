@@ -3,11 +3,16 @@ use image::codecs::webp::WebPEncoder;
 use image::{DynamicImage, ImageEncoder, ImageFormat, ImageReader};
 use std::io::Cursor;
 
+pub struct CompressionResult {
+    pub file_bytes: Vec<u8>,
+    pub new_file_extension: Option<String>,
+}
+
 /// Given an image and its mime type, compresses it as much as losslessly possible.
 pub fn compress_image_lossless(
     image_bytes: Vec<u8>,
     mime_type: &str,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+) -> Result<CompressionResult, Box<dyn std::error::Error>> {
     // Convert the infer type to ImageReader's.
     let format = ImageFormat::from_mime_type(mime_type).unwrap();
 
@@ -20,16 +25,25 @@ pub fn compress_image_lossless(
     match format {
         ImageFormat::Jpeg => {
             // Already lossy - return original
-            Ok(image_bytes)
+            Ok(CompressionResult {
+                file_bytes: image_bytes,
+                new_file_extension: None,
+            })
         }
         ImageFormat::Gif => {
             // TODO: How do I compress gifs without killing the animation?
-            Ok(image_bytes)
+            Ok(CompressionResult {
+                file_bytes: image_bytes,
+                new_file_extension: None,
+            })
         }
         ImageFormat::WebP => {
             // WebP could be lossy or lossless, but we can't easily tell
             // Safer to return original to avoid re-encoding lossy data
-            Ok(image_bytes)
+            Ok(CompressionResult {
+                file_bytes: image_bytes,
+                new_file_extension: None,
+            })
         }
         ImageFormat::Png => {
             // Re-compress PNG with maximum compression
@@ -37,9 +51,15 @@ pub fn compress_image_lossless(
 
             // Only return compressed version if it's actually smaller
             if compressed.len() < image_bytes.len() {
-                Ok(compressed)
+                Ok(CompressionResult {
+                    file_bytes: image_bytes,
+                    new_file_extension: None,
+                })
             } else {
-                Ok(image_bytes)
+                Ok(CompressionResult {
+                    file_bytes: image_bytes,
+                    new_file_extension: None,
+                })
             }
         }
         ImageFormat::Bmp
@@ -51,12 +71,17 @@ pub fn compress_image_lossless(
         | ImageFormat::Hdr
         | ImageFormat::Farbfeld => {
             // Convert to lossless WebP for better compression
-            let compressed = compress_to_webp_lossless(&img)?;
-            Ok(compressed)
+            Ok(CompressionResult {
+                file_bytes: compress_to_webp_lossless(&img)?,
+                new_file_extension: Some("webp".to_string()),
+            })
         }
         _ => {
             // Other formats - try to compress as WebP.
-            compress_to_webp_lossless(&img)
+            Ok(CompressionResult {
+                file_bytes: compress_to_webp_lossless(&img)?,
+                new_file_extension: Some("webp".to_string()),
+            })
         }
     }
 }
@@ -106,7 +131,7 @@ pub fn compress_image_lossy(
     image_bytes: Vec<u8>,
     mime_type: &str,
     settings: Option<LossyCompressionSettings>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+) -> Result<CompressionResult, Box<dyn std::error::Error>> {
     // Use default settings if none provided
     let settings = settings.unwrap_or_default();
 
@@ -138,7 +163,10 @@ pub fn compress_image_lossy(
     // Compress to lossy WebP
     let compressed = compress_to_webp_lossy(&img, settings.quality)?;
 
-    Ok(compressed)
+    Ok(CompressionResult {
+        file_bytes: compressed,
+        new_file_extension: Some("webp".to_string()),
+    })
 }
 
 fn resize_if_needed(img: DynamicImage, max_width: u32, max_height: u32) -> DynamicImage {

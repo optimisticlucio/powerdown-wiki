@@ -97,14 +97,23 @@ pub async fn move_temp_s3_file(
         original_file_bytes: Vec<u8>,
         mime_type: &str,
         mime_media_type: &str,
-    ) -> Option<Vec<u8>> {
+    ) -> Option<file_compression::CompressionResult> {
         match mime_media_type {
-            "image" if mime_type == "image/svg+xml" => Some(original_file_bytes), // God SVGs are a fuckin' headache.
+            "image" if mime_type == "image/svg+xml" => Some(file_compression::CompressionResult {
+                file_bytes: original_file_bytes,
+                new_file_extension: None,
+            }), // God SVGs are a fuckin' headache.
             "image" => Some(
                 file_compression::compress_image_lossless(original_file_bytes.to_vec(), mime_type)
-                    .unwrap_or(original_file_bytes),
+                    .unwrap_or(file_compression::CompressionResult {
+                        file_bytes: original_file_bytes,
+                        new_file_extension: None,
+                    }),
             ), // If can't compress it, just send back the original untouched.
-            "video" => Some(original_file_bytes), // Video compression takes ages, I'm not doing it on-server.
+            "video" => Some(file_compression::CompressionResult {
+                file_bytes: original_file_bytes,
+                new_file_extension: None,
+            }), // Video compression takes ages, I'm not doing it on-server.
             _ => None,
         }
     }
@@ -117,7 +126,6 @@ pub async fn move_temp_s3_file(
         target_file_key,
         losslessly_convert_based_on_filetype,
         "MOVE TEMP S3 FILE",
-        None,
     )
     .await
 }
@@ -138,7 +146,7 @@ pub async fn move_and_lossily_compress_temp_s3_img(
         mime_type: &str,
         mime_media_type: &str,
         compression_settings: Option<file_compression::LossyCompressionSettings>,
-    ) -> Option<Vec<u8>> {
+    ) -> Option<file_compression::CompressionResult> {
         // If it's not an image, SHOOT THAT SHIT BACK.
         if mime_media_type != "image" {
             return None;
@@ -146,7 +154,10 @@ pub async fn move_and_lossily_compress_temp_s3_img(
 
         // If it's an SVG just skip this whole thing, it's as compressed as it'll get.
         if mime_type == "image/svg+xml" {
-            return Some(original_file_bytes);
+            return Some(file_compression::CompressionResult {
+                file_bytes: original_file_bytes,
+                new_file_extension: None,
+            });
         }
 
         // Now it's gotta be an image. COMPRESS IT.
@@ -162,13 +173,12 @@ pub async fn move_and_lossily_compress_temp_s3_img(
         target_file_key,
         move |x, y, z| lossily_compress_img(x, y, z, compression_settings),
         "COMPRESS TEMP S3 IMG",
-        Some("webp"),
     )
     .await
 }
 
 /// Helper function which downloads a temp file from the public bucket, runs a function on it, and moves it to a chosen final location in any bucket.
-#[allow(clippy::too_many_arguments)] // It's probably right, but I'm lazy rn
+/// The function should take the file data, mime type, and media type, and return the compressed file and optionally its new file extension (return None if the compression failed).
 async fn move_and_convert_temp_file<F>(
     s3_client: &aws_sdk_s3::Client,
     server_config: &crate::server_state::config::Config,
@@ -177,10 +187,9 @@ async fn move_and_convert_temp_file<F>(
     target_file_key: &str,
     file_conversion_operation: F,
     function_name_for_debug_logging: &str,
-    override_file_extension: Option<&str>,
 ) -> Result<String, MoveTempS3FileErrs>
 where
-    F: FnOnce(Vec<u8>, &str, &str) -> Option<Vec<u8>>,
+    F: FnOnce(Vec<u8>, &str, &str) -> Option<file_compression::CompressionResult>,
 {
     // Download file from S3
     let downloaded_file = s3_client.get_object()
@@ -257,13 +266,16 @@ where
     let target_key_with_filename = format!(
         "{}.{}",
         target_file_key.split(".").next().unwrap(), // Remove a passed extension.
-        override_file_extension.unwrap_or(mime_type_extension)
+        converted_file
+            .new_file_extension
+            .as_deref()
+            .unwrap_or(mime_type_extension)
     );
 
     s3_client.put_object()
         .bucket(target_bucket_name)
         .key(&target_key_with_filename)
-        .body(converted_file.into())
+        .body(converted_file.file_bytes.into())
         .content_type(mime_type)
         .content_disposition(file_content_disposition)
         .send()
