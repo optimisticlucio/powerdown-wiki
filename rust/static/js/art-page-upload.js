@@ -12,10 +12,10 @@ const thumbnailContainer = document.getElementById("postThumbnail");
 // Initialize only if not already defined in the page
 if (typeof filesInImageContainer === 'undefined') {
   // An array holding the files that are in the image container.
-    filesInImageContainer = [];
+  filesInImageContainer = [];
 }
 if (typeof thumbnailObject === 'undefined') {
-    thumbnailObject = {};
+  thumbnailObject = {};
 }
 
 // Incase someone exits and enters the page, to ensure there aren't visual/logic discrepancies - clear out the image and thumbnail containers.
@@ -23,7 +23,7 @@ imageContainer.innerHTML = '';
 thumbnailContainer.innerHTML = '';
 
 // Now we render whatever is in the files and object variables.
-filesInImageContainer.forEach( (givenImage) => {
+filesInImageContainer.forEach((givenImage) => {
   createImageElement(givenImage.key);
 });
 // If thumbnail object isn't empty.
@@ -40,7 +40,7 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
   // Get all the inputs under the wrapper, and check their validity.
   const inputsToCheck = Array.from(document.querySelectorAll(".upload input"));
   if (inputsToCheck.some((inputItem) => !inputItem.checkValidity())) {
-    document.getElementById("errorDisplay").innerHTML = `<b>ERROR:</b> Some of the values are either not set or invalid. Fix all the sections that are highlighted in red!`;
+    updateErrorText(`<b>ERROR:</b> Some of the values are either not set or invalid. Fix all the sections that are highlighted in red!`);
   }
 
   // Now, let's collect all of our data.
@@ -51,12 +51,12 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     creation_date: document.getElementById("postCreationDate").value,
     is_nsfw: document.getElementById("postIsNsfw").checked,
     creators: document.getElementById("postArtists").value.split(","),
-    slug: document.getElementById("postSlug").value || postTitle.toLowerCase().replaceAll(" ","-"),
+    slug: document.getElementById("postSlug").value || postTitle.toLowerCase().replaceAll(" ", "-"),
   };
 
   // Most values are checked by the server, but thumbnail is not checked before being sent to s3. So let's make sure it's set.
   if (!thumbnailObject) {
-    document.getElementById("errorDisplay").innerHTML = `<b>ERROR:</b> Thumbnail wasn't selected.`;
+    updateErrorText(`<b>ERROR:</b> Thumbnail wasn't selected.`);
   }
 
   // Now add optional values
@@ -95,12 +95,14 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
 
   console.log(`SENT: ${JSON.stringify(messageToSend)}`)
 
+  updateErrorText(`Requesting permission to upload...`);
+
   const s3UrlsRequestResponse = await fetch(targetUrl, messageToSend);
 
   // ERROR! Bubble it up to user.
   if (s3UrlsRequestResponse.status >= 400 && s3UrlsRequestResponse.status < 600) {
     let errorText = await s3UrlsRequestResponse.text();
-    document.getElementById("errorDisplay").innerHTML = `<b>ERROR ${s3UrlsRequestResponse.status}, ${s3UrlsRequestResponse.statusText}:</b> ${errorText}`;
+    updateErrorText(`<b>ERROR ${s3UrlsRequestResponse.status}, ${s3UrlsRequestResponse.statusText}:</b> ${errorText}`);
     return;
   }
 
@@ -129,30 +131,32 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
 
       thumbnailObject.state = "uploaded";
       thumbnailObject.key = thumbnailKey;
-    })()); 
+    })());
   }
 
   listOfUploadFunctions.push(...filesInImageContainer
-  .filter((imageObject) => imageObject.state == "local")
-  .map((imageObject, index) => {
-    const urlToUpload = s3Urls.presigned_urls[index];
-    
-    return (async () => {  
-      await fetch(urlToUpload, {
-        method: 'PUT',
-        body: imageObject.file,
-        headers: {
-          'Content-Type': imageObject.file.type
-        }
-      });
+    .filter((imageObject) => imageObject.state == "local")
+    .map((imageObject, index) => {
+      const urlToUpload = s3Urls.presigned_urls[index];
 
-      // TODO: Check for errors
+      return (async () => {
+        await fetch(urlToUpload, {
+          method: 'PUT',
+          body: imageObject.file,
+          headers: {
+            'Content-Type': imageObject.file.type
+          }
+        });
 
-      imageObject.state = "uploaded";
-      imageObject.key = urlToUpload;
-    })();
-  }
-));
+        // TODO: Check for errors
+
+        imageObject.state = "uploaded";
+        imageObject.key = urlToUpload;
+      })();
+    }
+    ));
+
+  updateErrorText(`Uploading art files...`);
 
   await Promise.all(listOfUploadFunctions);
 
@@ -173,6 +177,8 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
 
   console.log(`SENDING: ${JSON.stringify(finalMessageToSend)}`);
 
+  updateErrorText(`Uploading art metadata...`);
+
   // Now that it's all on S3, send the final result!
   const finalUploadRequest = await fetch(targetUrl, finalMessageToSend);
 
@@ -182,11 +188,12 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
   // ERROR! Bubble it up to user.
   if (finalUploadRequest.status >= 400 && finalUploadRequest.status < 600) {
     let errorText = await finalUploadRequest.text();
-    document.getElementById("errorDisplay").innerHTML = `<b>ERROR ${finalUploadRequest.status}, ${finalUploadRequest.statusText}:</b> ${errorText}`;
+    updateErrorText(`<b>ERROR ${finalUploadRequest.status}, ${finalUploadRequest.statusText}:</b> ${errorText}`);
     return;
   }
   // If there's a redirect, follow it, it means the upload was successful.
   else if (finalUploadRequest.redirected) {
+    updateErrorText(`Upload successful!`);
     window.location.href = finalUploadRequest.url;
   }
 }
@@ -232,7 +239,7 @@ function createImageElement(src) {
   // Create an img element
   const img = document.createElement('img');
   img.src = src;
-  
+
   // Add it to the container
   localImageContainer.appendChild(img);
   imageContainer.appendChild(localImageContainer);
@@ -257,7 +264,7 @@ function addNewImage(event) {
     reader.onload = (e) => {
       createImageElement(e.target.result); // Pass the base64 data URL
     };
-    
+
     reader.readAsDataURL(file); // Read as data URL for images
     event.target.value = '';
   }
@@ -278,18 +285,18 @@ function setThumbnail(event) {
 
     // Now, make the user see the new thumbnail listed.
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       // Create an img element
       const img = document.createElement('img');
       img.src = e.target.result; // This is the base64 data URL
-      
+
       // Clear out any existing thumbnail visual.
-      thumbnailContainer.innerHTML='';
+      thumbnailContainer.innerHTML = '';
       // Add it to the page
       thumbnailContainer.appendChild(img);
     };
-    
+
     reader.readAsDataURL(file); // Read as data URL for images
     event.target.value = '';
   }
@@ -332,4 +339,9 @@ function removeImage(imageDiv) {
 
   // Remove it in the back logic
   filesInImageContainer.splice(imageCurrentIndex, 1);
+}
+
+/// Given text, puts it in the Error Text div.
+function updateErrorText(text) {
+  document.getElementById("errorDisplay").innerHTML = text;
 }
