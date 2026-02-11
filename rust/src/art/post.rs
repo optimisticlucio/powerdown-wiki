@@ -296,6 +296,15 @@ pub async fn add_art(
                 return Err(RootErrors::InternalServerError);
             };
 
+            println!(
+                "[ART UPLOAD] User {} (ID:{}) uploaded art {} (ID:{}, SLUG:{})",
+                requesting_user.display_name,
+                requesting_user.id,
+                page_art.base_art.title,
+                page_art.base_art.id,
+                page_art.base_art.slug
+            );
+
             Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
         }
     }
@@ -643,6 +652,15 @@ pub async fn edit_art_put_request(
             {
                 eprintln!("[ART MODIFICATION] Failed to clean up redundant S3 keys! Proceeding as normal. Keys: {}. Err: {err:?}", s3_keys_to_delete.join(","));
             };
+
+            println!(
+                "[ART MODIFICATION] User {} (ID:{}) edited art {} (ID:{}, SLUG:{})",
+                requesting_user.display_name,
+                requesting_user.id,
+                sent_page_art.base_art.title,
+                existing_art.base_art.id,
+                sent_page_art.base_art.slug
+            );
 
             Ok(Redirect::to(&format!("/art/{}", sent_page_art.base_art.slug)).into_response())
         }

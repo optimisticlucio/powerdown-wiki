@@ -321,6 +321,13 @@ pub async fn add_character(
                 return Err(RootErrors::InternalServerError);
             };
 
+            println!(
+                "[CHARACTER POSTING] User {} (ID:{}) uploaded character named {}",
+                requesting_user.display_name,
+                requesting_user.id,
+                recieved_page_character.base_character.name
+            );
+
             Ok(Redirect::to(&format!(
                 "/characters/{}",
                 &recieved_page_character.base_character.slug

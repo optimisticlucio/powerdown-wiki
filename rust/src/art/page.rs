@@ -220,6 +220,15 @@ pub async fn delete_art_page(
         .await
         .unwrap();
 
+    println!(
+        "[ART UPLOAD] User {} (ID:{}) DELETED art {} (ID:{}, SLUG:{})",
+        requesting_user.display_name,
+        requesting_user.id,
+        requested_art.base_art.title,
+        requested_art.base_art.id,
+        requested_art.base_art.slug
+    );
+
     // Yay! The page is deleted! :)
     let mut not_found_but_204 =
         RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)).into_response();
