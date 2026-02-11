@@ -78,14 +78,11 @@
 
     <br/>
 
+    <div class="buttons">
     <button class="light" onclick="attemptNewArtUpload({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Upload Art</button>
-
-    <br/>
-    <br/>
-
-    {%- if art_being_modified.is_some() %}
-    <button onclick="sendDeleteRequest({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Delete Art</button>
-    </br>
-    {% endif -%}
+    {%- if art_being_modified.is_some() -%}
+    <button class="dark" onclick="sendDeleteRequest({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Delete Art</button>
+    {%- endif -%}
+    </div>
 </div>
 {% endblock %}
