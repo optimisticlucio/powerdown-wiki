@@ -544,7 +544,7 @@ pub async fn edit_art_put_request(
                     db_connection
                         .execute(
                             DELETE_FROM_ART_FILE_DB_QUERY,
-                            &[&existing_art.base_art.id, &(leftover_index as i32)],
+                            &[&existing_art.base_art.id, &((leftover_index + 1) as i32)],
                         )
                         .await
                         .map_err(|err| {
