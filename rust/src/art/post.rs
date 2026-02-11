@@ -301,7 +301,7 @@ pub async fn add_art(
                 requesting_user.display_name,
                 requesting_user.id,
                 page_art.base_art.title,
-                page_art.base_art.id,
+                art_id,
                 page_art.base_art.slug
             );
 
