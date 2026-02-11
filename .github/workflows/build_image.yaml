@@ -4,7 +4,7 @@ name: Build Docker Image
 # Not like doing it on push costs me money.
 on:
   workflow_run:
-    workflows: ["Rust"] # name of the workflow to depend on
+    workflows: ["Rust"]
     types:
       - completed
     branches:
