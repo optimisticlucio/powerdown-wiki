@@ -227,6 +227,7 @@ where
         // Handle cases where mime_guess returns a weird file extension.
         "text/plain" => "txt",
         "image/jpeg" => "jpg",
+        "text/xml" => "xml",
         _ => mime_guess::get_mime_extensions_str(mime_type)
             .and_then(|exts| exts.first())
             .unwrap_or(&"bin"),
