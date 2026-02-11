@@ -41,7 +41,7 @@ pub async fn view_archival_progress(
     if !super::user_is_admin(&user)
         || user
             .as_ref()
-            .is_some_and(|user| user.user_type == UserType::Uploader)
+            .is_none_or(|user| user.user_type != UserType::Uploader)
     {
         return Err(RootErrors::NotFound(original_uri, cookie_jar, user));
     }
