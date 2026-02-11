@@ -167,6 +167,10 @@ async fn clean_up_old_backups(state: &ServerState) -> Result<(), Box<dyn std::er
     let mut backups_from_over_week_ago_to_month_ago = Vec::new();
     let mut backups_from_over_month_ago = Vec::new();
 
+    // We aren't going to act on these backups, but I do want to count them for logging.
+    let mut amount_of_backups_from_last_3_days = 0;
+    let mut amount_of_backups_from_over_3_months_ago = 0;
+
     let current_timestamp = chrono::Utc::now();
     let three_days_ago = current_timestamp - chrono::Duration::days(3);
     let week_ago = current_timestamp - chrono::Duration::weeks(1);
@@ -185,6 +189,7 @@ async fn clean_up_old_backups(state: &ServerState) -> Result<(), Box<dyn std::er
             match last_modification_date {
                 date if date < three_months_ago => {
                     // Old enough that we assume it's already organized.
+                    amount_of_backups_from_over_3_months_ago += 1;
                 }
                 date if date < month_ago => {
                     backups_from_over_month_ago.push(backup.key.unwrap());
@@ -195,10 +200,19 @@ async fn clean_up_old_backups(state: &ServerState) -> Result<(), Box<dyn std::er
                 date if date < three_days_ago => {
                     backups_from_4_days_ago_to_week_ago.push(backup.key.unwrap());
                 }
-                _ => (), // The last 3 days. Leave unmodified.
+                _ => {
+                    amount_of_backups_from_last_3_days += 1;
+                } // The last 3 days. Leave unmodified.
             }
         }
     }
+
+    println!("[CLEANUP SQL BACKUPS] There are {amount_of_backups_from_last_3_days} backups from the past three days, \
+                {} from four days to a week, {} from a week to a month, {} from a month to three months, \
+                and {amount_of_backups_from_over_3_months_ago} that are three months or older.", 
+            backups_from_4_days_ago_to_week_ago.len(),
+            backups_from_over_week_ago_to_month_ago.len(),
+            backups_from_over_month_ago.len());
 
     // Sort each list for convenience.
     backups_from_4_days_ago_to_week_ago.sort();
@@ -269,6 +283,11 @@ async fn clean_up_old_backups(state: &ServerState) -> Result<(), Box<dyn std::er
             months_already_backed_up.insert(backup_month);
         }
     }
+
+    println!(
+        "[CLEANUP SQL BACKUPS] There are {} backups to clean up.",
+        backup_keys_to_delete.len()
+    );
 
     // Now that we have the keys to delete, nuke em.
     if backup_keys_to_delete.is_empty() {
