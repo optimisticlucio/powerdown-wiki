@@ -52,7 +52,7 @@ pub fn compress_image_lossless(
             // Only return compressed version if it's actually smaller
             if compressed.len() < image_bytes.len() {
                 Ok(CompressionResult {
-                    file_bytes: image_bytes,
+                    file_bytes: compressed,
                     new_file_extension: None,
                 })
             } else {
