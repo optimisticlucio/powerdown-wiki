@@ -1,15 +1,12 @@
 #
-name: Create and publish a Docker image
+name: Build Docker Image
 
 # Not like doing it on push costs me money.
 on:
-  pull_request:
-    paths:
-      - "rust/Cargo.toml"
-      - "rust/Cargo.lock"
-      - "rust/src/**"
-      - ".github/workflows/build_image.yaml"
-  push:
+  workflow_run:
+    workflows: ["Rust"] # name of the workflow to depend on
+    types:
+      - completed
     branches:
       - main
 
@@ -27,6 +24,7 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
       contents: read
