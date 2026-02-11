@@ -39,7 +39,7 @@ pub async fn view_archival_progress(
 
     // Admins and uploaders can both access this page.
     if !super::user_is_admin(&user)
-        || user
+        && user
             .as_ref()
             .is_none_or(|user| user.user_type != UserType::Uploader)
     {
