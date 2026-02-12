@@ -10,7 +10,7 @@ const tagsContainer = document.getElementById('tag-search');
 const baseURL = tagsContainer.dataset.baseUrl;
 
 const tagRemoveOnClick = (event) => {
-    const self = event.currentTarget; 
+    const self = event.currentTarget;
     const idx = tags.indexOf(self.parentElement.querySelector(".tag-name").innerHTML);
     if (idx > -1) {
         tags.splice(idx, 1);
@@ -19,7 +19,7 @@ const tagRemoveOnClick = (event) => {
     window.location.href = createTargetUrl();
 };
 
-document.querySelectorAll('.tag-remove').forEach( (tagRemove) => {tagRemove.addEventListener('click', tagRemoveOnClick)});
+document.querySelectorAll('.tag-remove').forEach((tagRemove) => { tagRemove.addEventListener('click', tagRemoveOnClick) });
 
 function createTag(text) {
     const tag = document.createElement('div');
@@ -28,20 +28,20 @@ function createTag(text) {
         <span class="tag-name">${text}</span>
         <span class="tag-remove">×</span>
     `;
-    
+
     tag.querySelector('.tag-remove').addEventListener('click', tagRemoveOnClick);
-    
+
     tagsContainer.insertBefore(tag, tagInput);
 }
 
 function addTag(text) {
     text = text.trim().replace(/[,\s]/g, '');
-    
+
     if (text && !tags.includes(text)) {
         tags.push(text);
         createTag(text);
     }
-    
+
     tagInput.value = '';
 }
 
@@ -67,13 +67,13 @@ tagInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
         if (tagInput.value.trim()) {
-            addTag(tagInput.value);
+            tagInput.value.split(" ").forEach((tag) => addTag(tag));
             window.location.href = createTargetUrl();
-        } 
+        }
     } else if (e.key === 'Backspace' && tagInput.value === '' && tags.length > 0) {
         const tagElements = tagsContainer.querySelectorAll('.tag');
         const lastTagElement = tagElements[tagElements.length - 1];
-        
+
         tags.pop();
         lastTagElement.remove();
         window.location.href = createTargetUrl();
