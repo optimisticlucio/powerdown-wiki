@@ -6,7 +6,11 @@
 <div class="wrapper">
     <h1>Login to Wiki</h1>
 
-    <p>If you're seeing this page, the website can't recognize you. This means you either need to create an account or log in.</p>
+    {% if let Some(user) = user %}
+        <p>On this page, you can add extra login methods to your existing account. That way, if you lose access to one, you can still access your wiki account.</p>
+    {% else %}
+        <p>If you're seeing this page, the website can't recognize you. This means you either need to create an account or log in.</p>
+    {% endif %}
 
     <a href="{{discord_oauth_url}}">Login using Discord</a>
 

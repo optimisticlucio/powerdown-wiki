@@ -64,11 +64,10 @@ async fn homepage(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
-    let db_connection = state
-        .db_pool
-        .get()
-        .await
-        .map_err(|_| RootErrors::InternalServerError)?;
+    let db_connection = state.db_pool.get().await.map_err(|err| {
+        eprintln!("[FRONTPAGE] Failed getting DB connection! {err:?}");
+        RootErrors::InternalServerError
+    })?;
 
     let random_subtitle: String = {
         let statement =

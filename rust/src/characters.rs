@@ -24,7 +24,12 @@ pub fn router() -> Router<ServerState> {
             post(post::add_character).get(post::character_posting_page),
         )
         .layer(DefaultBodyLimit::max(10 * 1000 * 1000)) // 10MB Post Limit
-        .route_with_tsr("/{character_slug}", get(page::character_page))
+        .route_with_tsr(
+            "/{character_slug}",
+            get(page::character_page)
+                .put(post::modify_character)
+                .post(post::modify_character),
+        )
         .route_with_tsr("/{character_slug}/edit", get(edit::edit_character_page))
 }
 

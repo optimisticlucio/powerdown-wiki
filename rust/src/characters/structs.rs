@@ -53,7 +53,7 @@ pub struct PageCharacter {
     pub page_contents: Option<String>,
 }
 
-#[derive(Debug, FromSql, ToSql, Clone, Deserialize)]
+#[derive(Debug, FromSql, ToSql, Clone, Deserialize, PartialEq)]
 #[postgres(name = "infobox_row")]
 pub struct InfoboxRow {
     pub title: String,

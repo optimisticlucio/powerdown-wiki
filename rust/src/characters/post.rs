@@ -1,12 +1,12 @@
 use crate::characters::BaseCharacter;
-use crate::user::User;
+use crate::user::{User, UsermadePost};
 use crate::utils::sql::PostState;
 use crate::utils::{
     self, get_temp_s3_presigned_urls, template_to_response, PostingSteps, PresignedUrlsResponse,
 };
 use crate::{characters::structs::PageCharacter, errs::RootErrors, ServerState};
 use askama::Template;
-use axum::extract::{OriginalUri, State};
+use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{http, Json};
 use http::Uri;
@@ -136,11 +136,6 @@ pub async fn add_character(
             if let Some(long_name) = &recieved_page_character.long_name {
                 columns.push("long_name".into());
                 values.push(long_name);
-            }
-
-            if let Some(logo) = &recieved_page_character.logo_url {
-                columns.push("logo".into());
-                values.push(logo);
             }
 
             if let Some(birthday) = &recieved_page_character.base_character.birthday {
@@ -326,6 +321,282 @@ pub async fn add_character(
                 requesting_user.display_name,
                 requesting_user.id,
                 recieved_page_character.base_character.name
+            );
+
+            Ok(Redirect::to(&format!(
+                "/characters/{}",
+                &recieved_page_character.base_character.slug
+            ))
+            .into_response())
+        }
+    }
+}
+
+/// Given a complete PageCharacter, replaces the PageCharacter in the given slug with it. Assumes we're merely modifying a character and not wholly replacing it.
+#[axum::debug_handler]
+pub async fn modify_character(
+    Path(character_slug): Path<String>,
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+    Json(posting_step): Json<PostingSteps<PageCharacter>>,
+) -> Result<Response, RootErrors> {
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
+
+    // Who's trying to do this?
+    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        Some(user) => user,
+        None => return Err(RootErrors::Unauthorized),
+    };
+
+    // Is this a character that exists?
+    let modified_character = match PageCharacter::get_by_slug(&db_connection, &character_slug).await
+    {
+        Some(x) => x,
+        None => {
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                Some(requesting_user),
+            ))
+        }
+    };
+
+    if !modified_character.can_be_modified_by(&requesting_user) {
+        return Err(RootErrors::Forbidden);
+    }
+
+    match posting_step {
+        PostingSteps::RequestPresignedURLs { file_amount } => {
+            // TODO - Ensure it's an amount of art that makes sense. Right now the only variable is whether a page has a logo in it.
+
+            let presigned_urls =
+                get_temp_s3_presigned_urls(&state, file_amount.into(), "characters")
+                    .await
+                    .map_err(|err| {
+                        eprintln!("[POSTING CHARACTER] Failed to get presigned URLs! {err}");
+                        RootErrors::InternalServerError
+                    })?;
+
+            // Now return the presigned urls as a json
+            Ok(
+                serde_json::to_string(&PresignedUrlsResponse { presigned_urls })
+                    .unwrap()
+                    .into_response(),
+            )
+        }
+        PostingSteps::UploadMetadata(mut recieved_page_character) => {
+            sanitize_recieved_page_character(&mut recieved_page_character, &state);
+
+            if let Err(err_string) = validate_recieved_page_character(&recieved_page_character) {
+                return Err(RootErrors::BadRequest(err_string));
+            }
+
+            // Let's build our update query.
+            let mut columns: Vec<String> = Vec::new();
+            let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+            if recieved_page_character.base_character.slug != modified_character.base_character.slug
+            {
+                columns.push("page_slug".into());
+                values.push(&recieved_page_character.base_character.slug);
+            }
+
+            if recieved_page_character.base_character.name != modified_character.base_character.name
+            {
+                columns.push("short_name".into());
+                values.push(&recieved_page_character.base_character.name);
+            }
+
+            if recieved_page_character.subtitles != modified_character.subtitles {
+                columns.push("subtitles".into());
+                values.push(&recieved_page_character.subtitles);
+            }
+
+            if recieved_page_character.creator != modified_character.creator {
+                columns.push("creator".into());
+                values.push(&recieved_page_character.creator);
+            }
+
+            if recieved_page_character.infobox != modified_character.infobox {
+                columns.push("infobox".into());
+                values.push(&recieved_page_character.infobox);
+            }
+
+            if recieved_page_character.overlay_css != modified_character.overlay_css {
+                columns.push("overlay_css".into());
+
+                // TODO: SANITIZE
+                values.push(&recieved_page_character.overlay_css);
+            }
+
+            if recieved_page_character.page_contents != modified_character.page_contents {
+                // TODO: SANITIZE
+                columns.push("page_text".into());
+                values.push(&recieved_page_character.page_contents);
+            }
+
+            if recieved_page_character.base_character.is_hidden
+                != modified_character.base_character.is_hidden
+            {
+                columns.push("is_hidden".into());
+                values.push(&recieved_page_character.base_character.is_hidden);
+            }
+
+            if recieved_page_character.retirement_reason != modified_character.retirement_reason {
+                columns.push("retirement_reason".into());
+                values.push(&recieved_page_character.retirement_reason);
+            }
+
+            if recieved_page_character.long_name != modified_character.long_name {
+                columns.push("long_name".into());
+                values.push(&recieved_page_character.long_name);
+            }
+
+            if recieved_page_character.base_character.birthday
+                != modified_character.base_character.birthday
+            {
+                columns.push("birthday".into());
+                values.push(&recieved_page_character.base_character.birthday);
+            }
+
+            if recieved_page_character.tag != modified_character.tag {
+                columns.push("relevant_tag".into());
+                values.push(&recieved_page_character.tag);
+            }
+
+            // Now let's potentially deal with images.
+            let target_s3_folder =
+                format!("characters/{}", modified_character.base_character.db_id);
+            let s3_client = state.s3_client.clone();
+
+            let thumbnail_s3_key;
+            if recieved_page_character.base_character.thumbnail_key
+                != modified_character.base_character.thumbnail_key
+            {
+                let random_string = utils::get_random_string(6);
+                let thumbnail_target_s3_key =
+                    format!("{target_s3_folder}/thumbnail_{random_string}");
+                thumbnail_s3_key = match utils::move_and_lossily_compress_temp_s3_img(
+                    &s3_client,
+                    &state.config,
+                    &recieved_page_character.base_character.thumbnail_key,
+                    &state.config.s3_public_bucket,
+                    &thumbnail_target_s3_key,
+                    Some(CHARACTER_THUMBNAIL_COMPRESSION_SETTINGS),
+                )
+                .await
+                {
+                    Ok(x) => x,
+                    Err(err) => {
+                        eprintln!(
+                            "[CHARACTER POSTING] Converting thumbnail of character {} failed, {err:?}",
+                            modified_character.base_character.db_id,
+                            );
+                        return Err(RootErrors::InternalServerError);
+                    }
+                };
+
+                columns.push("thumbnail".into());
+                values.push(&thumbnail_s3_key);
+            }
+
+            let main_art_key;
+            if recieved_page_character.page_img_key != modified_character.page_img_key {
+                let random_string = utils::get_random_string(6);
+                let main_art_target_s3_key = format!("{target_s3_folder}/page_art_{random_string}");
+                main_art_key = match utils::move_and_lossily_compress_temp_s3_img(
+                    &s3_client,
+                    &state.config,
+                    &recieved_page_character.page_img_key,
+                    &state.config.s3_public_bucket,
+                    &main_art_target_s3_key,
+                    Some(CHARACTER_IMAGE_COMPRESSION_SETTINGS),
+                )
+                .await
+                {
+                    Ok(x) => x,
+                    Err(err) => {
+                        eprintln!(
+                            "[CHARACTER MODIFICATION] Converting main art of character {} failed, {err:?}",
+                            modified_character.base_character.db_id
+                        );
+                        return Err(RootErrors::InternalServerError);
+                    }
+                };
+
+                columns.push("page_image".into());
+                values.push(&main_art_key);
+            }
+
+            let compressed_logo_key: String;
+            if recieved_page_character.logo_url != modified_character.logo_url {
+                columns.push("logo".into());
+
+                if let Some(new_logo_url) = recieved_page_character.logo_url {
+                    let random_string = utils::get_random_string(6);
+                    let target_key = format!("{target_s3_folder}/logo_{random_string}");
+
+                    compressed_logo_key = match utils::move_and_lossily_compress_temp_s3_img(
+                        &s3_client,
+                        &state.config,
+                        &new_logo_url,
+                        &state.config.s3_public_bucket,
+                        &target_key,
+                        Some(CHARACTER_LOGO_COMPRESSION_SETTINGS),
+                    )
+                    .await
+                    {
+                        Ok(x) => x,
+                        Err(err) => {
+                            eprintln!(
+                                    "[CHARACTER MODFIFICATION] Converting logo of character {} failed, {err:?}",
+                                    modified_character.base_character.db_id
+                                );
+                            return Err(RootErrors::InternalServerError);
+                        }
+                    };
+
+                    values.push(&compressed_logo_key);
+                } else {
+                    values.push(&None::<String>);
+                }
+            }
+
+            // Update the image values of the character
+            // SAFETY: No user-passed values are in the query, they're all in `values`
+            let update_query = format!(
+                "UPDATE character SET {} WHERE id=${};",
+                columns
+                    .iter()
+                    .enumerate()
+                    .map(|(index, value)| format!("{}=${}", value, index + 1))
+                    .collect::<Vec<_>>()
+                    .join(","),
+                columns.len() + 1
+            );
+
+            values.push(&modified_character.base_character.db_id);
+
+            if let Err(err) = db_connection.execute(&update_query, &values).await {
+                println!(
+                        "[CHARACTER MODIFICATION] Error in db query execution!\nQuery: {update_query}\nError: {err:?}",
+                    );
+
+                return Err(RootErrors::InternalServerError);
+            };
+
+            println!(
+                "[CHARACTER MODIFICATION] User {} (ID:{}) edited character named {} (SLUG:{}, ID:{})",
+                requesting_user.display_name,
+                requesting_user.id,
+                recieved_page_character.base_character.name,
+                recieved_page_character.base_character.slug,
+                modified_character.base_character.db_id
             );
 
             Ok(Redirect::to(&format!(

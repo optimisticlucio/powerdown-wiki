@@ -11,14 +11,37 @@
     <div id="errorDisplay" style="color:red;">
     </div>
 
+    {%- if let Some(page_character) = character_being_modified -%} 
+    <script>
+        let characterImageFiles = {
+            thumbnail: {
+                state: "uploaded",
+                key: "{{ crate::utils::get_s3_public_object_url(page_character.base_character.thumbnail_key) }}"
+            },
+            pageImg: {
+                state: "uploaded",
+                key: "{{ crate::utils::get_s3_public_object_url(page_character.page_img_key) }}"
+            }
+            {%- if let Some(logo_url) = page_character.logo_url -%}
+            ,logo: {
+                state: "uploaded",
+                key: "{{ crate::utils::get_s3_public_object_url(page_character.page_img_key) }}"
+            }
+            {%- endif -%}
+        };
+    </script>
+    {%- endif -%}
+
     <label for="characterName">First Name / Short Title:</label>
     <input type="text" id="characterName" required minLength="1"
         {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.name}}" {% endif %}/>
     <br />
 
-    {# TODO: Handle long name #}
-
-    {# TODO: Handle subtitles #}
+    <label for="characterSubtitles">Subtitles: (Each subtitle in a new line!)</label>
+    <textarea type="text" id="characterSubtitles" required minLength="1">
+        {%- if let Some(page_character) = character_being_modified %}{{page_character.subtitles.join("\n")}}{%- endif -%}
+    </textarea>
+    <br />
 
     <label for="characterCreatorName">Creator Name:</label>
     <input type="text" id="characterCreatorName" required minLength="1"
@@ -32,12 +55,6 @@
     </div>
 
     <br />
-
-    <label for="characterLogo">Logo:</label>
-    <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
-
-    <div id="characterLogo" class="imageHolder">
-    </div>
 
     <label for="characterBirthday">Birthday: (The year doesn't matter)</label>
     <input type="date" id="characterBirthday"
@@ -73,6 +90,8 @@
             checked
             {%- endif -%}
             {% endif %} />
+
+        <br />
         
         <label for="characterRetirementReason">Retirement Reason:</label>
         <input type="text" id="characterRetirementReason"
@@ -81,6 +100,36 @@
                     value="{{retirement_reason}}"
                 {%- endif -%}
                 {%- endif -%}/>
+        <br />
+
+        <label for="characterLongName">In-Page Name:</label>
+        <input type="text" id="characterLongName"
+            {%- if let Some(page_character) = character_being_modified -%}
+                {%- if let Some(long_name) = page_character.long_name -%}
+                    value="{{long_name}}"
+                {%- endif -%}
+                {%- endif -%}/>
+        <br />
+        
+        <label for="characterTag">Character Tag:</label>
+        <input type="text" id="characterTag"
+            {%- if let Some(page_character) = character_being_modified %}{% if let Some(tag) = page_character.tag %}%value="{{tag}}"{%endif%}{% endif %}/>
+        <br />
+
+        <label for="characterLogo">Logo:</label>
+        <input type="file" accept="image/*" onchange="setThumbnail(event)"/> 
+
+        <div id="characterLogo" class="imageHolder">
+        </div>
+
+        <label for="characterOverlayCss">Overlay CSS:</label>
+        <textarea type="text" id="characterOverlayCss">
+            {%- if let Some(page_character) = character_being_modified %}
+            {%- if let Some(overlay_css) = page_character.overlay_css %}
+            {{ overlay_css }}
+            {%- endif %}
+            {%- endif %}
+        </textarea>
         <br />
     </details>
 
