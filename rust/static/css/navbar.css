@@ -38,12 +38,17 @@ nav {
         align-items: center;
     }
 
-    .left, .right {
+    .left,
+    .right {
         padding-right: 0.5em;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 1ch;
+
+        .site-logo {
+            height: 3em;
+        }
 
         * {
             display: inherit;

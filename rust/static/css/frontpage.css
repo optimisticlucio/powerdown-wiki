@@ -1,4 +1,8 @@
 .frontpage {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+
     .frontpage-top {
         overflow: hidden;
         background-color: var(--dark-shade);
@@ -14,7 +18,7 @@
             justify-content: space-around;
             margin: 1em 0 1em 2ch;
 
-            > * {
+            >* {
                 margin: 0;
             }
 
@@ -69,7 +73,7 @@
                 background-color: var(--link-color);
                 border-color: var(--link-color);
             }
-            
+
             span {
                 text-align: center;
                 margin: auto;
@@ -91,7 +95,7 @@
     .frontpage-bottom {
         display: flex;
         flex-direction: row;
-        margin-top: 1em;
+        gap: 1em;
 
         .frontpage-buttons {
             flex-grow: 3;
@@ -99,7 +103,6 @@
             justify-items: stretch;
             gap: 1em;
             grid-template-columns: repeat(auto-fit, minmax(20em, 1fr));
-            justify-content: space-between;
             height: min-content;
 
             .button {
@@ -127,41 +130,65 @@
     }
 
     .joke-area {
-            margin-left: 1em;
-            width: 35%;
+        width: 35%;
+        display: flex;
+        justify-content: center;
 
-            .brought-by {
-                background-color: var(--bright-shade);
-                padding: 1.5em 2.5em;
-                display: flex;
-                flex-direction: column;
+        .brought-by {
+            background-color: var(--bright-shade);
+            padding: 1.5em 1ch;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
 
-                div {
-                    white-space: pre;
-                    font-size: 1.2em;
-                    font-weight: bold;
-                    text-align: center;
-                    margin-bottom: 1em;
-                }
-
-                img {
-                    max-width: 100%;
-                    max-height: 15em;
-                    object-fit: contain;
-                }
+            div {
+                white-space: pre;
+                font-size: 1.2em;
+                font-weight: bold;
+                text-align: center;
+                margin-bottom: 1em;
+                text-wrap: balance;
             }
 
-            .birthday {
-                font-size: 0.9em;
+            img {
+                max-width: 100%;
+                max-height: 15em;
+                object-fit: contain;
             }
         }
+
+        .birthday {
+            font-size: 0.9em;
+        }
+    }
 }
 
 @media screen and (max-width: 1100px) {
     .frontpage {
+        width: 100%;
+
+        .frontpage-top {
+            height: 7em;
+
+            .logo {
+                display: none;
+            }
+
+            .links {
+                width: 12em;
+                aspect-ratio: unset;
+            }
+        }
+
+        .frontpage-bottom {
+            flex-direction: column;
+        }
+
         .joke-area {
+            width: 100%;
+
             .brought-by {
-                padding: 1ch 2ch;
+                width: unset;
             }
         }
     }
