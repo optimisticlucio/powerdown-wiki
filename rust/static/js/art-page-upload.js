@@ -182,7 +182,6 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
   // Now that it's all on S3, send the final result!
   const finalUploadRequest = await fetch(targetUrl, finalMessageToSend);
 
-  // TODO: Show to the user the response. In the meanwhile, the console will do.
   console.log(`UPLOAD COMPLETE! Result : ${JSON.stringify(finalUploadRequest)} `)
 
   // ERROR! Bubble it up to user.

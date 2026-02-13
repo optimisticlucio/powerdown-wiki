@@ -1,6 +1,6 @@
 {% extends "base-template.html" %}
 
-{% block title %}Create New Art{% endblock %}
+{% block title %}{%- if let Some(page_character) = character_being_modified -%}Modify {{page_character.base_character.name}}{%else%}Create New Character{%endif%}{% endblock %}
 
 {% block customhead %}<script src="/static/js/character-page-upload.js" defer></script>{% endblock %}
 
@@ -25,7 +25,7 @@
             {%- if let Some(logo_url) = page_character.logo_url -%}
             ,logo: {
                 state: "uploaded",
-                key: "{{ crate::utils::get_s3_public_object_url(page_character.page_img_key) }}"
+                key: "{{ crate::utils::get_s3_public_object_url(logo_url) }}"
             }
             {%- endif -%}
         };
@@ -43,13 +43,22 @@
     </textarea>
     <br />
 
+    <label for="characterInfobox">Infobox: (Each piece of info in a new line!)</label>
+    <textarea type="text" id="characterInfobox" required minLength="1">
+        {%- if let Some(page_character) = character_being_modified -%}
+        {%- for infobox in page_character.infobox -%}{{infobox.title}}:{{infobox.description}}
+{% endfor -%}
+        {%- endif -%}
+    </textarea>
+    <br />
+
     <label for="characterCreatorName">Creator Name:</label>
     <input type="text" id="characterCreatorName" required minLength="1"
         {%- if let Some(page_character) = character_being_modified %} value="{{page_character.creator}}" {% endif %}/>
     <br />
 
     <label for="characterThumbnail">Thumbnail:</label>
-    <input type="file" accept="image/*" onchange="setsetImageFile(event, 'thumbnail')"/> 
+    <input type="file" accept="image/*" onchange="setImageFile(event, 'thumbnail')"/> 
 
     <div id="characterThumbnail" class="imageHolder">
     </div>
@@ -66,7 +75,7 @@
     <br />
 
     <label for="characterImage">Page Image:</label>
-    <input type="file" accept="image/*" onchange="setsetImageFile(event, 'pageImg')"/> 
+    <input type="file" accept="image/*" onchange="setImageFile(event, 'pageImg')"/> 
 
     <div id="characterImage" class="imageHolder">
     </div>
@@ -113,22 +122,32 @@
         
         <label for="characterTag">Character Tag:</label>
         <input type="text" id="characterTag"
-            {%- if let Some(page_character) = character_being_modified %}{% if let Some(tag) = page_character.tag %}%value="{{tag}}"{%endif%}{% endif %}/>
+            {%- if let Some(page_character) = character_being_modified %}{% if let Some(tag) = page_character.tag %}value="{{tag}}"{%endif%}{% endif %}/>
         <br />
 
         <label for="characterLogo">Logo:</label>
-        <input type="file" accept="image/*" onchange="setsetImageFile(event, 'logo')"/> 
+        <input type="file" accept="image/*" onchange="setImageFile(event, 'logo')"/> 
 
         <div id="characterLogo" class="imageHolder">
         </div>
 
         <label for="characterOverlayCss">Overlay CSS:</label>
         <textarea type="text" id="characterOverlayCss">
-            {%- if let Some(page_character) = character_being_modified %}
-            {%- if let Some(overlay_css) = page_character.overlay_css %}
+            {%- if let Some(page_character) = character_being_modified -%}
+            {%- if let Some(overlay_css) = page_character.overlay_css -%}
             {{ overlay_css }}
-            {%- endif %}
-            {%- endif %}
+            {%- endif -%}
+            {%- endif -%}
+        </textarea>
+        <br />
+
+        <label for="characterCustomCss">Custom CSS:</label>
+        <textarea type="text" id="characterCustomCss">
+            {%- if let Some(page_character) = character_being_modified -%}
+            {%- if let Some(custom_css) = page_character.custom_css -%}
+            {{ custom_css }}
+            {%- endif -%}
+            {%- endif -%}
         </textarea>
         <br />
     </details>
@@ -138,6 +157,11 @@
 
     </br>
 
-    <button class="light" onclick="attemptNewCharacterUpload({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Upload Art</button>
+    <div class="buttons">
+        {%- if character_being_modified.is_some() %}
+        <button class="dark" onclick="sendDeleteRequest({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Delete Character</button>
+        {%- endif -%}
+        <button class="light" onclick="attemptNewCharacterUpload({% if let Some(actual_target_button_url) = target_button_url %}'{{actual_target_button_url}}'{% endif %})">Upload Character</button>
+    </div>
 </div>
 {% endblock %}

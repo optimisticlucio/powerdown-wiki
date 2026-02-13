@@ -119,6 +119,9 @@ pub async fn add_character(
                 values.push(overlay_css);
             }
 
+            columns.push("custom_css".into());
+            values.push(&recieved_page_character.custom_css);
+
             if let Some(page_text) = &recieved_page_character.page_contents {
                 // TODO: SANITIZE
                 columns.push("page_text".into());
@@ -434,6 +437,9 @@ pub async fn modify_character(
                 values.push(&recieved_page_character.overlay_css);
             }
 
+            columns.push("custom_css".into());
+            values.push(&recieved_page_character.custom_css);
+
             if recieved_page_character.page_contents != modified_character.page_contents {
                 // TODO: SANITIZE
                 columns.push("page_text".into());
@@ -567,37 +573,40 @@ pub async fn modify_character(
                 }
             }
 
-            // Update the image values of the character
-            // SAFETY: No user-passed values are in the query, they're all in `values`
-            let update_query = format!(
-                "UPDATE character SET {} WHERE id=${};",
-                columns
-                    .iter()
-                    .enumerate()
-                    .map(|(index, value)| format!("{}=${}", value, index + 1))
-                    .collect::<Vec<_>>()
-                    .join(","),
-                columns.len() + 1
-            );
+            // If anything was changed, let's modify it.
+            if !values.is_empty() {
+                // Update the image values of the character
+                // SAFETY: No user-passed values are in the query, they're all in `values`
+                let update_query = format!(
+                    "UPDATE character SET {} WHERE id=${};",
+                    columns
+                        .iter()
+                        .enumerate()
+                        .map(|(index, value)| format!("{}=${}", value, index + 1))
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    columns.len() + 1
+                );
 
-            values.push(&modified_character.base_character.db_id);
+                values.push(&modified_character.base_character.db_id);
 
-            if let Err(err) = db_connection.execute(&update_query, &values).await {
-                println!(
+                if let Err(err) = db_connection.execute(&update_query, &values).await {
+                    println!(
                         "[CHARACTER MODIFICATION] Error in db query execution!\nQuery: {update_query}\nError: {err:?}",
                     );
 
-                return Err(RootErrors::InternalServerError);
-            };
+                    return Err(RootErrors::InternalServerError);
+                };
 
-            println!(
-                "[CHARACTER MODIFICATION] User {} (ID:{}) edited character named {} (SLUG:{}, ID:{})",
-                requesting_user.display_name,
-                requesting_user.id,
-                recieved_page_character.base_character.name,
-                recieved_page_character.base_character.slug,
-                modified_character.base_character.db_id
-            );
+                println!(
+                    "[CHARACTER MODIFICATION] User {} (ID:{}) edited character named {} (SLUG:{}, ID:{})",
+                    requesting_user.display_name,
+                    requesting_user.id,
+                    recieved_page_character.base_character.name,
+                    recieved_page_character.base_character.slug,
+                    modified_character.base_character.db_id
+                );
+            }
 
             Ok(Redirect::to(&format!(
                 "/characters/{}",
@@ -698,8 +707,14 @@ fn sanitize_recieved_page_character(
     recieved_page_character.custom_css = recieved_page_character
         .custom_css
         .as_deref()
-        .filter(|custom_css| custom_css.is_empty())
-        .map(|s| s.to_string());
+        .filter(|custom_css| !custom_css.is_empty())
+        .map(|s| s.trim().to_string());
+
+    recieved_page_character.overlay_css = recieved_page_character
+        .overlay_css
+        .as_deref()
+        .filter(|overlay_css| !overlay_css.is_empty())
+        .map(|s| s.trim().to_string());
 
     // TODO - Sanitize CSS sections
 }

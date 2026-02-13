@@ -3,14 +3,10 @@
 {% block title %}{{ name }}{% endblock %}
 
 {% block customhead %}
-    {% if let Some(overlay_css) = overlay_css %}
-        <style>
-            .overlay::before {
-                {{ overlay_css }}
-            }
-        </style>
+    {% if let Some(overlay_css) = character.overlay_css %}
+        <style>.overlay::before { {{ overlay_css }} }</style>
     {% endif %}
-    {% if let Some(custom_css) = custom_css %}
+    {% if let Some(custom_css) = character.custom_css %}
         <style>{{ custom_css }}</style>
     {% endif %}
 {% endblock%}
@@ -35,17 +31,17 @@
                 <div class="titles">
                     <div>
                         <h1>{{ name }}</h1>
-                        {% if let Some(logo_path) = character_logo %}
+                        {% if let Some(logo_path) = character.logo_url %}
                             <img src="{{ crate::utils::get_s3_public_object_url(logo_path) }}">
                         {% endif %}
                     </div>
                     <h2 id="character-subtitle">{{ subtitle }}</h2>
                     <p class="text">
-                        {% for item in infobox %}
+                        {% for item in character.infobox %}
                             <strong>{{item.title}}:</strong> {{item.description}} <br>
                         {% endfor %}
                     </p>
-                    {% if let Some(tag) = tag %}
+                    {% if let Some(tag) = character.tag %}
                         <a class="text" href="/art?tags={{ tag }}">
                             ART OF {{ name }}
                         </a>
@@ -53,9 +49,9 @@
                 </div>
             </div>
             <div class="right">
-                <img src="{{ crate::utils::get_s3_public_object_url(page_img) }}">
+                <img src="{{ crate::utils::get_s3_public_object_url(character.page_img_key) }}">
                 <p>
-                    Creator: {{ creator }}
+                    Creator: {{ character.creator }}
                 </p>
             </div>
         </div>
@@ -65,6 +61,14 @@
                     {{ page_content | safe }} 
             </div>
         {% endif %}
+    {% if let Some(user) = user %}
+        {% if character.can_be_modified_by(user)%}
+        <div class="buttons">
+            {% let current_path = original_uri.path() %}
+            <a href="{{current_path}}/edit"><button class="white">Edit Page</button></a>
+        </div>
+        {% endif %}
+    {% endif %}
     </div>
     
 </div>

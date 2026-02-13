@@ -14,7 +14,7 @@ mod page;
 mod post;
 pub mod structs;
 
-pub use structs::{BaseCharacter, PageCharacter};
+pub use structs::BaseCharacter;
 
 pub fn router() -> Router<ServerState> {
     Router::new()
@@ -28,7 +28,8 @@ pub fn router() -> Router<ServerState> {
             "/{character_slug}",
             get(page::character_page)
                 .put(post::modify_character)
-                .post(post::modify_character),
+                .post(post::modify_character)
+                .delete(page::delete_character_page),
         )
         .route_with_tsr("/{character_slug}/edit", get(edit::edit_character_page))
 }
