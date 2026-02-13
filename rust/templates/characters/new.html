@@ -68,7 +68,7 @@
     <label for="characterBirthday">Birthday: (The year doesn't matter)</label>
     <input type="date" id="characterBirthday"
         {%- if let Some(page_character) = character_being_modified -%} 
-        {%- if let Some(birthday) = page_character.base_character.birthday%}
+        {%- if let Some(birthday) = page_character.base_character.birthday -%}
         value="{{birthday}}" 
         {%- endif -%}
         {%- endif -%}/>
