@@ -115,17 +115,17 @@ async function attemptNewCharacterUpload(targetUrl = window.location.pathname) {
         postInfo.tag = tag;
     }
 
-    let pageContent = document.getElementById("characterPageContents").value;
+    let pageContent = document.getElementById("characterPageContents").value.trim();
     if (pageContent) {
         postInfo.page_contents = pageContent;
     }
 
-    let overlayCss = document.getElementById("characterOverlayCss").value;
+    let overlayCss = document.getElementById("characterOverlayCss").value.trim();
     if (overlayCss) {
         postInfo.overlay_css = overlayCss;
     }
 
-    let customCss = document.getElementById("characterCustomCss").value;
+    let customCss = document.getElementById("characterCustomCss").value.trim();
     if (customCss) {
         postInfo.custom_css = customCss;
     }

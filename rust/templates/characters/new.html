@@ -153,7 +153,7 @@
     </details>
 
     <label for="characterPageContents">Page Text: (Markdown-compatible! Y'know, like, the formatting discord messages use.) </label>
-    <textarea id="characterPageContents">{%- if let Some(page_character) = character_being_modified %}{%- if let Some(page_contents) = page_character.page_contents %}{{page_contents}}{% endif %}{% endif %}</textarea>
+    <textarea id="characterPageContents" style="height:20em;">{%- if let Some(page_character) = character_being_modified %}{%- if let Some(page_contents) = page_character.page_contents %}{{page_contents}}{% endif %}{% endif %}</textarea>
 
     </br>
 
