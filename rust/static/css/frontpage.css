@@ -133,6 +133,7 @@
         width: 35%;
         display: flex;
         justify-content: center;
+        flex-direction: column;
 
         .brought-by {
             background-color: var(--bright-shade);
