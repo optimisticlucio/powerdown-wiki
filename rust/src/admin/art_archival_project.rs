@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{user::UserType, utils::template_to_response, RootErrors, ServerState, User};
+use crate::{utils::template_to_response, RootErrors, ServerState, User};
 use askama::Template;
 use axum::extract::{OriginalUri, State};
 use axum::response::{IntoResponse, Response};
@@ -38,7 +38,9 @@ pub async fn view_archival_progress(
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     // Anyone who can post art can help
-    if !user.as_ref().is_some_and(|user| user.user_type.permissions().can_post_art)
+    if !user
+        .as_ref()
+        .is_some_and(|user| user.user_type.permissions().can_post_art)
     {
         return Err(RootErrors::NotFound(original_uri, cookie_jar, user));
     }
@@ -179,17 +181,17 @@ pub async fn update_archival_progress(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
-
-    if user.is_none() {
-        return Err(RootErrors::Unauthorized);
-    }
-
-    // Anyone who can post art can help
-    if !user.as_ref().is_some_and(|user| user.user_type.permissions().can_post_art)
-    {
-        return Err(RootErrors::Forbidden);
-    }
+    // Anyone who can upload art can help here.
+    match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        None => {
+            return Err(RootErrors::Unauthorized);
+        }
+        Some(user) => {
+            if !user.user_type.permissions().can_post_art {
+                return Err(RootErrors::Forbidden);
+            }
+        }
+    };
 
     // If it passed axum's JSON reader, I am going to assume it's valid info. If not, well, shit.
     const PROGRESS_PINS_UPDATE_QUERY: &str =
