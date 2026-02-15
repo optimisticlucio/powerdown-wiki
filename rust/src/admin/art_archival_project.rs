@@ -37,11 +37,8 @@ pub async fn view_archival_progress(
 
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    // Admins and uploaders can both access this page.
-    if !super::user_is_admin(&user)
-        && user
-            .as_ref()
-            .is_none_or(|user| user.user_type != UserType::Uploader)
+    // Anyone who can post art can help
+    if !user.as_ref().is_some_and(|user| user.user_type.permissions().can_post_art)
     {
         return Err(RootErrors::NotFound(original_uri, cookie_jar, user));
     }
@@ -188,11 +185,8 @@ pub async fn update_archival_progress(
         return Err(RootErrors::Unauthorized);
     }
 
-    // Admins and uploaders can both update this page.
-    if !super::user_is_admin(&user)
-        || user
-            .as_ref()
-            .is_some_and(|user| user.user_type == UserType::Uploader)
+    // Anyone who can post art can help
+    if !user.as_ref().is_some_and(|user| user.user_type.permissions().can_post_art)
     {
         return Err(RootErrors::Forbidden);
     }
