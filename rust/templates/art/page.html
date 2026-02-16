@@ -2,30 +2,40 @@
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block customhead %}<script src="/static/js/art-page.js" ></script>{% endblock %}
+{% block customhead %}
+<script src="/static/js/art-page.js"></script>
+{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="{{ title }}">
+{% if let Some(first_image_url) = art_urls.get(0) %}
+<meta property="og:image" itemprop="image" content="{{ first_image_url }}">
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="art-page-v2">
 
     <div class="art-display">
-        {# Every art piece gets its respective display, and an invisible radio button, so we can have convenient art switching using the labels below. #}
+        {# Every art piece gets its respective display, and an invisible radio button, so we can have convenient art
+        switching using the labels below. #}
         {% for art_url in art_urls %}
-            <input type="radio" name="art" id="art-{{ loop.index }}" {% if loop.first %}checked{% endif %}/>
+        <input type="radio" name="art" id="art-{{ loop.index }}" {% if loop.first %}checked{% endif %} />
 
-            {% if url_is_of_video(art_url) %}{# Url is a video #} 
-                <video class="art-item" src="{{ art_url }}" controls autoplay></video>
-            {% else %} {# Url is an image or gif #}
-                <a class="art-item" href="{{ art_url }}"><img src="{{ art_url }}" /></a>
-            {% endif %}
+        {% if url_is_of_video(art_url) %}{# Url is a video #}
+        <video class="art-item" src="{{ art_url }}" controls autoplay></video>
+        {% else %} {# Url is an image or gif #}
+        <a class="art-item" href="{{ art_url }}"><img src="{{ art_url }}" /></a>
+        {% endif %}
         {% endfor %}
     </div>
-    
+
     {% if art_urls.len() > 1 -%}
-        <div class="controls">
-            {% for art_url in art_urls -%}
-                <label for="art-{{ loop.index }}"></label>
-            {% endfor -%}
-        </div>
+    <div class="controls">
+        {% for art_url in art_urls -%}
+        <label for="art-{{ loop.index }}"></label>
+        {% endfor -%}
+    </div>
     {%- endif -%}
 
     <div class="info-and-arrows">
@@ -41,13 +51,14 @@
         <div class="info">
             <p class="date">{{ formatted_creation_date }}</p>
             <h1>{{ title }}</h1>
-            <h2>By: 
+            <h2>By:
                 {{ artists | join(", ") }}
             </h2>
-            {% if let Some(description) = description -%}<div class="content">{{ description | safe }}</div>{%- endif -%}
+            {% if let Some(description) = description -%}<div class="content">{{ description | safe }}</div>{%- endif
+            -%}
             <div class="tags">
                 {%- for tag in tags -%}
-                    <a class="tag" href="/art?tags={{ tag }}">{{ tag }}</a>
+                <a class="tag" href="/art?tags={{ tag }}">{{ tag }}</a>
                 {%- endfor -%}
             </div>
         </div>
@@ -62,45 +73,46 @@
         {% endif %}
     </div>
 
-    <div class="upload-data"> 
+    <div class="upload-data">
         {% if user_can_edit_page %}
-            {% let current_path = original_uri.path() %}
+        {% let current_path = original_uri.path() %}
 
-            <a href="{{current_path}}/edit">Edit Page</a>
+        <a href="{{current_path}}/edit">Edit Page</a>
         {% endif %}
     </div>
 
     <div class="comments">
         {% if let Some(user) = user %}
-            <div class="comment">
-                <img class="profile-pic" src="{{user.get_pfp_url()}}" />
-                <textarea class="text" id="commentArea" placeholder="Post a comment..." autocomplete="off"></textarea>
-                <button class="post" onclick="postComment()">Post</button>
-            </div>
+        <div class="comment">
+            <img class="profile-pic" src="{{user.get_pfp_url()}}" />
+            <textarea class="text" id="commentArea" placeholder="Post a comment..." autocomplete="off"></textarea>
+            <button class="post" onclick="postComment()">Post</button>
+        </div>
         {% endif %}
         {% for comment in comments %}
-            <div class="comment">
-                {% if let Some(posting_user) = comment.posting_user %}
-                <a href="{{posting_user.get_user_page_url()}}">
-                    <img class="profile-pic" src="{{posting_user.get_pfp_url()}}" />
-                </a>
-                <div class="text">
-                    <div class="titles">
-                        <b>{{posting_user.display_name}}</b>
-                {% else %}
-                <div class="text">
-                    <div class="titles">
-                        <b>[deleted user]</b>
-                {% endif %}
-                        <span class="date">{{ comment.posting_time.date_naive().format("%Y-%m-%d").to_string()}}</span>
-                    </div>
-                    <div>
-                        {{ comment.contents | safe }}
+        <div class="comment">
+            {% if let Some(posting_user) = comment.posting_user %}
+            <a href="{{posting_user.get_user_page_url()}}">
+                <img class="profile-pic" src="{{posting_user.get_pfp_url()}}" />
+            </a>
+            <div class="text">
+                <div class="titles">
+                    <b>{{posting_user.display_name}}</b>
+                    {% else %}
+                    <div class="text">
+                        <div class="titles">
+                            <b>[deleted user]</b>
+                            {% endif %}
+                            <span class="date">{{
+                                comment.posting_time.date_naive().format("%Y-%m-%d").to_string()}}</span>
+                        </div>
+                        <div>
+                            {{ comment.contents | safe }}
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-        {% endfor %}
-    </div>
-</div>
+        </div>
 
-{% endblock %}
+        {% endblock %}

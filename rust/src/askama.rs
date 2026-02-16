@@ -7,4 +7,5 @@ pub const NAVBAR_URLS: [(&str, &str); 2] = [("Art", "/art"), ("Characters", "/ch
 
 lazy_static! {
     pub static ref DEBUG_ENABLED: bool = env::var("DEBUG").is_ok();
+    pub static ref WEBSITE_URL: String = env::var("WEBSITE_URL").unwrap();
 }

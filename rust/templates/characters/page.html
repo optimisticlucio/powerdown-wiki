@@ -3,28 +3,49 @@
 {% block title %}{{ name }}{% endblock %}
 
 {% block customhead %}
-    {% if let Some(overlay_css) = character.overlay_css %}
-        <style>.overlay::before { {{ overlay_css }} }</style>
-    {% endif %}
-    {% if let Some(custom_css) = character.custom_css %}
-        <style>{{ custom_css }}</style>
-    {% endif %}
+{% if let Some(overlay_css) = character.overlay_css %}
+<style>
+    .overlay::before {
+            {
+                {
+                overlay_css
+            }
+        }
+    }
+</style>
+{% endif %}
+{% if let Some(custom_css) = character.custom_css %}
+<style>
+    {
+            {
+            custom_css
+        }
+    }
+</style>
+{% endif %}
 {% endblock%}
+
+{% block meta %}
+<meta property="og:title" content="{{ name }}">
+<meta property="og:image" itemprop="image"
+    content="{{ crate::utils::get_s3_public_object_url(character.base_character.thumbnail_key) }}">
+<meta property="og:description" content="{{ subtitle }}">
+{% endblock %}
 
 {% block body %}
 <div class="overlay">
     {% include "components/navbar.html" %}
     <div class="wrapper dark character-div">
         {% if let Some(retirement_reason) = retirement_reason %}
-            <div class="exclusion-reason">
-                <img src="/static/img/alert.png">
-                <div class="exclusion-text">
-                    <div class="exclusion-title">
-                        THIS CHARACTER IS NOT ACTIVELY IN POWER DOWN
-                    </div>
-                    {{ retirement_reason | safe }}
+        <div class="exclusion-reason">
+            <img src="/static/img/alert.png">
+            <div class="exclusion-text">
+                <div class="exclusion-title">
+                    THIS CHARACTER IS NOT ACTIVELY IN POWER DOWN
                 </div>
+                {{ retirement_reason | safe }}
             </div>
+        </div>
         {% endif %}
         <div class="character-top">
             <div class="left">
@@ -32,19 +53,19 @@
                     <div>
                         <h1>{{ name }}</h1>
                         {% if let Some(logo_path) = character.logo_url %}
-                            <img src="{{ crate::utils::get_s3_public_object_url(logo_path) }}">
+                        <img src="{{ crate::utils::get_s3_public_object_url(logo_path) }}">
                         {% endif %}
                     </div>
                     <h2 id="character-subtitle">{{ subtitle }}</h2>
                     <p class="text">
                         {% for item in character.infobox %}
-                            <strong>{{item.title}}:</strong> {{item.description}} <br>
+                        <strong>{{item.title}}:</strong> {{item.description}} <br>
                         {% endfor %}
                     </p>
                     {% if let Some(tag) = character.tag %}
-                        <a class="text" href="/art?tags={{ tag }}">
-                            ART OF {{ name }}
-                        </a>
+                    <a class="text" href="/art?tags={{ tag }}">
+                        ART OF {{ name }}
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -57,19 +78,19 @@
         </div>
 
         {% if let Some(page_content) = content %}
-            <div class="character-bottom">
-                    {{ page_content | safe }} 
-            </div>
+        <div class="character-bottom">
+            {{ page_content | safe }}
+        </div>
         {% endif %}
-    {% if let Some(user) = user %}
+        {% if let Some(user) = user %}
         {% if character.can_be_modified_by(user)%}
         <div class="buttons">
             {% let current_path = original_uri.path() %}
             <a href="{{current_path}}/edit"><button class="white">Edit Page</button></a>
         </div>
         {% endif %}
-    {% endif %}
+        {% endif %}
     </div>
-    
+
 </div>
 {% endblock %}

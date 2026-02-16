@@ -1,28 +1,35 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        {% block head %}
-            <title>{% block title %}Default Title{% endblock %}</title>
-            <meta charset="utf-8">
-            <link rel="stylesheet" href="/static/css/index.css">
-            <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-            <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-            {% block customhead %}{% endblock %}
-        {% endblock %}
-    </head> 
-    <body>
-        {% block body %}
-            {% include "components/navbar.html" %}
-            {% block content %} 
-            <p>Whoops! Someone forgot to fill in the Content Block!</p>
-            {% endblock %}
-            {% if *crate::askama::DEBUG_ENABLED %}
-                <div style="clear:both; height:1.5em;">
-                </div>
-                <div class="footer debug">
-                    THIS IS A TEST SITE! IT WILL REGULARLY RESET!
-                </div>
-            {% endif %}
-        {% endblock %}
-    </body>
+
+<head>
+    {% block head %}
+    <title>{% block title %}Default Title{% endblock %}</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    {% block customhead %}{% endblock %}
+    <meta property="og:site_name" content="Power Down Wiki">
+    <meta property="og:url" content="{{ *crate::askama::WEBSITE_URL }}">
+    <meta property="og:type" content="website">
+    {% block meta %}{% endblock %}
+    {% endblock %}
+</head>
+
+<body>
+    {% block body %}
+    {% include "components/navbar.html" %}
+    {% block content %}
+    <p>Whoops! Someone forgot to fill in the Content Block!</p>
+    {% endblock %}
+    {% if *crate::askama::DEBUG_ENABLED %}
+    <div style="clear:both; height:1.5em;">
+    </div>
+    <div class="footer debug">
+        THIS IS A TEST SITE! IT WILL REGULARLY RESET!
+    </div>
+    {% endif %}
+    {% endblock %}
+</body>
+
 </html>
