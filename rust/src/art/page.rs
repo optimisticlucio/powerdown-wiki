@@ -37,6 +37,9 @@ struct ArtPage<'a> {
 
     comments: Vec<super::structs::Comment>,
 
+    // The image shown in discord embeds.
+    embed_image_url: String,
+
     newer_art_url: Option<String>,
     older_art_url: Option<String>,
 }
@@ -99,6 +102,8 @@ pub async fn art_page(
             user,
             original_uri,
             user_search_params: &query_params,
+
+            embed_image_url: requested_art.base_art.get_thumbnail_url(),
 
             user_can_edit_page,
 

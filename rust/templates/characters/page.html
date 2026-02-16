@@ -5,22 +5,12 @@
 {% block customhead %}
 {% if let Some(overlay_css) = character.overlay_css %}
 <style>
-    .overlay::before {
-            {
-                {
-                overlay_css
-            }
-        }
-    }
+    .overlay::before { {{ overlay_css }} }
 </style>
 {% endif %}
 {% if let Some(custom_css) = character.custom_css %}
 <style>
-    {
-            {
-            custom_css
-        }
-    }
+{{ custom_css }}
 </style>
 {% endif %}
 {% endblock%}
