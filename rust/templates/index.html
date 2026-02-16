@@ -2,15 +2,20 @@
 
 {% block title %}Front Page{% endblock %}
 
-{% block content %}
+{% block meta %}
+<meta property="og:title" content="Power Down Wiki">
+<meta property="og:description"
+    content="The website for cataloging all information regarding the Power Down writing project.">
+{% endblock %}
 
+{% block content %}
 <div class="wrapper wide frontpage">
     <div class="frontpage-top">
         <div class="titles">
             <h1>The Power Down Wiki</h1>
             <h2>{{ random_quote }}</h2>
         </div>
-        
+
         <div class="logo">
             <img src="/static/img/pd_logo.svg">
         </div>
@@ -37,12 +42,12 @@
     <div class="frontpage-bottom">
         <div class="frontpage-buttons">
             {%- for button in buttons -%}
-                <a class="button" href="{{ button.url }}">
-                    <span>
-                        {{ button.name }}
-                    </span>
-                    <img src="{{ button.image_url }}">
-                </a>
+            <a class="button" href="{{ button.url }}">
+                <span>
+                    {{ button.name }}
+                </span>
+                <img src="{{ button.image_url }}">
+            </a>
             {%- endfor -%}
         </div>
 
@@ -53,7 +58,8 @@
             </div>
             {%- for character in birthday_characters -%}
             <div class="wrapper birthday">
-                <img class="character-icon" src="{{ crate::utils::get_s3_public_object_url(character.thumbnail_key) }}" />
+                <img class="character-icon"
+                    src="{{ crate::utils::get_s3_public_object_url(character.thumbnail_key) }}" />
                 {%- if loop.first -%}
                 <div>
                     <p>Today is {{ today_date }}!</p>
