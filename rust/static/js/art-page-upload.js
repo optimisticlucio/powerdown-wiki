@@ -41,6 +41,7 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
   const inputsToCheck = Array.from(document.querySelectorAll(".upload input"));
   if (inputsToCheck.some((inputItem) => !inputItem.checkValidity())) {
     updateErrorText(`<b>ERROR:</b> Some of the values are either not set or invalid. Fix all the sections that are highlighted in red!`);
+    return;
   }
 
   // Now, let's collect all of our data.
@@ -57,6 +58,7 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
   // Most values are checked by the server, but thumbnail is not checked before being sent to s3. So let's make sure it's set.
   if (!thumbnailObject) {
     updateErrorText(`<b>ERROR:</b> Thumbnail wasn't selected.`);
+    return;
   }
 
   // Now add optional values
@@ -72,7 +74,11 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
     postInfo.tags = tags;
   }
 
-  // TODO: Check for valid calendar date and throw error if invalid bc server returns a weird serde if that's missing.
+  // Make sure that we got a date.
+  if (!postInfo.creation_date) {
+    updateErrorText(`<b>ERROR:</b> Did not set creation date.`);
+    return;
+  }
 
   // We have all of our data, sexcellent.
   // Posting needs to be done in two phases - we ask for S3 presigned URLs to upload our images to,

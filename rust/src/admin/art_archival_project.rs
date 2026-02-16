@@ -126,7 +126,7 @@ impl DiscordProgressPin {
             if months_of_difference == 1 {
                 human_readable_difference.push('.');
             } else {
-                let years_of_difference = months_of_difference / 12;
+                let years_of_difference = days_of_difference / 365;
                 let s_if_multiple_years = if years_of_difference > 1 { "s" } else { "" };
 
                 human_readable_difference.push_str(&format!(
