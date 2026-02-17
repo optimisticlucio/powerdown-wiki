@@ -701,9 +701,9 @@ fn validate_recieved_page_art(recieved_page_art: &PageArt) -> Result<(), String>
     }
 
     if recieved_page_art
-        .art_keys
+        .tags
         .iter()
-        .any(|tag| utils::is_valid_tag(tag))
+        .any(|tag| !utils::is_valid_tag(tag))
     {
         return Err("Tags secton contain an invalid tag. Tags must be lowercase letters, numbers, and may include hyphens and underscores in the middle.".to_owned());
     }
