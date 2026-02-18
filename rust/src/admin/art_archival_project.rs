@@ -130,7 +130,7 @@ impl DiscordProgressPin {
                 let s_if_multiple_years = if years_of_difference > 1 { "s" } else { "" };
 
                 human_readable_difference.push_str(&format!(
-                    ", or <b>about {years_of_difference} year{s_if_multiple_years}</b>."
+                    ", or <b>over {years_of_difference} year{s_if_multiple_years}</b>."
                 ));
             }
         }

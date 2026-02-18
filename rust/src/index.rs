@@ -37,11 +37,12 @@ lazy_static! {
             url: "/characters",
             image_url: "/static/img/frontpage/characters.png"
         },
+        /*
         FrontpageItem {
             name: "Stories",
             url: "/stories",
             image_url: "/static/img/frontpage/stories.jpg"
-        }
+        },*/
     ];
 }
 
