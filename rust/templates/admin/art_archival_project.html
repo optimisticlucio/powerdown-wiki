@@ -44,7 +44,9 @@
     <h3>SFW Art Progress</h3>
     <div class="text">
         <p>
-            Going forwards, we are currently at <a href="{{ old_sfw_pin.get_clickable_discord_url() }}">{{ old_sfw_pin.get_readable_date() }}</a>. <em>Note that we didn't use to have a separation between NSFW and SFW art. Beware tits!</em>
+            Going forwards, we are currently at <a href="{{ old_sfw_pin.get_clickable_discord_url() }}">{{ old_sfw_pin.get_readable_date() }}</a>. 
+            (If the previous link doesn't work, <a href="{{old_sfw_pin.link}}">click here</a>.)
+            <br/><em>Note that we didn't use to have a separation between NSFW and SFW art. Beware tits!</em>
         </p>
 
         <br />
@@ -63,6 +65,7 @@
 
         <p>
             Going backwards, we are currently at <a href="{{ new_sfw_pin.get_clickable_discord_url() }}">{{ new_sfw_pin.get_readable_date() }}</a>.
+            (If the previous link doesn't work, <a href="{{new_sfw_pin.link}}">click here</a>.)
         </p>
 
         <br />
@@ -111,6 +114,7 @@
 
         <p>
             Going forwards, we are currently at <a href="{{ old_nsfw_pin.get_clickable_discord_url() }}">{{ old_nsfw_pin.get_readable_date() }}</a>.
+            (If the previous link doesn't work, <a href="{{old_nsfw_pin.link}}">click here</a>.)
         </p>
 
         <br />
@@ -128,6 +132,7 @@
 
         <p>
             Going backwards, we are currently at <a href="{{ new_nsfw_pin.get_clickable_discord_url() }}">{{ new_nsfw_pin.get_readable_date() }}</a>.
+            (If the previous link doesn't work, <a href="{{new_nsfw_pin.link}}">click here</a>.)
         </p>
         <br />
 
