@@ -173,7 +173,7 @@ pub struct UpdatePinRequest {
 pub async fn update_archival_progress(
     State(state): State<ServerState>,
     cookie_jar: tower_cookies::Cookies,
-    Json(updated_pin): Json<UpdatePinRequest>,
+    Json(mut updated_pin): Json<UpdatePinRequest>,
 ) -> Result<Response, RootErrors> {
     let db_connection = state
         .db_pool
@@ -193,7 +193,20 @@ pub async fn update_archival_progress(
         }
     };
 
-    // If it passed axum's JSON reader, I am going to assume it's valid info. If not, well, shit.
+    // Convert discordapp to discord, so we have consistent link naming.
+    updated_pin.pin_data.link = updated_pin
+        .pin_data
+        .link
+        .replace("https://discordapp", "https://discord");
+
+    // Make sure we got a proper discord link.
+    if !updated_pin.pin_data.link.starts_with("https://discord") {
+        return Err(RootErrors::BadRequest(
+            "Passed invalid discord message link".to_string(),
+        ));
+    }
+
+    // If it passed axum's JSON reader, I am going to assume the item_key is valid. If not, well, shit.
     const PROGRESS_PINS_UPDATE_QUERY: &str =
         "UPDATE arbitrary_value SET item_value=$1 WHERE item_key=$2;";
 
