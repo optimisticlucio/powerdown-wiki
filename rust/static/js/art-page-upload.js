@@ -183,7 +183,7 @@ async function attemptNewArtUpload(targetUrl = window.location.pathname) {
 
   console.log(`SENDING: ${JSON.stringify(finalMessageToSend)}`);
 
-  updateErrorText(`Uploading art metadata...`);
+  updateErrorText(`Processing art metadata...`);
 
   // Now that it's all on S3, send the final result!
   const finalUploadRequest = await fetch(targetUrl, finalMessageToSend);
