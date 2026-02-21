@@ -346,6 +346,19 @@ impl UserSession {
 
         cookie
     }
+
+    /// Removes the given user session from the database. Will log out any user using this session.
+    pub async fn delete_from_db(
+        self,
+        db_connection: &Object<Manager>,
+    ) -> Result<(), tokio_postgres::Error> {
+        const DELETE_QUERY: &str = "DELETE FROM user_session WHERE session_id=$1";
+
+        db_connection
+            .execute(DELETE_QUERY, &[&self.session_id])
+            .await
+            .map(|_| ())
+    }
 }
 
 impl OAuth2Association {

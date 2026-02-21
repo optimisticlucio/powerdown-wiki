@@ -1,4 +1,5 @@
 use crate::{
+    user::structs::UserSession,
     utils::{self, template_to_response},
     RootErrors, ServerState,
 };
@@ -11,7 +12,7 @@ use axum::{
 };
 use axum_extra::routing::RouterExt;
 use http::Uri;
-use tower_cookies::Cookies;
+use tower_cookies::{Cookie, Cookies};
 
 mod oauth;
 mod patch;
@@ -28,6 +29,7 @@ pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(self_user_page))
         .route_with_tsr("/login", get(login_page))
+        .route_with_tsr("/logout", get(log_out))
         .nest("/oauth2", oauth::router())
         .route_with_tsr("/{user_id}", get(other_user_page).patch(patch::patch_user))
         .route_with_tsr("/{user_id}/modify", get(patch::modify_user_page))
@@ -114,4 +116,41 @@ struct LoginTemplate<'a> {
     discord_oauth_url: &'a str,
     google_oauth_url: &'a str,
     github_oauth_url: &'a str,
+}
+
+/// Logs out the currently logged-in user.
+pub async fn log_out(
+    State(state): State<ServerState>,
+    cookie_jar: Cookies,
+) -> Result<Response, RootErrors> {
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_err| RootErrors::InternalServerError)?;
+
+    // Is there a log-in cookie?
+    let user_session_id = match cookie_jar.get("USER_SESSION_ID") {
+        Some(user_session_cookie) => user_session_cookie.value().to_string(),
+        None => return Err(RootErrors::Unauthorized),
+    };
+
+    // Cool. Regardless of what happens now, we do not want the user to have their cookie anymore.
+    cookie_jar.remove(Cookie::new("USER_SESSION_ID", ""));
+
+    // If None is returned here, it means the session doesn't exist. We don't need to clean it up.
+    if let Some(user_session) = UserSession::get_by_id(&db_connection, &user_session_id).await {
+        // The session does exist, we're gonna need to clean it up.
+
+        let user_session_id = user_session.session_id.clone();
+        let user_id = user_session.user.id;
+        let user_display_name = user_session.user.display_name.clone();
+
+        user_session.delete_from_db(&db_connection).await.map_err(|err| {
+            eprintln!("[LOG OUT] Failed deleting user {user_display_name}'s (ID:{user_id}) user session (ID:{user_session_id}). ERR: {err:?}");
+            RootErrors::InternalServerError
+        })?;
+    }
+
+    Ok(Redirect::to("/").into_response())
 }

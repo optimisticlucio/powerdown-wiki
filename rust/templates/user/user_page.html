@@ -11,14 +11,15 @@
     <p>This is the page for the user: {{viewed_user.display_name}}. Their DB ID is {{viewed_user.id}}.</p>
 
     {% if let Some(logged_in_user) = user %}
-        <div class="buttons">
+    <div class="buttons">
         {% if &viewed_user == logged_in_user %}
+        <a href="/user/logout"><button class="light">Log Out</button></a>
         <a href="/user/login"><button class="dark">Add Other Login Methods</button></a>
         {% endif %}
         {% if viewed_user.can_have_visible_data_modified_by(logged_in_user) %}
         <a href="{{ original_uri.path() }}/modify"><button class="white">Modify User's Data</button></a>
         {% endif %}
-        </div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
