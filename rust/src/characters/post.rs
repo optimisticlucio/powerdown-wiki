@@ -670,6 +670,16 @@ fn validate_recieved_page_character(recieved_page_character: &PageCharacter) -> 
         );
     }
 
+    if recieved_page_character
+        .page_contents
+        .as_ref()
+        .is_some_and(|contents| !contents.starts_with("#"))
+    {
+        return Err(
+            "Missing Starting Title. The first line of the character description should be a title that starts with a pound sign, like \"# Bio\" or \"# Backstory\".".to_string()
+        );
+    }
+
     Ok(())
 }
 
@@ -704,17 +714,23 @@ fn sanitize_recieved_page_character(
         .collect();
 
     // Make sure none of the Options have empty values in them.
+    recieved_page_character.page_contents = recieved_page_character
+        .page_contents
+        .as_deref()
+        .map(|s| s.trim().to_string())
+        .filter(|page_contents| !page_contents.is_empty());
+
     recieved_page_character.custom_css = recieved_page_character
         .custom_css
         .as_deref()
-        .filter(|custom_css| !custom_css.is_empty())
-        .map(|s| s.trim().to_string());
+        .map(|s| s.trim().to_string())
+        .filter(|custom_css| !custom_css.is_empty());
 
     recieved_page_character.overlay_css = recieved_page_character
         .overlay_css
         .as_deref()
-        .filter(|overlay_css| !overlay_css.is_empty())
-        .map(|s| s.trim().to_string());
+        .map(|s| s.trim().to_string())
+        .filter(|overlay_css| !overlay_css.is_empty());
 
     // TODO - Sanitize CSS sections
 }
