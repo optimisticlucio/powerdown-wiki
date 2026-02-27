@@ -1,3 +1,4 @@
+use crate::art::get_all_artists;
 use crate::art::structs::{BaseArt, PageArt};
 use crate::user::{User, UsermadePost};
 use crate::utils::{self, template_to_response, PostingSteps};
@@ -321,6 +322,9 @@ pub struct ArtPostingPage {
 
     /// The URL to which our upload button will be talking to. If empty, messages the current URI.
     pub target_button_url: Option<String>,
+
+    /// A list of individual artist names to give to the user.
+    pub all_artist_names: Vec<String>,
 }
 
 pub async fn art_posting_page(
@@ -328,12 +332,16 @@ pub async fn art_posting_page(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
+    let db_connection = state.db_pool.get().await.unwrap();
+
     Ok(template_to_response(ArtPostingPage {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        user: User::get_from_cookie_jar(&db_connection, &cookie_jar).await,
         original_uri,
 
         art_being_modified: None,
         target_button_url: None,
+
+        all_artist_names: get_all_artists(&db_connection).await,
     }))
 }
 

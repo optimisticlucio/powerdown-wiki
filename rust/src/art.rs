@@ -175,7 +175,7 @@ async fn art_index(
 
         show_upload_button,
 
-        all_tags: get_all_tags(state.db_pool.get().await.unwrap()).await,
+        all_tags: get_all_tags(&db_connection).await,
 
         art_pieces,
     }))
@@ -206,9 +206,26 @@ fn get_search_url(params: ArtSearchParameters) -> String {
 
 /// Returns all the unique tags in all art.
 // TODO: Should probably cache this. Not a frequently changing field, and even if it does, a short discrepancy is ok.
-pub async fn get_all_tags(db_connection: Object<Manager>) -> Vec<String> {
+pub async fn get_all_tags(db_connection: &Object<Manager>) -> Vec<String> {
     let answers = db_connection
         .query("SELECT DISTINCT unnest(tags) AS tags FROM art;", &[])
+        .await
+        .unwrap();
+
+    answers
+        .iter()
+        .map(|row| row.get(0))
+        .collect::<Vec<String>>()
+}
+
+/// Returns all the unique artists in all art.
+// TODO: Should probably cache this. Not a frequently changing field, and even if it does, a short discrepancy is ok.
+pub async fn get_all_artists(db_connection: &Object<Manager>) -> Vec<String> {
+    let answers = db_connection
+        .query(
+            "SELECT DISTINCT unnest(creators) AS creators FROM art;",
+            &[],
+        )
         .await
         .unwrap();
 
