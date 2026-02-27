@@ -60,8 +60,14 @@
     <br/>
 
     <label for="postArtists">Artists (If multiple, separate with commas!): </label>
-    <input type="text" id="postArtists" required minLength="1"
+    <input type="text" id="postArtists" required minLength="1" list="all-artists"
         {%- if let Some(page_art) = art_being_modified %} value="{{page_art.base_art.creators | join(", ")}}" {% endif %}/>
+
+    <datalist id="all-artists">
+        {%- for artist in all_artist_names -%}
+        <option value="{{ artist }}"/>
+        {%- endfor -%}
+    </datalist>
     <br/>
 
     <label for="postTags">Tags (If multiple, separate with commas!): </label>
