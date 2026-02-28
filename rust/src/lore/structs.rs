@@ -18,6 +18,8 @@ pub struct BaseLore {
 
     pub title: String,
     pub description: Option<String>,
+
+    pub slug: String,
 }
 
 #[derive(Debug)]
@@ -62,7 +64,8 @@ impl BaseLore {
         Self {
             id: row.get("id"),
             title: row.get("title"),
-            description: row.get("description")
+            description: row.get("description"),
+            slug: row.get("slug")
         }
     }
 }

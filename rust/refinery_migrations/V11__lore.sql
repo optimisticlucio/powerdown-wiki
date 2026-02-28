@@ -23,7 +23,9 @@ CREATE TABLE lore (
         REFERENCES lore_category(id)
         ON DELETE CASCADE, -- The category which this post belongs to.
 
-    title text NOT NULL CHECK (TRIM(text) != ''),
+    slug text NOT NULL UNIQUE CHECK (trim(slug) != ''),
+
+    title text NOT NULL CHECK (TRIM(title) != ''),
     description text CHECK (TRIM(description) != ''), -- Should be short
 
     content text NOT NULL CHECK (trim(content) != '')
