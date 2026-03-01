@@ -1,9 +1,12 @@
-use askama::Template;
-use axum::{extract::{OriginalUri, Path, State}, response::Response};
-use crate::{ServerState, RootErrors, User};
-use http::Uri;
-use super::structs::{PageLore};
+use super::structs::PageLore;
 use crate::utils::template_to_response;
+use crate::{RootErrors, ServerState, User};
+use askama::Template;
+use axum::{
+    extract::{OriginalUri, Path, State},
+    response::Response,
+};
+use http::Uri;
 
 #[derive(Debug, Template)]
 #[template(path = "lore/page.html")]
@@ -11,9 +14,9 @@ struct LorePage {
     user: Option<User>,
     original_uri: Uri,
 
-    page_lore: PageLore
+    page_lore: PageLore,
 }
- 
+
 #[axum::debug_handler]
 pub async fn lore_page(
     Path(lore_slug): Path<String>,
@@ -26,18 +29,20 @@ pub async fn lore_page(
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     let requested_lore = match PageLore::get_from_slug(&db_connection, &lore_slug).await {
-        None => return Err(RootErrors::NotFound(original_uri, cookie_jar, requesting_user)),
-        Some(page) => page
+        None => {
+            return Err(RootErrors::NotFound(
+                original_uri,
+                cookie_jar,
+                requesting_user,
+            ))
+        }
+        Some(page) => page,
     };
 
-    Ok(
-        template_to_response(
-            LorePage {
-                user: requesting_user,
-                original_uri,
+    Ok(template_to_response(LorePage {
+        user: requesting_user,
+        original_uri,
 
-                page_lore: requested_lore
-            }
-        )
-    )
+        page_lore: requested_lore,
+    }))
 }

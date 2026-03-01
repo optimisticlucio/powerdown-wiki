@@ -67,6 +67,8 @@ pub struct UserPermissions {
     pub can_ban_users: bool,
     /// Whether the given user type can modify content posted by other users, like stories or art.
     pub can_modify_others_content: bool,
+    /// Whether the given user type can upload, delete, and modify lore and lore categories.
+    pub can_modify_lore: bool,
 }
 
 #[derive(Debug)]
@@ -230,6 +232,7 @@ impl UserType {
                 can_promote_to_admin: false,
                 can_modify_users: false,
                 can_modify_others_content: false,
+                can_modify_lore: false,
             },
             Self::Uploader => UserPermissions {
                 can_post_art: true,
@@ -239,6 +242,7 @@ impl UserType {
                 can_promote_to_admin: false,
                 can_modify_users: false,
                 can_modify_others_content: false,
+                can_modify_lore: true,
             },
             Self::Admin => UserPermissions {
                 can_post_art: true,
@@ -248,6 +252,7 @@ impl UserType {
                 can_modify_users: true,
                 can_promote_to_admin: false,
                 can_modify_others_content: true,
+                can_modify_lore: true,
             },
             Self::Superadmin => UserPermissions {
                 can_post_art: true,
@@ -257,6 +262,7 @@ impl UserType {
                 can_modify_users: true,
                 can_promote_to_admin: true,
                 can_modify_others_content: true,
+                can_modify_lore: true,
             },
         }
     }

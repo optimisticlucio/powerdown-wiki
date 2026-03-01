@@ -1,10 +1,33 @@
 {% extends "base-template.html" %}
 
-{% block title %}Lore{% endblock %}
+{% block title %}{{ page_lore.base.title }}{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="{{ page_lore.base.title }}">
+{% if let Some(description) = page_lore.base.description %}
+<meta property="og:description" content="{{ description }}">
+{% endif %}
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
 
 {% block content %}
-<div class="wrapper wide dark">
-    TODO
+<div class="wrapper dark lore">
+
+    <a href="/lore">
+        <h2> &lt;- {{ page_lore.parent_category.title }} </h2>
+    </a>
+
+    <h1> {{ page_lore.base.title }}</h1>
+
+    {% if let Some(description) = page_lore.base.description %}
+    <div class="text description">
+        {{ description }}
+    </div>
+    {% endif %}
+
+    <div class="text">
+        {{ page_lore.content }}
+    </div>
 </div>
 {% endblock %}
