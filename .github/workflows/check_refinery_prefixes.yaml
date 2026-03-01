@@ -1,0 +1,47 @@
+name: Validate Migration Prefixes
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate-prefixes:
+    name: Check for duplicate version prefixes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate unique prefixes
+        env:
+          MIGRATIONS_DIR: "rust/refinery_migrations" # The folder holding the migrations
+        run: |
+          echo "Scanning '$MIGRATIONS_DIR' for duplicate version prefixes..."
+
+          # Find all files matching the V[x]__[name] pattern and extract their prefix (e.g. "V1")
+          duplicates=$(
+            find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name 'V*__*' \
+            | xargs -I{} basename {} \
+            | grep -oP '^V[^_]+' \
+            | sort \
+            | uniq -d
+          )
+
+          if [ -n "$duplicates" ]; then
+            echo "❌ Duplicate version prefixes found:"
+            echo ""
+            while IFS= read -r prefix; do
+              echo "  Prefix '$prefix' is used by:"
+              find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name "${prefix}__*" \
+                | xargs -I{} basename {} \
+                | sed 's/^/    - /'
+            done <<< "$duplicates"
+            echo ""
+            echo "Each version prefix (e.g. V1, V2) must be used by exactly one file."
+            exit 1
+          else
+            echo "✅ All version prefixes are unique."
+          fi
