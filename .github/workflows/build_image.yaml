@@ -3,12 +3,6 @@ name: Build Docker Image
 
 # Not like doing it on push costs me money.
 on:
-  pull_request:
-    paths:
-      - "rust/Cargo.toml"
-      - "rust/Cargo.lock"
-      - "rust/src/**"
-      - ".github/workflows/rust.yaml"
   push:
     branches:
       - main
