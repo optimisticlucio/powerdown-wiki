@@ -270,6 +270,10 @@ impl ArtSearchParameters {
             parameters.push(format!("tags={}", self.tags.join(",")));
         }
 
+        if let Some(artist_name) = &self.artist {
+            parameters.push(format!("artist={}", artist_name));
+        }
+
         // -- Return --
 
         if parameters.is_empty() {
