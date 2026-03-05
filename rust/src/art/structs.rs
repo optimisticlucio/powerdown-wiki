@@ -243,7 +243,7 @@ impl ArtSearchParameters {
 
         if let Some(artist_name) = &self.artist {
             params.push(artist_name);
-            query_conditions.push(format!("{} ILIKE ANY(artists)", params.len()))
+            query_conditions.push(format!("{} ILIKE ANY(creators)", params.len()))
         }
 
         // --- Return ---
