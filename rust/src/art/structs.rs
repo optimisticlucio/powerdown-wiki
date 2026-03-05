@@ -209,7 +209,9 @@ pub struct ArtSearchParameters {
 
     #[serde(default)]
     pub art_state: PostState,
-    // TODO: Handle Artist Name
+
+    #[serde(default)]
+    pub artist: Option<String>,
 }
 
 fn default_page_number() -> i64 {
@@ -237,6 +239,11 @@ impl ArtSearchParameters {
         if !self.tags.is_empty() {
             params.push(&self.tags);
             query_conditions.push(format!("tags @> ${}", params.len()));
+        }
+
+        if let Some(artist_name) = &self.artist {
+            params.push(artist_name);
+            query_conditions.push(format!("{} ILIKE ANY(artists)", params.len()))
         }
 
         // --- Return ---
@@ -290,6 +297,7 @@ impl Default for ArtSearchParameters {
             tags: Vec::new(),
             is_nsfw: false,
             art_state: PostState::Public,
+            artist: None,
         }
     }
 }
