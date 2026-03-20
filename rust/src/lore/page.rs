@@ -1,4 +1,5 @@
 use super::structs::PageLore;
+use crate::lore::structs::LoreCategory;
 use crate::utils::template_to_response;
 use crate::{RootErrors, ServerState, User};
 use askama::Template;
@@ -15,6 +16,7 @@ struct LorePage {
     original_uri: Uri,
 
     page_lore: PageLore,
+    parent_category: LoreCategory,
 }
 
 #[axum::debug_handler]
@@ -39,10 +41,13 @@ pub async fn lore_page(
         Some(page) => page,
     };
 
+    let parent_category = requested_lore.get_parent_category(&db_connection).await;
+
     Ok(template_to_response(LorePage {
         user: requesting_user,
         original_uri,
 
         page_lore: requested_lore,
+        parent_category,
     }))
 }

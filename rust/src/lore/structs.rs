@@ -31,7 +31,7 @@ pub struct PageLore {
     #[serde(flatten)]
     pub base: BaseLore,
 
-    pub parent_category: LoreCategory,
+    pub parent_category_id: i32,
 
     pub content: String,
 }
@@ -136,13 +136,10 @@ impl UsermadePost for BaseLore {
 
 impl PageLore {
     /// Converts a DB row with the relevant info to a LorePage struct.
-    async fn from_db_row(db_connection: &Object<Manager>, row: &Row) -> Self {
+    fn from_db_row(row: &Row) -> Self {
         Self {
             base: BaseLore::from_db_row(row),
-            // This unwrap is fine bc db enforces that "belongs_to" exists
-            parent_category: LoreCategory::get_by_id(db_connection, row.get("belongs_to"))
-                .await
-                .unwrap(),
+            parent_category_id: row.get("belongs_to"),
             content: row.get("content"),
         }
     }
@@ -154,7 +151,15 @@ impl PageLore {
             .await
             .ok()?;
 
-        Some(Self::from_db_row(db_connection, &requested_page).await)
+        Some(Self::from_db_row(&requested_page))
+    }
+
+    /// Returns the LoreCategory which owns the given PageLore
+    pub async fn get_parent_category(&self, db_connection: &Object<Manager>) -> LoreCategory {
+        // Unwrap is ok here because DB enforces parent_category_id exists.
+        LoreCategory::get_by_id(db_connection, self.parent_category_id)
+            .await
+            .unwrap()
     }
 }
 

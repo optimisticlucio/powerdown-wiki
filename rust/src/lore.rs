@@ -7,8 +7,8 @@ use axum::{response::Response, routing::get, Router};
 use axum_extra::routing::RouterExt;
 use http::Uri;
 
-mod modify;
 mod page;
+mod post;
 mod structs;
 
 pub fn router() -> Router<ServerState> {
