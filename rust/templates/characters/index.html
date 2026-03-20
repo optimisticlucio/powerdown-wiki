@@ -2,6 +2,14 @@
 
 {% block title %}Characters{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="Characters">
+<meta property="og:description"
+    content="A page listing all the various characters of Power Down, from the most recent to the most ancient.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block content %}
 <div class="wrapper wide character-selector">
     <h1>Characters</h1>

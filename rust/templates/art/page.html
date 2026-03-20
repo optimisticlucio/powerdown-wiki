@@ -51,8 +51,10 @@
         <div class="info">
             <p class="date">{{ formatted_creation_date }}</p>
             <h1>{{ title }}</h1>
-            <h2>By:
-                {{ artists | join(", ") }}
+            <h2>By: {% for artist in artists -%}
+                {%- if !loop.first %}, {% endif -%}{% if loop.last && loop.index > 1 %}and {% endif -%}
+                <a href="/art?artist={{ artist }}">{{ artist }}</a>
+                {%- endfor -%}
             </h2>
             {% if let Some(description) = description -%}<div class="content">{{ description | safe }}</div>{%- endif
             -%}

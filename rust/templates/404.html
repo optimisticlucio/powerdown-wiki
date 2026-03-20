@@ -2,6 +2,14 @@
 
 {% block title %}ERROR 404{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="ERROR 404">
+<meta property="og:description"
+    content="This link is dead. Don't click on it, you won't find no pots of gold here.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block content %}
 <div class="wrapper" style="text-align: center;">
         <h1>Huh? Wuh?</h1>

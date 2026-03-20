@@ -9,7 +9,7 @@
         </a>
         {% for link in crate::askama::NAVBAR_URLS %}
             {% if current_path.starts_with(link.1)%}
-                {% if current_path.len() == link.1.len()%}
+                {% if current_path.len() == link.1.len() && original_uri.query().is_none() %}
                     <p class="curr-item">{{ link.0 }}</p>
                 {% else %}
                     <a class="curr-item" href="{{ link.1 }}">{{ link.0 }}</a>

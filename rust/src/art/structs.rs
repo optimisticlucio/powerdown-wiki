@@ -209,7 +209,9 @@ pub struct ArtSearchParameters {
 
     #[serde(default)]
     pub art_state: PostState,
-    // TODO: Handle Artist Name
+
+    #[serde(default)]
+    pub artist: Option<String>,
 }
 
 fn default_page_number() -> i64 {
@@ -239,6 +241,11 @@ impl ArtSearchParameters {
             query_conditions.push(format!("tags @> ${}", params.len()));
         }
 
+        if let Some(artist_name) = &self.artist {
+            params.push(artist_name);
+            query_conditions.push(format!("${} ILIKE ANY(creators)", params.len()))
+        }
+
         // --- Return ---
         if query_conditions.is_empty() {
             String::new()
@@ -263,6 +270,10 @@ impl ArtSearchParameters {
             parameters.push(format!("tags={}", self.tags.join(",")));
         }
 
+        if let Some(artist_name) = &self.artist {
+            parameters.push(format!("artist={}", artist_name));
+        }
+
         // -- Return --
 
         if parameters.is_empty() {
@@ -281,6 +292,27 @@ impl ArtSearchParameters {
         }
         .to_uri_parameters(false)
     }
+
+    /// Returns a human-readable string describing the given search parameters.
+    pub fn to_human_readable(&self) -> String {
+        let mut human_readable_string = String::from("Art of the Power Down setting");
+
+        if self.is_nsfw {
+            human_readable_string = format!("NSFW {human_readable_string}");
+        }
+
+        if let Some(artist_name) = &self.artist {
+            human_readable_string.push_str(&format!(" by {artist_name}"));
+        }
+
+        if !self.tags.is_empty() {
+            human_readable_string.push_str(&format!(" tagged with {}", self.tags.iter().map(|tag| format!("\"{tag}\"")).collect::<Vec<_>>().join(", ")));
+        }
+
+        human_readable_string.push('.');
+
+        human_readable_string
+    }
 }
 
 impl Default for ArtSearchParameters {
@@ -290,6 +322,7 @@ impl Default for ArtSearchParameters {
             tags: Vec::new(),
             is_nsfw: false,
             art_state: PostState::Public,
+            artist: None,
         }
     }
 }

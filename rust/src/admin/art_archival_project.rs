@@ -123,7 +123,7 @@ impl DiscordProgressPin {
                 "Put otherwise, it's <b>about {months_of_difference} month{s_if_multiple_months}</b>"
             ));
 
-            if months_of_difference == 1 {
+            if months_of_difference <= 12 {
                 human_readable_difference.push('.');
             } else {
                 let years_of_difference = days_of_difference / 365;

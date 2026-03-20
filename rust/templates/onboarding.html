@@ -2,6 +2,14 @@
 
 {% block title %}Onboarding{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="Power Down Onboarding">
+<meta property="og:description"
+    content="Hey, you! If you got this link, you should click on it. Whoever gave it to you wants to add you to the Power Down project! It gives you an explanation of what Power Down is and how to join, so come check it out, we're cool, I promise.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block content %}
 <div class="wrapper onboarding">
     <div class="bubble">
