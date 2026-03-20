@@ -2,6 +2,14 @@
 
 {% block title %}Art{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="Art">
+<meta property="og:description"
+    content="{{ user_search_params.to_human_readable() }}">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block customhead %}<script src="/static/js/tag-search-box.js" defer></script>{% endblock %}
 
 {% block content %}

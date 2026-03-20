@@ -2,6 +2,14 @@
 
 {% block title %}TITS AHOY{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="PORNOGRAPHY (PROBABLY)">
+<meta property="og:description"
+    content="This page has been marked as being NSFW, and therefore is hidden until you confirm you're an adult on the site proper. Click this link if you wanna see what lies beneath.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block content %}
 <div class="wrapper wide nsfw-warning">
     <img src="/static/img/alert.png">
