@@ -6,7 +6,7 @@ CREATE TABLE lore_category (
     title text NOT NULL CHECK (TRIM(text) != ''),
     description text CHECK (TRIM(description) != ''), -- Should be short
 
-    order_position int NOT NULL -- The categories are listed in some order. This int orders them, and is zero indexed.
+    order_position int NOT NULL UNIQUE -- The categories are listed in some order. This int orders them, and is zero indexed.
 );
 
 CREATE TRIGGER lore_category_last_modified
