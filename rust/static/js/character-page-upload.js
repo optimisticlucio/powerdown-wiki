@@ -23,11 +23,6 @@ Object.keys(characterImageFiles).forEach((propertyName) => {
     containers[propertyName].appendChild(img);
 });
 
-/// Given text, puts it in the Error Text div.
-function updateErrorText(text) {
-    document.getElementById("errorDisplay").innerHTML = text;
-}
-
 // Ran when the user selects a new image file.
 function setImageFile(event, targetImageKey) {
     const file = event.target.files[0];

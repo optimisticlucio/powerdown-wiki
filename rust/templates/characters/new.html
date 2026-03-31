@@ -2,7 +2,8 @@
 
 {% block title %}{%- if let Some(page_character) = character_being_modified -%}Modify {{page_character.base_character.name}}{%else%}Create New Character{%endif%}{% endblock %}
 
-{% block customhead %}<script src="/static/js/character-page-upload.js" defer></script>{% endblock %}
+{% block customhead %}<script src="/static/js/character-page-upload.js" defer></script>
+<script src="/static/js/upload-page.js" defer></script>{% endblock %}
 
 {% block content %}
 <div class="wrapper upload" style="text-align: left">

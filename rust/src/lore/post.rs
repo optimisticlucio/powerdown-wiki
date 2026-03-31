@@ -40,6 +40,16 @@ pub async fn add_lore_page(
 
             validate_recieved_lore_page(&given_page_lore).map_err(RootErrors::BadRequest)?;
 
+            if PageLore::get_from_slug(&db_connection, &given_page_lore.base.slug)
+                .await
+                .is_some()
+            {
+                return Err(RootErrors::BadRequest(format!(
+                    "A lore page with the slug {} already exists.",
+                    given_page_lore.base.slug
+                )));
+            }
+
             // Now that everything is valid, toss into database
 
             let mut columns: Vec<String> = Vec::new();
@@ -206,6 +216,18 @@ fn sanitize_recieved_lore_category(recieved_lore_category: &mut LoreCategory) {
 }
 
 fn validate_recieved_lore_category(recieved_lore_category: &LoreCategory) -> Result<(), String> {
+    if recieved_lore_category.title.len() > 20 {
+        return Err("The title should be at most 20 characters long.".to_string());
+    }
+
+    if recieved_lore_category
+        .description
+        .as_ref()
+        .is_some_and(|desciption| desciption.len() > 256)
+    {
+        return Err("Don't write the bible in the description! 256 character max length.".into());
+    }
+
     // TODO
 
     Ok(())

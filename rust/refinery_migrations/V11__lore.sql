@@ -3,7 +3,7 @@ CREATE TABLE lore_category (
 
     last_modified_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Updates whenever this row is modified, see `update_last_modified_date()`.
 
-    title text NOT NULL CHECK (TRIM(text) != ''),
+    title text NOT NULL CHECK (TRIM(title) != ''),
     description text CHECK (TRIM(description) != ''), -- Should be short
 
     order_position int NOT NULL UNIQUE -- The categories are listed in some order. This int orders them, and is zero indexed.

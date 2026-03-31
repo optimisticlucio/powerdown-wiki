@@ -1,5 +1,6 @@
 use super::structs::PageLore;
 use crate::lore::structs::LoreCategory;
+use crate::user::UsermadePost;
 use crate::utils::template_to_response;
 use crate::{RootErrors, ServerState, User};
 use askama::Template;

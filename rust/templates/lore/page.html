@@ -29,5 +29,11 @@
     <div class="text">
         {{ page_lore.content }}
     </div>
+
+    {% if page_lore.can_optionally_be_modified_by(&user) %}
+    <div class="uploaderBar">
+        <a href="/lore/{{page_lore.base.slug}}/edit"><button class="light">Edit Page</button></a>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

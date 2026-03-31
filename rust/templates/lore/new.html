@@ -1,0 +1,12 @@
+{% extends "base-template.html" %}
+
+{% block title %}{%- if let Some(lore_page) = lore_being_modified -%}Modify {{lore_page.base.title}}{%else%}Create New
+Lore{%endif%}{% endblock %}
+
+{% block customhead %}
+<script src="/static/js/lore-page-upload.js" defer></script>
+<script src="/static/js/upload-page.js" defer></script>{% endblock %}
+
+{% block content %}
+
+{% endblock %}
