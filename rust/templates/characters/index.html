@@ -16,7 +16,7 @@
     <h2>{{ random_subtitle }}</h2>
 
     {% if birthday_characters.len() > 0 %}
-    <div class="wrapper dark birthday">
+    <div class="wrapper dark birthday" style="gap:1em">
         {% for character in birthday_characters %}
         <img src="{{crate::utils::get_s3_public_object_url(character.thumbnail_key)}}">
         {% endfor %}
