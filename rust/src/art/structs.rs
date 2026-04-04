@@ -306,7 +306,14 @@ impl ArtSearchParameters {
         }
 
         if !self.tags.is_empty() {
-            human_readable_string.push_str(&format!(" tagged with {}", self.tags.iter().map(|tag| format!("\"{tag}\"")).collect::<Vec<_>>().join(", ")));
+            human_readable_string.push_str(&format!(
+                " tagged with {}",
+                self.tags
+                    .iter()
+                    .map(|tag| format!("\"{tag}\""))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
         }
 
         human_readable_string.push('.');
