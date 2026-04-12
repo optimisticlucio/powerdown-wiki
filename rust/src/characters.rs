@@ -12,6 +12,7 @@ use http::Uri;
 mod edit;
 mod page;
 mod post;
+mod random;
 pub mod structs;
 
 pub use structs::BaseCharacter;
@@ -23,6 +24,7 @@ pub fn router() -> Router<ServerState> {
             "/new",
             post(post::add_character).get(post::character_posting_page),
         )
+        .route_with_tsr("/random", get(random::random_character_redirect))
         .layer(DefaultBodyLimit::max(10 * 1000 * 1000)) // 10MB Post Limit
         .route_with_tsr(
             "/{character_slug}",

@@ -19,12 +19,14 @@ mod comment;
 mod edit;
 mod page;
 mod post;
+mod random;
 mod structs;
 
 pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(art_index))
         .route_with_tsr("/new", post(post::add_art).get(post::art_posting_page))
+        .route_with_tsr("/random", get(random::random_art_redirect))
         .layer(DefaultBodyLimit::max(50 * 1000 * 1000)) // Upload limit of 50MB
         .route_with_tsr(
             "/{art_slug}",
