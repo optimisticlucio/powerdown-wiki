@@ -35,3 +35,7 @@ CREATE TRIGGER lore_last_modified
 BEFORE UPDATE ON lore
 FOR EACH ROW
 EXECUTE FUNCTION update_last_modified_date();
+
+ALTER TABLE lore
+  ADD CONSTRAINT lore_page_slug_reserved_slugs
+  CHECK (page_slug NOT IN ('', 'new', 'random', 'add', 'update', 'null'));
