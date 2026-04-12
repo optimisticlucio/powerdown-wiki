@@ -72,7 +72,7 @@ impl BaseCharacter {
     }
 
     /// Gets BaseCharacter for all characters in the database.
-    pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
+    pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<Self> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(
@@ -86,13 +86,26 @@ impl BaseCharacter {
     }
 
     /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
-    pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<BaseCharacter> {
+    pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<Self> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
             "SELECT * FROM character WHERE post_state='public' AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()
+    }
+
+    /// Gets a random character from the database.
+    pub async fn get_random_character(db_connection: &Object<Manager>) -> Self {
+        let character_row = db_connection
+            .query_one(
+                "SELECT * FROM character WHERE post_state='public' ORDER BY RANDOM() LIMIT 1",
+                &[],
+            )
+            .await
+            .unwrap();
+
+        Self::from_db_row(&character_row)
     }
 
     /// Converts a DB row with the relevant info to a BaseCharacter struct.

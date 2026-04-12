@@ -50,6 +50,18 @@ impl BaseArt {
         Some(Self::from_db_row(&requested_art))
     }
 
+    pub async fn get_random_art(db_connection: &Object<Manager>) -> Self {
+        let random_art = db_connection
+            .query_one(
+                "SELECT * FROM art WHERE post_state='public' ORDER BY RANDOM() LIMIT 1",
+                &[],
+            )
+            .await
+            .unwrap();
+
+        Self::from_db_row(&random_art)
+    }
+
     /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
     pub async fn get_art_from_index(
         db_connection: &Object<Manager>,
