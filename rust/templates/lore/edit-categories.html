@@ -1,0 +1,37 @@
+{% extends "base-template.html" %}
+
+{% block title %}Edit Lore Categories{% endblock %}
+
+{% block customhead %}
+<script src="/static/js/lore-upload.js"></script>
+<script src="/static/js/upload-pages.js"></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper dark lore edit">
+    <h1>Edit Lore Categories</h1>
+
+    <div id="errorDisplay"></div>
+
+    <div class="categories">
+    </div>
+    <script>
+        const serverGivenCategories = [
+            {% for lore_category in sorted_lore_categories %}
+        {
+            name: "{{lore_category.title}}",
+                id: "{{lore_category.id}}",
+                    {% if let Some(category_description) = lore_category.description %}
+        description: "{{category_description}}"
+        {% endif %}
+            },
+        {% endfor %}
+        ];
+
+        generateGivenCategories(serverGivenCategories);
+    </script>
+
+    <button class="dark" onclick="createNewCategory()">Add New Category</button>
+
+    <button class="light" onclick="uploadLoreCategories()">Update Categories</button>
+</div>
+{% endblock %}

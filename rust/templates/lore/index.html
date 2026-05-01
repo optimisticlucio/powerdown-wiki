@@ -10,13 +10,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="wrapper dark">
+<div class="wrapper dark lore">
     <h1>Lore</h1>
 
     <h2>Wow, you actually come here to read?</h2>
 
     {% for (lore_category, list_of_bases) in lore_categories_with_pages %}
-    <details class="loreSelector">
+    <details class="category">
         <summary>
             {{ lore_category.title }}
         </summary>

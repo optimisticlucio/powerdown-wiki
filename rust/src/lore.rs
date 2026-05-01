@@ -1,3 +1,4 @@
+use crate::lore::post::edit_lore_categories;
 use crate::lore::structs::BaseLore;
 use crate::utils::template_to_response;
 use crate::{lore::structs::LoreCategory, RootErrors, ServerState, User};
@@ -11,6 +12,7 @@ use axum::{
 use axum_extra::routing::RouterExt;
 use http::Uri;
 
+mod edit;
 mod page;
 mod post;
 mod structs;
@@ -19,7 +21,10 @@ pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(index))
         .route_with_tsr("/new", post(post::add_lore_page))
-        .route_with_tsr("/newCategory", post(post::add_lore_category))
+        .route_with_tsr(
+            "/edit",
+            get(edit::edit_categories).post(edit_lore_categories),
+        )
         .route_with_tsr("/{lore_slug}", get(page::lore_page))
 }
 

@@ -38,4 +38,4 @@ EXECUTE FUNCTION update_last_modified_date();
 
 ALTER TABLE lore
   ADD CONSTRAINT lore_page_slug_reserved_slugs
-  CHECK (page_slug NOT IN ('', 'new', 'random', 'add', 'update', 'null'));
+  CHECK (slug NOT IN ('', 'new', 'random', 'add', 'update', 'null', 'edit'));

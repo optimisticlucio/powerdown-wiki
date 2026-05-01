@@ -127,14 +127,14 @@ fn validate_recieved_lore_page(given_lore_page: &PageLore) -> Result<(), String>
     Ok(())
 }
 
-/// Post Request Handler for adding new lore categories.
+/// Post Request Handler for editing lore categories.
 #[axum::debug_handler]
-pub async fn add_lore_category(
+pub async fn edit_lore_categories(
     State(state): State<ServerState>,
     cookie_jar: tower_cookies::Cookies,
-    Json(posting_step): Json<PostingSteps<LoreCategory>>,
+    Json(mut lore_categories): Json<Vec<LoreCategory>>,
 ) -> Result<Response, RootErrors> {
-    let db_connection = state
+    let mut db_connection = state
         .db_pool
         .get()
         .await
@@ -150,60 +150,141 @@ pub async fn add_lore_category(
         return Err(RootErrors::Forbidden);
     }
 
-    match posting_step {
-        PostingSteps::RequestPresignedURLs { file_amount: _ } => {
-            // TODO: Allow uploading stuff like category-specific images and thumbnails
-            Err(RootErrors::BadRequest(
-                "You can't upload files to lore sections, getthefuckouttahere.".into(),
-            ))
-        }
-        PostingSteps::UploadMetadata(mut given_lore_category) => {
-            sanitize_recieved_lore_category(&mut given_lore_category);
+    let existing_categories = LoreCategory::get_all_categories(&db_connection).await;
 
-            validate_recieved_lore_category(&given_lore_category)
-                .map_err(RootErrors::BadRequest)?;
+    // Let's build one big transaction so we don't have a bunch of inbetween moments.
+    let sql_transaction = db_connection.transaction().await.map_err(|err| {
+        eprintln!("[EDIT LORE CATEGORIES] Errored trying to create an SQL Transaction! {err:?}");
+        RootErrors::InternalServerError
+    })?;
 
-            // Now that everything is valid, toss into database
+    // Firstly let's sanitize and validate everything the user passed us.
 
-            let mut columns: Vec<String> = Vec::new();
-            let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+    for category in &mut lore_categories {
+        sanitize_recieved_lore_category(category);
 
-            columns.push("title".into());
-            values.push(&given_lore_category.title);
-
-            columns.push("description".into());
-            values.push(&given_lore_category.description);
-
-            columns.push("order_position".into());
-            values.push(&given_lore_category.order_position);
-
-            // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
-            let query = format!(
-                "INSERT INTO lore_category ({}) VALUES ({}) RETURNING id;",
-                columns.join(","),
-                (1..values.len() + 1)
-                    .map(|i| format!("${i}"))
-                    .collect::<Vec<_>>()
-                    .join(",")
-            );
-
-            let db_id: i32 = db_connection
-                .query_one(&query, &values)
-                .await
-                .map_err(|err| {
-                    eprintln!("[LORE CATEGORY UPLOAD] Executing SQL insert failed! {err:?}");
-                    RootErrors::InternalServerError
-                })?
-                .get(0);
-
-            println!(
-                "[LORE CATEGORY UPLOAD] User {} (ID:{}) uploaded lore category {} (ID:{})",
-                requesting_user.display_name, requesting_user.id, given_lore_category.title, db_id,
-            );
-
-            Ok(Redirect::to("/lore").into_response())
-        }
+        validate_recieved_lore_category(category).map_err(RootErrors::BadRequest)?;
     }
+
+    // TODO: Validate the given order positions make sense. No duplicates and the like.
+
+    // Let's see if any of these are new, and add them to the db. As only positive id values are DB Generated, look for any nonpositive ones.
+    let (new_categories, modified_categories): (Vec<_>, Vec<_>) = lore_categories
+        .into_iter()
+        .partition(|category| category.id <= 0);
+
+    for modified_category in modified_categories {
+        // Check if anything changed. If so, toss a transaction on the pile.
+
+        let mut columns: Vec<String> = Vec::new();
+        let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+        let Some(existing_category) = existing_categories
+            .iter()
+            .find(|category| category.id == modified_category.id)
+        else {
+            return Err(RootErrors::BadRequest(format!(
+                "Sent category named \"{}\" has nonexistent ID - {}",
+                modified_category.title, modified_category.id
+            )));
+        };
+
+        if existing_category.title != modified_category.title {
+            columns.push("title".into());
+            values.push(&modified_category.title);
+        }
+
+        if existing_category.description != modified_category.description {
+            columns.push("description".into());
+            values.push(&modified_category.description);
+        }
+
+        if existing_category.order_position != modified_category.order_position {
+            columns.push("order_position".into());
+            values.push(&modified_category.order_position);
+        }
+
+        if columns.is_empty() {
+            continue;
+        }
+
+        values.push(&modified_category.id);
+
+        // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
+        let query = format!(
+            "UPDATE lore_category SET {} WHERE id=${};",
+            columns
+                .iter()
+                .enumerate()
+                .map(|(index, value)| format!("{}=${}", value, index + 1))
+                .collect::<Vec<_>>()
+                .join(","),
+            columns.len() + 1
+        );
+
+        sql_transaction
+            .execute(&query, &values)
+            .await
+            .map_err(|err| {
+                eprintln!("[EDIT LORE CATEGORIES] Adding SQL update query failed! {err:?}");
+                RootErrors::InternalServerError
+            })?;
+
+        println!(
+                "[EDIT LORE CATEGORIES] User {} (ID:{}) is attempting to edit lore category {}. Proceeding with transaction.",
+                requesting_user.display_name, requesting_user.id, existing_category.title,
+            );
+    }
+
+    for new_category in new_categories {
+        let mut columns: Vec<String> = Vec::new();
+        let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+        columns.push("title".into());
+        values.push(&new_category.title);
+
+        columns.push("description".into());
+        values.push(&new_category.description);
+
+        columns.push("order_position".into());
+        values.push(&new_category.order_position);
+
+        // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
+        let query = format!(
+            "INSERT INTO lore_category ({}) VALUES ({}) RETURNING id;",
+            columns.join(","),
+            (1..values.len() + 1)
+                .map(|i| format!("${i}"))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+
+        sql_transaction
+            .execute(&query, &values)
+            .await
+            .map_err(|err| {
+                eprintln!("[EDIT LORE CATEGORIES] Adding SQL insert query failed! {err:?}");
+                RootErrors::InternalServerError
+            })?;
+
+        println!(
+                "[EDIT LORE CATEGORIES] User {} (ID:{}) is attempting to upload lore category {}. Proceeding with transaction.",
+                requesting_user.display_name, requesting_user.id, new_category.title,
+            );
+    }
+
+    // Now run it all and pray for the best.
+    sql_transaction.commit().await.map_err(|err| {
+        eprintln!("[EDIT LORE CATEGORIES] Errored trying to run SQL Transaction! {err:?}");
+        RootErrors::InternalServerError
+    })?;
+
+    println!(
+        "[EDIT LORE CATEGORIES User {} (ID:{}) successfully modified lore categories.",
+        requesting_user.display_name, requesting_user.id
+    );
+
+    Ok(http::StatusCode::CREATED.into_response())
 }
 
 fn sanitize_recieved_lore_category(recieved_lore_category: &mut LoreCategory) {

@@ -1,0 +1,27 @@
+.wrapper.lore {
+    .categories {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        margin: 1em 0;
+    }
+
+    &.edit {
+        div.category {
+            border: dashed var(--brightest-shade);
+            padding: 0 1em;
+
+            h3:before {
+                content: "Name:";
+                margin-right: 1ch;
+                color: var(--bright-shade);
+            }
+
+            .text:before {
+                content: "Description:";
+                margin-right: 1ch;
+                color: var(--bright-shade);
+            }
+        }
+    }
+}
