@@ -17,16 +17,14 @@ async function postLorePage(targetUrl = window.location.pathname) {
         return;
     }
 
-    let title = document.getElementById("pageTitle").innerHTML.trim();
+    let title = getContentEditableText(document.getElementById("pageTitle"));
 
     if (!title) {
         updateErrorText("Title is missing.");
         return;
     }
 
-    let content = document.getElementById("pageContents").innerHTML
-        .replaceAll("<br>", "\n")
-        .trim();
+    let content = getContentEditableText(document.getElementById("pageContents"));
 
     let lorePageData = {
         step: "2",

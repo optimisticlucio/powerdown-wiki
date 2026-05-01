@@ -4,7 +4,6 @@ use crate::{utils::PostingSteps, RootErrors, ServerState, User};
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::Json;
-use http::StatusCode;
 
 /// Post Request Handler for adding new lore pages.
 #[axum::debug_handler]

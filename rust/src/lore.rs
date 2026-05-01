@@ -4,11 +4,7 @@ use crate::utils::template_to_response;
 use crate::{lore::structs::LoreCategory, RootErrors, ServerState, User};
 use askama::Template;
 use axum::extract::{OriginalUri, State};
-use axum::{
-    response::Response,
-    routing::{get, post},
-    Router,
-};
+use axum::{response::Response, routing::get, Router};
 use axum_extra::routing::RouterExt;
 use http::Uri;
 
