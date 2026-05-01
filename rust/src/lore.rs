@@ -20,12 +20,13 @@ mod structs;
 pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(index))
-        .route_with_tsr("/new", post(post::add_lore_page))
+        .route_with_tsr("/new", get(edit::new_lore_page).post(post::add_lore_page))
         .route_with_tsr(
             "/edit",
             get(edit::edit_categories).post(edit_lore_categories),
         )
         .route_with_tsr("/{lore_slug}", get(page::lore_page))
+        .route_with_tsr("/{lore_slug}/edit", get(edit::edit_lore_page))
 }
 
 #[axum::debug_handler]

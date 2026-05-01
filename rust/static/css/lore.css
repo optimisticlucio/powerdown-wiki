@@ -6,6 +6,26 @@
         margin: 1em 0;
     }
 
+    .category {
+        background: var(--bright-shade);
+        padding: 1ch;
+
+        summary {
+            list-style-type: none;
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            font-weight: bold;
+            font-size: 1.4em;
+        }
+
+        a {
+            text-decoration: none;
+        }
+    }
+
     &.edit {
         div.category {
             border: dashed var(--brightest-shade);

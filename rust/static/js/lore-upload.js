@@ -1,5 +1,71 @@
-// Checks the page validity of a new lore page upload. If valid, sends new art to the site.
-async function attemptNewLorePageUpload(targetUrl = window.location.pathname) {
+// Posts the current lore page info to the given target URL.
+async function postLorePage(targetUrl = window.location.pathname) {
+
+    let parentCategorySelect = document.getElementById("parentCategory");
+
+    if (parentCategorySelect.options[parentCategorySelect.selectedIndex].disabled) {
+        updateErrorText("You did not select a parent category!");
+        return;
+    }
+
+    let parent_category_id = parseInt(parentCategorySelect.value);
+
+    let slug = document.getElementById("pageSlug").value.trim();
+
+    if (!slug) {
+        updateErrorText("Page slug is missing.");
+        return;
+    }
+
+    let title = document.getElementById("pageTitle").innerHTML.trim();
+
+    if (!title) {
+        updateErrorText("Title is missing.");
+        return;
+    }
+
+    let content = document.getElementById("pageContents").innerHTML.trim();
+
+    let lorePageData = {
+        step: "2",
+        slug,
+        title,
+        content,
+        parent_category_id,
+    };
+
+    let description = document.getElementById("pageDescription").value.trim();
+
+    if (description) {
+        lorePageData.description = description;
+    }
+
+    const messageToSend = {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify(lorePageData)
+    };
+
+    console.log(`SENT: ${JSON.stringify(messageToSend)}`)
+
+    updateErrorText(`Sending lore page data...`);
+
+    const categoryUpdateResponse = await fetch(targetUrl, messageToSend);
+
+    if (categoryUpdateResponse.status >= 400 && categoryUpdateResponse.status < 600) {
+        let errorText = await categoryUpdateResponse.text();
+        updateErrorText(`<b>ERROR ${categoryUpdateResponse.status}, ${categoryUpdateResponse.statusText}:</b> ${errorText}`);
+        return;
+    }
+
+    // If there's a redirect, follow it, it means the upload was successful.
+    else if (finalUploadRequest.redirected) {
+        updateErrorText(`Upload successful!`);
+        window.location.href = finalUploadRequest.url;
+    }
 }
 
 

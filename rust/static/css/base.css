@@ -287,6 +287,12 @@ button {
     }
 }
 
+#errorDisplay {
+    color: red;
+    padding: 1ch;
+    border: red dotted;
+}
+
 @media screen and (max-width: 1100px) {
     body {
         font-size: 1.4em;

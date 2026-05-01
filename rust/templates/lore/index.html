@@ -15,22 +15,28 @@
 
     <h2>Wow, you actually come here to read?</h2>
 
-    {% for (lore_category, list_of_bases) in lore_categories_with_pages %}
-    <details class="category">
-        <summary>
-            {{ lore_category.title }}
-        </summary>
-        {% if let Some(description) = lore_category.description %}
-        <div class="text description">
-            {{ description }}
-        </div>
-        {% endif %}
+    <div class="categories">
+        {% for (lore_category, list_of_bases) in lore_categories_with_pages %}
+        <details class="category">
+            <summary>
+                {{ lore_category.title }}
+            </summary>
+            {% if let Some(description) = lore_category.description %}
+            <div class="text description">
+                {{ description }}
+            </div>
+            {% endif %}
 
-        {% for lore_page in list_of_bases %}
-        <a href="{{ lore_page.slug }}">{{ lore_page.title }}</a> </br>
+            <ul>
+                {% for lore_page in list_of_bases %}
+                <li><a href="/lore/{{ lore_page.slug }}">
+                    <bold>{{ lore_page.title }}</bold> {% if let Some(lore_description) = lore_page.description %} - {{lore_description}}{% endif -%}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </details>
         {% endfor %}
-    </details>
-    {% endfor %}
+    </div>
 
     {% if show_uploader_bar %}
     <div class="uploaderBar">
