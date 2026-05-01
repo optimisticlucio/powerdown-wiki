@@ -18,6 +18,7 @@ struct LorePage {
 
     page_lore: PageLore,
     parent_category: LoreCategory,
+    page_contents: String,
 }
 
 #[axum::debug_handler]
@@ -44,11 +45,15 @@ pub async fn lore_page(
 
     let parent_category = requested_lore.get_parent_category(&db_connection).await;
 
+    let page_contents =
+        comrak::markdown_to_html(&requested_lore.content, &comrak::Options::default());
+
     Ok(template_to_response(LorePage {
         user: requesting_user,
         original_uri,
 
         page_lore: requested_lore,
         parent_category,
+        page_contents,
     }))
 }

@@ -20,14 +20,8 @@
 
     <h1> {{ page_lore.base.title }}</h1>
 
-    {% if let Some(description) = page_lore.base.description %}
-    <div class="text description">
-        {{ description }}
-    </div>
-    {% endif %}
-
     <div class="text">
-        {{ page_lore.content }}
+        {{ page_contents | safe }}
     </div>
 
     {% if page_lore.can_optionally_be_modified_by(&user) %}

@@ -1,9 +1,10 @@
 use super::structs::PageLore;
 use crate::lore::structs::LoreCategory;
 use crate::{utils::PostingSteps, RootErrors, ServerState, User};
-use axum::extract::State;
+use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::Json;
+use http::StatusCode;
 
 /// Post Request Handler for adding new lore pages.
 #[axum::debug_handler]
@@ -103,6 +104,119 @@ pub async fn add_lore_page(
     }
 }
 
+/// Post Request Handler for modifying existing lore pages.
+#[axum::debug_handler]
+pub async fn edit_lore_page(
+    Path(lore_slug): Path<String>,
+    State(state): State<ServerState>,
+    OriginalUri(original_uri): OriginalUri,
+    cookie_jar: tower_cookies::Cookies,
+    Json(posting_step): Json<PostingSteps<PageLore>>,
+) -> Result<Response, RootErrors> {
+    let db_connection = state
+        .db_pool
+        .get()
+        .await
+        .map_err(|_| RootErrors::InternalServerError)?;
+
+    // Who's trying to do this?
+    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+        Some(user) => user,
+        None => return Err(RootErrors::Unauthorized),
+    };
+
+    if !requesting_user.user_type.permissions().can_modify_lore {
+        return Err(RootErrors::Forbidden);
+    }
+
+    let Some(existing_page_lore) = PageLore::get_from_slug(&db_connection, &lore_slug).await else {
+        return Err(RootErrors::NotFound(
+            original_uri,
+            cookie_jar,
+            Some(requesting_user),
+        ));
+    };
+
+    match posting_step {
+        PostingSteps::RequestPresignedURLs { file_amount: _ } => {
+            // TODO: Allow uploading stuff like post-specific images and thumbnails
+            Err(RootErrors::BadRequest(
+                "You can't upload files to lore sections, getthefuckouttahere.".into(),
+            ))
+        }
+        PostingSteps::UploadMetadata(mut given_page_lore) => {
+            sanitize_recieved_lore_page(&mut given_page_lore);
+
+            validate_recieved_lore_page(&given_page_lore).map_err(RootErrors::BadRequest)?;
+
+            // Now that everything is valid, see what we need to update before tossing into database
+
+            let mut columns: Vec<String> = Vec::new();
+            let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+            if existing_page_lore.parent_category_id != given_page_lore.parent_category_id {
+                columns.push("belongs_to_category".into());
+                values.push(&given_page_lore.parent_category_id);
+            }
+
+            if existing_page_lore.base.slug != given_page_lore.base.slug {
+                columns.push("slug".into());
+                values.push(&given_page_lore.base.slug);
+            }
+
+            if existing_page_lore.base.title != given_page_lore.base.title {
+                columns.push("title".into());
+                values.push(&given_page_lore.base.title);
+            }
+
+            if existing_page_lore.base.description != given_page_lore.base.description {
+                columns.push("description".into());
+                values.push(&given_page_lore.base.description);
+            }
+
+            if existing_page_lore.content != given_page_lore.content {
+                columns.push("content".into());
+                values.push(&given_page_lore.content);
+            }
+
+            if !columns.is_empty() {
+                // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
+                let query = format!(
+                    "UPDATE lore SET {} WHERE id=${};",
+                    columns
+                        .iter()
+                        .enumerate()
+                        .map(|(index, value)| format!("{}=${}", value, index + 1))
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    columns.len() + 1
+                );
+
+                values.push(&existing_page_lore.base.id);
+
+                db_connection
+                    .execute(&query, &values)
+                    .await
+                    .map_err(|err| {
+                        eprintln!("[LORE PAGE EDIT] Executing SQL update failed! {err:?}");
+                        RootErrors::InternalServerError
+                    })?;
+
+                println!(
+                    "[LORE PAGE EDIT] User {} (ID:{}) modified lore page {} (ID:{}, SLUG:{})",
+                    requesting_user.display_name,
+                    requesting_user.id,
+                    given_page_lore.base.title,
+                    existing_page_lore.base.id,
+                    given_page_lore.base.slug
+                );
+            }
+
+            Ok(Redirect::to(&format!("/lore/{}", given_page_lore.base.slug)).into_response())
+        }
+    }
+}
+
 fn sanitize_recieved_lore_page(given_lore_page: &mut PageLore) {
     given_lore_page.content = given_lore_page.content.trim().into();
 
@@ -112,7 +226,14 @@ fn sanitize_recieved_lore_page(given_lore_page: &mut PageLore) {
         .as_deref()
         .map(|description| description.trim().into());
 
-    given_lore_page.base.title = given_lore_page.base.title.trim().into();
+    given_lore_page.base.title = given_lore_page
+        .base
+        .title
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .into();
 }
 
 fn validate_recieved_lore_page(given_lore_page: &PageLore) -> Result<(), String> {
@@ -288,7 +409,13 @@ pub async fn edit_lore_categories(
 }
 
 fn sanitize_recieved_lore_category(recieved_lore_category: &mut LoreCategory) {
-    recieved_lore_category.title = recieved_lore_category.title.trim().into();
+    recieved_lore_category.title = recieved_lore_category
+        .title
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .into();
 
     recieved_lore_category.description = recieved_lore_category
         .description

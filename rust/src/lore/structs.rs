@@ -18,6 +18,9 @@ pub struct LoreCategory {
 
 #[derive(Debug, Deserialize)]
 pub struct BaseLore {
+    #[serde(default)]
+    pub id: i32,
+
     pub title: String,
     pub description: Option<String>,
 
@@ -122,6 +125,7 @@ impl BaseLore {
     /// Converts a DB row with the relevant info to a LoreBase struct.
     fn from_db_row(row: &Row) -> Self {
         Self {
+            id: row.get("id"),
             title: row.get("title"),
             description: row.get("description"),
             slug: row.get("slug"),

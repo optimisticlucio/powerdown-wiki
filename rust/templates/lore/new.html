@@ -46,11 +46,11 @@ Lore{%endif%}{% endblock %}
         -%}{{lore_page.base.title}}{%else%}New
         Lore Page{%endif%}</h1>
     <div id="pageContents" class="text" contenteditable="true">
-        {%- if let Some(lore_page) = lore_being_modified -%}{{lore_page.content}}{%else%}Write Page Contents
+        {%- if let Some(lore_page) = lore_being_modified -%}{{lore_page.content.replace("\n", "<br>") | safe}}{%else%}Write Page Contents
         Here{%endif%}
     </div>
 
-    <button class="light" onclick="postLorePage({%- if let Some(lore_page) = lore_being_modified -%}"/lore/{{lore_page.base.slug}}"{%- endif -%})">
+    <button class="light" onclick="postLorePage({%- if let Some(lore_page) = lore_being_modified -%}'/lore/{{lore_page.base.slug}}'{%- endif -%})">
         {%-if lore_being_modified.is_some() -%}Update Page{%- else -%}Create Page{%- endif -%}</button>
 </div>
 

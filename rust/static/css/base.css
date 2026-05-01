@@ -291,6 +291,10 @@ button {
     color: red;
     padding: 1ch;
     border: red dotted;
+
+    &:empty {
+        display: none;
+    }
 }
 
 @media screen and (max-width: 1100px) {

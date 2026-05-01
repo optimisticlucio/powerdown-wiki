@@ -24,7 +24,9 @@ async function postLorePage(targetUrl = window.location.pathname) {
         return;
     }
 
-    let content = document.getElementById("pageContents").innerHTML.trim();
+    let content = document.getElementById("pageContents").innerHTML
+        .replaceAll("<br>", "\n")
+        .trim();
 
     let lorePageData = {
         step: "2",
@@ -62,9 +64,9 @@ async function postLorePage(targetUrl = window.location.pathname) {
     }
 
     // If there's a redirect, follow it, it means the upload was successful.
-    else if (finalUploadRequest.redirected) {
+    else if (categoryUpdateResponse.redirected) {
         updateErrorText(`Upload successful!`);
-        window.location.href = finalUploadRequest.url;
+        window.location.href = categoryUpdateResponse.url;
     }
 }
 

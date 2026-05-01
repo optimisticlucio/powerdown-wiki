@@ -27,13 +27,18 @@
             </div>
             {% endif %}
 
+            {% if list_of_bases.is_empty() %}
+            <p>There are currently no pages in this category.</p>
+            {%- else -%}
             <ul>
                 {% for lore_page in list_of_bases %}
                 <li><a href="/lore/{{ lore_page.slug }}">
-                    <bold>{{ lore_page.title }}</bold> {% if let Some(lore_description) = lore_page.description %} - {{lore_description}}{% endif -%}</a>
+                        <b>{{ lore_page.title }}</b> {% if let Some(lore_description) = lore_page.description %} -
+                        {{lore_description}}{% endif -%}</a>
                 </li>
                 {% endfor %}
             </ul>
+            {%- endif -%}
         </details>
         {% endfor %}
     </div>
