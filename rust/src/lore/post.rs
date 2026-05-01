@@ -424,8 +424,8 @@ fn sanitize_recieved_lore_category(recieved_lore_category: &mut LoreCategory) {
 }
 
 fn validate_recieved_lore_category(recieved_lore_category: &LoreCategory) -> Result<(), String> {
-    if recieved_lore_category.title.len() > 20 {
-        return Err("The title should be at most 20 characters long.".to_string());
+    if recieved_lore_category.title.len() > 26 {
+        return Err("The title should be at most 26 characters long.".to_string());
     }
 
     if recieved_lore_category

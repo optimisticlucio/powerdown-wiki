@@ -34,7 +34,7 @@
             h3:before {
                 content: "Name:";
                 margin-right: 1ch;
-                color: var(--bright-shade);
+                color: var(--brightest-shade);
             }
 
             .text:before {

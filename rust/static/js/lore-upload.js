@@ -92,7 +92,15 @@ function createNewCategory(name = "New Category", description = null, id = null)
         categoryDescription.innerHTML = description;
     }
 
-    newCategory.append(categoryTitle, categoryDescription);
+    let moveUpButton = document.createElement("button");
+    moveUpButton.onclick = (el) => newCategory.previousElementSibling?.before(newCategory);
+    moveUpButton.innerHTML = "↑";
+
+    let moveDownButton = document.createElement("button");
+    moveDownButton.onclick = (el) => newCategory.nextElementSibling?.after(newCategory);
+    moveDownButton.innerHTML = "↓";
+
+    newCategory.append(categoryTitle, categoryDescription, moveUpButton, moveDownButton);
 
     categoryHolder.appendChild(newCategory);
 }
