@@ -1,0 +1,57 @@
+{% extends "base-template.html" %}
+
+{% block title %}{%- if let Some(lore_page) = lore_being_modified -%}Modify {{lore_page.base.title}}{%else%}Create New
+Lore{%endif%}{% endblock %}
+
+{% block customhead %}
+<script src="/static/js/lore-upload.js" defer></script>
+<script src="/static/js/upload-pages.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper dark edit lore">
+    <div id="errorDisplay"></div>
+
+    <label for="parentCategory">Parent Category:</label>
+
+    <select id="parentCategory">
+        <option disabled {% if lore_being_modified.is_none() -%}selected{%- endif -%}>
+            -- Select Category --
+        </option>
+        {%- let lore_parent_id = -1 -%}
+        {%- if let Some(lore_page) = lore_being_modified -%}
+        {%- let lore_parent_id = lore_page.parent_category_id -%}
+        {%- endif -%}
+        {% for lore_category in lore_categories %}
+        <option {%- if lore_category.id==lore_parent_id %} selected{%- endif %} value="{{lore_category.id}}">
+            {{lore_category.title}}
+        </option>
+        {% endfor %}
+    </select>
+
+    <br />
+
+    <label for="pageSlug" required>Page Slug:</label>
+    <input id="pageSlug" type="text" {% if let Some(lore_page)=lore_being_modified -%}value="{{ lore_page.base.slug }}"
+        {%-endif-%} />
+
+    <br />
+
+    <label for="pageDescription">Short Description:</label>
+    <input id="pageDescription" type="text" {%- if let Some(lore_page)=lore_being_modified -%}{%- if let
+        Some(description)=lore_page.base.description -%}value="{{ description }}" {%-endif-%}{%-endif-%} />
+
+    <br />
+
+    <h1 id="pageTitle" contenteditable="true">{%- if let Some(lore_page) = lore_being_modified
+        -%}{{lore_page.base.title}}{%else%}New
+        Lore Page{%endif%}</h1>
+    <div id="pageContents" class="text" contenteditable="true">
+        {%- if let Some(lore_page) = lore_being_modified -%}{{lore_page.content.replace("\n", "<br>") | safe}}{%else%}Write Page Contents
+        Here{%endif%}
+    </div>
+
+    <button class="light" onclick="postLorePage({%- if let Some(lore_page) = lore_being_modified -%}'/lore/{{lore_page.base.slug}}'{%- endif -%})">
+        {%-if lore_being_modified.is_some() -%}Update Page{%- else -%}Create Page{%- endif -%}</button>
+</div>
+
+{% endblock %}

@@ -3,7 +3,11 @@ use lazy_static::lazy_static;
 use std::env;
 
 // URLs for the navbar. Format is ("Title", "url").
-pub const NAVBAR_URLS: [(&str, &str); 2] = [("Art", "/art"), ("Characters", "/characters")];
+pub const NAVBAR_URLS: [(&str, &str); 3] = [
+    ("Art", "/art"),
+    ("Characters", "/characters"),
+    ("Lore", "/lore"),
+];
 
 lazy_static! {
     pub static ref DEBUG_ENABLED: bool = env::var("DEBUG").is_ok();

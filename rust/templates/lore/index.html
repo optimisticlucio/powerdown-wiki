@@ -1,0 +1,53 @@
+{% extends "base-template.html" %}
+
+{% block title %}Lore{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="Lore">
+<meta property="og:description" content="The background for the world of the Electi Rehabilitation Academy.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
+{% block content %}
+<div class="wrapper dark lore">
+    <h1>Lore</h1>
+
+    <h2>Wow, you actually come here to read?</h2>
+
+    <div class="categories">
+        {% for (lore_category, list_of_bases) in lore_categories_with_pages %}
+        <details class="category">
+            <summary>
+                {{ lore_category.title }}
+            </summary>
+            {% if let Some(description) = lore_category.description %}
+            <div class="text description">
+                {{ description }}
+            </div>
+            {% endif %}
+
+            {% if list_of_bases.is_empty() %}
+            <p>There are currently no pages in this category.</p>
+            {%- else -%}
+            <ul>
+                {% for lore_page in list_of_bases %}
+                <li><a href="/lore/{{ lore_page.slug }}">
+                        <b>{{ lore_page.title }}</b> {% if let Some(lore_description) = lore_page.description %} -
+                        {{lore_description}}{% endif -%}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {%- endif -%}
+        </details>
+        {% endfor %}
+    </div>
+
+    {% if show_uploader_bar %}
+    <div class="uploaderBar">
+        <a href="/lore/new"><button class="light">Create New Lore Page</button></a>
+        <a href="/lore/edit"><button class="dark">Edit Lore Categories</button></a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

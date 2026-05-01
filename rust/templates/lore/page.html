@@ -1,0 +1,33 @@
+{% extends "base-template.html" %}
+
+{% block title %}{{ page_lore.base.title }}{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="{{ page_lore.base.title }}">
+{% if let Some(description) = page_lore.base.description %}
+<meta property="og:description" content="{{ description }}">
+{% endif %}
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
+{% block content %}
+<div class="wrapper dark lore">
+
+    <a href="/lore" style="text-decoration: none;">
+        <h4> &lt;- {{ parent_category.title }} </h4>
+    </a>
+
+    <h1> {{ page_lore.base.title }}</h1>
+
+    <div class="text">
+        {{ page_contents | safe }}
+    </div>
+
+    {% if page_lore.can_optionally_be_modified_by(&user) %}
+    <div class="uploaderBar">
+        <a href="/lore/{{page_lore.base.slug}}/edit"><button class="light">Edit Page</button></a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

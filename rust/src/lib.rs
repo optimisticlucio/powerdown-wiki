@@ -19,6 +19,7 @@ mod characters;
 mod errs;
 mod graceful_shutdown;
 mod index;
+mod lore;
 mod misc;
 mod nsfw_splash;
 mod refinery_migrations;
@@ -52,6 +53,7 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/user", user::router())
         .nest("/misc", misc::router())
         .nest("/admin", admin::router())
+        .nest("/lore", lore::router())
         .fallback(fallback)
         .with_state(state)
         .layer(
