@@ -25,6 +25,7 @@ pub struct MiscItem {
 }
 
 impl MiscItem {
+    // Fuck this
     // Returns a string pointing towards the thumbnail of this item.
     pub fn get_thumbnail_url(&self) -> String {
         self.thumbnail_url
@@ -58,7 +59,7 @@ impl MiscItem {
             title: row.get("title"),
             description: row.get("description"),
             url: row.get("url"),
-            thumbnail_url: row.get("thumbnail_url"),
+            thumbnail_url: row.get("thumbnail"),
         }
     }
 }
