@@ -43,8 +43,6 @@ pub async fn index(
 
     let mut lore_categories = LoreCategory::get_all_categories(&db_connection).await;
 
-    lore_categories.sort();
-
     let mut lore_categories_with_pages = Vec::new();
 
     for lore_category in lore_categories {
