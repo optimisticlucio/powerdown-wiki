@@ -3,7 +3,7 @@
 {% block title %}Create New Art{% endblock %}
 
 {% block customhead %}<script src="/static/js/art-page-upload.js" defer></script>
-<script src="/static/js/upload-page.js" defer></script>{% endblock %}
+<script src="/static/js/upload-pages.js" defer></script>{% endblock %}
 
 {% block content %}
 <div class="wrapper upload" style="text-align: left">
@@ -27,8 +27,7 @@
 
     <h1>Upload New Art Whoa</h1>
 
-    <div id="errorDisplay">
-    </div>
+    <div id="errorDisplay"></div>
 
     <label for="postTitle">Post Title:</label>
     <input type="text" id="postTitle" required minLength="1"
