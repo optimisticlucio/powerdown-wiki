@@ -2,6 +2,7 @@ use crate::ServerState;
 use axum::{routing::get, Router};
 use axum_extra::routing::RouterExt;
 
+mod structs;
 mod tierlist;
 
 pub fn router() -> Router<ServerState> {
