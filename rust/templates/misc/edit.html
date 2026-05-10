@@ -1,0 +1,49 @@
+{% extends "base-template.html" %}
+
+{% block title %}Edit Misc{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="Edit Misc">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
+{% block customhead %}
+<script src="/static/js/misc-page-upload.js" defer></script>
+<script src="/static/js/upload-pages.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper wide upload">
+    <h1>Editing Links & Misc.</h1>
+    <h2><em>Please</em> take responsibility for the Big Wooden Horse</h2>
+
+    <div id="errorDisplay"></div>
+
+    <div class="misc-holder">
+        {% for misc_item in misc_items %}
+        <div class="misc">
+            <div class="left">
+                <h1 contenteditable="true">{{ misc_item.title }}</h1>
+                <h2 contenteditable="">{{ misc_item.description }}</h2>
+                <hr />
+                <p>Links to: <span contenteditable="true">{{ misc_item.url }}</span></p>
+            </div>
+            <div class="thumbnail thumbnail-wrap" id="thumbWrap">
+                <img id="thumbImg" alt="Post thumbnail" {% if let Some(thumbnail_url)=misc_item.thumbnail_url %}
+                    src="{{ misc_item.get_thumbnail_url() }}" data-has-thumb="true" {% else %}
+                    src="https://placehold.co/400x260/e8e4de/999?text=No+thumbnail" data-has-thumb="false" {% endif %}
+                    data-default="https://placehold.co/400x260/e8e4de/999?text=No+thumbnail">
+                <input type="file" class="thumb-img hiddenThumbnailInput" accept="image/*">
+                <button type="button" class="remove-btn" title="Remove thumbnail">&#x2715;</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="uploaderBar">
+        <button class="light" onclick="createNewMiscItem()">Add Misc Section</button>
+        <button class="dark">Update Misc Listings</button>
+    </div>
+
+</div>
+{% endblock %}

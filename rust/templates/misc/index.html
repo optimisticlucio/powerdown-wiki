@@ -21,7 +21,7 @@
                 <h1>{{ misc_item.title }}</h1>
                 <h2>{{ misc_item.description }}</h2>
             </div>
-            <img src="{{ misc_item.get_thumbnail_url() }}">
+            <img class="thumbnail" src="{{ misc_item.get_thumbnail_url() }}">
         </a>
         {% endfor %}
     </div>

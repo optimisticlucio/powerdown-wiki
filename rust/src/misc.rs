@@ -2,18 +2,26 @@ use crate::utils::template_to_response;
 use crate::{RootErrors, ServerState, User};
 use askama::Template;
 use axum::extract::{OriginalUri, State};
-use axum::{response::Response, routing::{get, post}, Router};
+use axum::{
+    response::Response,
+    routing::{get, post},
+    Router,
+};
 use axum_extra::routing::RouterExt;
 use http::Uri;
 
+mod edit;
+mod post;
 mod structs;
 mod tierlist;
-mod post;
 
 pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(index))
-        .route_with_tsr("/edit", post(post::edit_misc_section))
+        .route_with_tsr(
+            "/edit",
+            get(edit::edit_misc_listing).post(post::edit_misc_section),
+        )
         .route_with_tsr("/tierlist", get(tierlist::tierlist))
 }
 
