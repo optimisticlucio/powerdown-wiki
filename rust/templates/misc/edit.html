@@ -26,15 +26,14 @@
                 <h1 contenteditable="true">{{ misc_item.title }}</h1>
                 <h2 contenteditable="">{{ misc_item.description }}</h2>
                 <hr />
-                <p>Links to: <span contenteditable="true">{{ misc_item.url }}</span></p>
+                <p>Links to: <span contenteditable="true">{{misc_item.url}}</span></p>
             </div>
-            <div class="thumbnail thumbnail-wrap" id="thumbWrap">
-                <img id="thumbImg" alt="Post thumbnail" {% if let Some(thumbnail_url)=misc_item.thumbnail_url %}
+            <div class="thumbnail thumbnail-wrap">
+                <img alt="Post thumbnail" {% if let Some(thumbnail_url)=misc_item.thumbnail_url %}
                     src="{{ misc_item.get_thumbnail_url() }}" data-has-thumb="true" {% else %}
-                    src="https://placehold.co/400x260/e8e4de/999?text=No+thumbnail" data-has-thumb="false" {% endif %}
-                    data-default="https://placehold.co/400x260/e8e4de/999?text=No+thumbnail">
-                <input type="file" class="thumb-img hiddenThumbnailInput" accept="image/*">
-                <button type="button" class="remove-btn" title="Remove thumbnail">&#x2715;</button>
+                    src="/static/img/pd_logo_with_stroke.png" data-has-thumb="false" {% endif %}>
+                <input type="file" class="hiddenThumbnailInput" accept="image/*">
+                <button type="button" class="removeButton" title="Remove thumbnail">&#x2715;</button>
             </div>
         </div>
         {% endfor %}

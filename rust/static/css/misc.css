@@ -119,6 +119,7 @@
     .misc {
         width: 26em;
         display: flex;
+        justify-content: space-between;
         padding: 1em;
         background-color: var(--darkest-shade);
         text-decoration: none;
@@ -141,8 +142,8 @@
             aspect-ratio: 1 / 1;
             width: 150px;
             height: 150px;
-            margin-left: 1em;
             object-fit: cover;
+            position: relative;
         }
     }
 }
