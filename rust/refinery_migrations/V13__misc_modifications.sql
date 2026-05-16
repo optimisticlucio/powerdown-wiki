@@ -1,0 +1,9 @@
+ALTER TABLE misc 
+ADD order_position int NOT NULL;
+
+ALTER TABLE misc
+ADD CONSTRAINT misc_no_duplicate_positions
+        UNIQUE (order_position) DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE misc
+ADD id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY;

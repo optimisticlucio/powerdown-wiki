@@ -1,0 +1,35 @@
+{% extends "base-template.html" %}
+
+{% block title %}Links & Misc.{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="Links & Misc">
+<meta property="og:description" content="Various links and etcetera we had no other place for on the site.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
+{% block content %}
+<div class="wrapper wide">
+    <h1>Links & Misc.</h1>
+    <h2>We take no responsibility for the Big Wooden Horse</h2>
+
+    <div class="misc-holder">
+        {% for misc_item in misc_items %}
+        <a class="misc" href="{{ misc_item.url }}">
+            <div class="left">
+                <h1>{{ misc_item.title }}</h1>
+                <h2>{{ misc_item.description }}</h2>
+            </div>
+            <img class="thumbnail" src="{{ misc_item.get_thumbnail_url() }}">
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if show_edit_button %}
+    <div class="uploaderBar">
+        <a href="/misc/edit"><button class="light">Edit Misc Pages</button></a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

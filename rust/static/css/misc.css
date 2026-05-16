@@ -4,13 +4,15 @@
             display: none;
         }
     }
+
     &.hide-hidden {
         .hidden {
             display: none;
         }
     }
 
-    #tierlist-collector, #tierlist-holder {
+    #tierlist-collector,
+    #tierlist-holder {
         display: flex;
         flex-direction: column;
         gap: 0.2em;
@@ -87,6 +89,7 @@
             flex-shrink: 0;
             font-weight: bold;
         }
+
         .holder {
             background-color: var(--darkest-shade);
             display: flex;
@@ -98,10 +101,49 @@
 
     #tierlist-origin {
         margin-top: 3em;
-        
+
         .holder {
             padding: 0.5em;
             justify-content: center;
+        }
+    }
+}
+
+.misc-holder {
+    width: 100%;
+    display: grid;
+    gap: 2em;
+    grid-template-columns: repeat(auto-fill, minmax(28em, 1fr));
+    place-items: center;
+
+    .misc {
+        width: 26em;
+        display: flex;
+        justify-content: space-between;
+        padding: 1em;
+        background-color: var(--darkest-shade);
+        text-decoration: none;
+
+        .left {
+            font-size: 0.7em;
+            display: flex;
+            flex-direction: column;
+
+            h2 {
+                margin: auto;
+            }
+
+            &> :first-child {
+                margin: 0;
+            }
+        }
+
+        .thumbnail {
+            aspect-ratio: 1 / 1;
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            position: relative;
         }
     }
 }
