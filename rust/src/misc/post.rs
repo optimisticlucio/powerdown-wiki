@@ -79,6 +79,10 @@ pub async fn edit_misc_section(
 
             // TODO: Validate the given order positions make sense. No duplicates and the like.
 
+            let mut s3_keys_to_delete: Vec<String> = Vec::new();
+            let s3_client = state.s3_client.clone();
+            let target_s3_folder = "misc/thumbnails";
+
             // Let's see if any of these are new, and add them to the db. As only positive id values are DB Generated, look for any nonpositive ones.
             let (new_items, modified_items): (Vec<_>, Vec<_>) = misc_items
                 .into_iter()
@@ -120,7 +124,48 @@ pub async fn edit_misc_section(
                     values.push(&modified_item.url);
                 }
 
-                // TODO: Handle modifications of existing thumbnail
+                // Incase it needs to be used.
+                let thumbnail_s3_key: String;
+                if existing_item.thumbnail_url != modified_item.thumbnail_url {
+                    columns.push("thumbnail".into());
+                    if let Some(thumbnail_url) = &modified_item.thumbnail_url {
+                        // Upload the thumbnail to the DB assuming everything else will work out. We're optimistic here. Also, lazy.
+
+                        // Move thumbnail.
+                        let random_string = crate::utils::get_random_string(16);
+                        let thumbnail_target_s3_key = format!("{target_s3_folder}/{random_string}");
+                        thumbnail_s3_key = match utils::move_and_lossily_compress_temp_s3_img(
+                            &s3_client,
+                            &state.config,
+                            thumbnail_url,
+                            &state.config.s3_public_bucket,
+                            &thumbnail_target_s3_key,
+                            Some(THUMBNAIL_COMPRESSION_SETTINGS),
+                        )
+                        .await
+                        {
+                            Ok(x) => x,
+                            Err(err) => {
+                                let item_id = existing_item.id;
+
+                                eprintln!(
+                                "[EDIT LORE CATEGORIES] Converting thumbnail of existing misc item (ID: {item_id}) failed, temp file URL is {thumbnail_url}, {err:?}",
+                                );
+
+                                return Err(RootErrors::InternalServerError);
+                            }
+                        };
+
+                        values.push(&thumbnail_s3_key);
+                    } else {
+                        values.push(&None::<String>);
+                    }
+
+                    // Whatever we do here, we need to get rid of the prev image.
+                    if let Some(previous_image_key) = &existing_item.thumbnail_url {
+                        s3_keys_to_delete.push(previous_image_key.clone());
+                    }
+                }
 
                 if columns.is_empty() {
                     continue;
@@ -174,8 +219,6 @@ pub async fn edit_misc_section(
                 let thumbnail_s3_key: String;
                 if let Some(thumbnail_url) = &new_item.thumbnail_url {
                     // Upload the thumbnail to the DB assuming everything else will work out. We're optimistic here. Also, lazy.
-                    let target_s3_folder = "misc/thumbnails";
-                    let s3_client = state.s3_client.clone();
 
                     // Move thumbnail.
                     let random_string = crate::utils::get_random_string(16);
@@ -238,6 +281,17 @@ pub async fn edit_misc_section(
                 "[EDIT MISC ITEMS] User {} (ID:{}) successfully modified misc section.",
                 requesting_user.display_name, requesting_user.id
             );
+
+            // If this fails - too bad.
+            let _ = utils::delete_keys_from_s3(
+                &state.s3_client.clone(),
+                &state.config.s3_public_bucket,
+                &s3_keys_to_delete,
+            )
+            .await.map_err(|err| {
+                eprintln!("[EDIT MISC ITEMS] Failed to delete old thumbnails. Continuing anyways. ERR: {err:?}");
+                RootErrors::InternalServerError
+            });
 
             Ok(http::StatusCode::CREATED.into_response())
         }

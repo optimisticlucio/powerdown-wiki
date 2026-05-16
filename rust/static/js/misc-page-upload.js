@@ -1,7 +1,5 @@
 const DEFAULT_SRC = '/static/img/pd_logo.svg';
 
-
-
 function applyRelevantActions(wrap) {
     const img = wrap.querySelector('.thumb-img');
     const input = wrap.querySelector('input[type="file"]');
@@ -95,7 +93,7 @@ async function updateMiscItems(targetUrl = window.location.pathname) {
 
         let id = miscItemElement.id;
 
-        let thumbnail_url = miscItemElement.querySelector(".thumb-img").src;
+        let image_element = miscItemElement.querySelector(".thumb-img");
 
         let data_to_send_back = {
             title,
@@ -108,8 +106,8 @@ async function updateMiscItems(targetUrl = window.location.pathname) {
             data_to_send_back.id = parseInt(id);
         }
 
-        if (thumbnail_url != DEFAULT_SRC) {
-            data_to_send_back.thumbnail_url = thumbnail_url;
+        if (image_element.dataset.hasThumb == 'true') {
+            data_to_send_back.thumbnail_url = image_element.src;
         }
 
         return data_to_send_back;

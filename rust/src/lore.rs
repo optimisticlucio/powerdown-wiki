@@ -41,7 +41,7 @@ pub async fn index(
     // This is an unholy mess. I apologize to whoever needs to fix this later, likely me.
     // We just need to get all of the categories and their subpages.
 
-    let mut lore_categories = LoreCategory::get_all_categories(&db_connection).await;
+    let lore_categories = LoreCategory::get_all_categories(&db_connection).await;
 
     let mut lore_categories_with_pages = Vec::new();
 
