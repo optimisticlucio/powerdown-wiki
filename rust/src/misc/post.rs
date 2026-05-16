@@ -303,7 +303,7 @@ fn sanitize_recieved_misc_item(recieved_misc_item: &mut MiscItem, state: &Server
 
     recieved_misc_item.title = recieved_misc_item.title.trim().to_string();
 
-    recieved_misc_item.url = recieved_misc_item.url.trim().to_lowercase().to_string();
+    recieved_misc_item.url = recieved_misc_item.url.trim().to_string();
 
     recieved_misc_item.thumbnail_url = recieved_misc_item
         .thumbnail_url
