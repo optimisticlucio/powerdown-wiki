@@ -31,7 +31,8 @@ impl MiscItem {
     pub fn get_thumbnail_url(&self) -> String {
         self.thumbnail_url
             .as_deref()
-            .unwrap_or("/static/img/pd_logo.svg")
+            .map(crate::utils::get_s3_public_object_url)
+            .unwrap_or("/static/img/pd_logo.svg".into())
             .to_string()
     }
 

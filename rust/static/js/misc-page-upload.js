@@ -95,7 +95,7 @@ async function updateMiscItems(targetUrl = window.location.pathname) {
 
         let id = miscItemElement.id;
 
-        // TODO: Get Thumbnail
+        let thumbnail_url = miscItemElement.querySelector(".thumb-img").src;
 
         let data_to_send_back = {
             title,
@@ -108,8 +108,77 @@ async function updateMiscItems(targetUrl = window.location.pathname) {
             data_to_send_back.id = parseInt(id);
         }
 
+        if (thumbnail_url != DEFAULT_SRC) {
+            data_to_send_back.thumbnail_url = thumbnail_url;
+        }
+
         return data_to_send_back;
     });
+
+    // We have all the data organized. Do we have any images to send?
+
+    let miscItemsWithNewThumbnails = miscItems.filter((miscItem) => {
+        return miscItem.thumbnail_url?.startsWith("blob:");
+    });
+
+    if (miscItemsWithNewThumbnails.length > 0) {
+        // Yep, let's get on it.
+        const messageToSend = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                step: "1",
+                file_amount: miscItemsWithNewThumbnails.length
+            })
+        };
+
+        console.log(`SENT: ${JSON.stringify(messageToSend)}`)
+
+        updateErrorText(`Requesting permission to upload thumbnails...`);
+
+        const s3UrlsRequestResponse = await fetch(targetUrl, messageToSend);
+
+        // ERROR! Bubble it up to user.
+        if (s3UrlsRequestResponse.status >= 400 && s3UrlsRequestResponse.status < 600) {
+            let errorText = await s3UrlsRequestResponse.text();
+            updateErrorText(`<b>ERROR ${s3UrlsRequestResponse.status}, ${s3UrlsRequestResponse.statusText}:</b> ${errorText}`);
+            return;
+        }
+
+        // A valid request should return a json with a list of "presigned_urls".
+
+        let s3Urls = await s3UrlsRequestResponse.json();
+
+        console.log(`RECIEVED: ${JSON.stringify(s3Urls)}`);
+
+        // Alright, let's try uploading everything to S3.
+        // Put everything in a list so we can run them in parallel later.
+        let listOfUploadFunctions = miscItemsWithNewThumbnails.map((miscItem, index) => {
+            const urlToUpload = s3Urls.presigned_urls[index];
+
+            return (async () => {
+                let imageFile = await fetch(miscItem.thumbnail_url).then(r => r.blob());
+
+                await fetch(urlToUpload, {
+                    method: 'PUT',
+                    body: imageFile,
+                    headers: {
+                        'Content-Type': imageFile.type
+                    }
+                });
+
+                miscItem.thumbnail_url = urlToUpload;
+            })();
+        }
+        );
+
+        updateErrorText(`Uploading thumbnails...`);
+
+        await Promise.all(listOfUploadFunctions);
+    }
 
     const messageToSend = {
         method: "POST",

@@ -1,5 +1,5 @@
 use crate::misc::structs::MiscItem;
-use crate::utils::PostingSteps;
+use crate::utils::{self, get_temp_s3_presigned_urls, PostingSteps, PresignedUrlsResponse};
 use crate::{RootErrors, ServerState, User};
 use ammonia::Url;
 use axum::extract::State;
@@ -11,6 +11,13 @@ use serde::Deserialize;
 pub struct RecievedMiscItems {
     misc_items: Vec<MiscItem>,
 }
+
+const THUMBNAIL_COMPRESSION_SETTINGS: utils::file_compression::LossyCompressionSettings =
+    utils::file_compression::LossyCompressionSettings {
+        max_width: Some(250),
+        max_height: Some(250),
+        quality: 85,
+    };
 
 /// Post Request Handler for editing lore categories.
 #[axum::debug_handler]
@@ -37,7 +44,19 @@ pub async fn edit_misc_section(
 
     match posting_steps {
         PostingSteps::RequestPresignedURLs { file_amount } => {
-            todo!()
+            let presigned_urls = get_temp_s3_presigned_urls(&state, file_amount.into(), "misc")
+                .await
+                .map_err(|err| {
+                    eprintln!("[EDIT MISC SECTION] Failed to get presigned URLs! {err}");
+                    RootErrors::InternalServerError
+                })?;
+
+            // Now return the presigned urls as a json
+            Ok(
+                serde_json::to_string(&PresignedUrlsResponse { presigned_urls })
+                    .unwrap()
+                    .into_response(),
+            )
         }
         PostingSteps::UploadMetadata(RecievedMiscItems { mut misc_items }) => {
             let existing_items = MiscItem::get_all(&db_connection).await;
@@ -53,7 +72,7 @@ pub async fn edit_misc_section(
             // Firstly let's sanitize and validate everything the user passed us.
 
             for misc_item in &mut misc_items {
-                sanitize_recieved_misc_item(misc_item);
+                sanitize_recieved_misc_item(misc_item, &state);
 
                 validate_recieved_misc_item(misc_item).map_err(RootErrors::BadRequest)?;
             }
@@ -101,7 +120,7 @@ pub async fn edit_misc_section(
                     values.push(&modified_item.url);
                 }
 
-                // TODO: HANDLE NEW THUMBNAIL
+                // TODO: Handle modifications of existing thumbnail
 
                 if columns.is_empty() {
                     continue;
@@ -151,7 +170,39 @@ pub async fn edit_misc_section(
                 columns.push("url".into());
                 values.push(&new_item.url);
 
-                // TODO: HANDLE NEW THUMBNAIL
+                // Incase it needs to be used.
+                let thumbnail_s3_key: String;
+                if let Some(thumbnail_url) = &new_item.thumbnail_url {
+                    // Upload the thumbnail to the DB assuming everything else will work out. We're optimistic here. Also, lazy.
+                    let target_s3_folder = "misc/thumbnails";
+                    let s3_client = state.s3_client.clone();
+
+                    // Move thumbnail.
+                    let random_string = crate::utils::get_random_string(16);
+                    let thumbnail_target_s3_key = format!("{target_s3_folder}/{random_string}");
+                    thumbnail_s3_key = match utils::move_and_lossily_compress_temp_s3_img(
+                        &s3_client,
+                        &state.config,
+                        thumbnail_url,
+                        &state.config.s3_public_bucket,
+                        &thumbnail_target_s3_key,
+                        Some(THUMBNAIL_COMPRESSION_SETTINGS),
+                    )
+                    .await
+                    {
+                        Ok(x) => x,
+                        Err(err) => {
+                            eprintln!(
+                            "[EDIT LORE CATEGORIES] Converting thumbnail of new misc item failed, temp file URL is {thumbnail_url}, {err:?}",
+                            );
+
+                            return Err(RootErrors::InternalServerError);
+                        }
+                    };
+
+                    columns.push("thumbnail".into());
+                    values.push(&thumbnail_s3_key);
+                }
 
                 // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
                 let query = format!(
@@ -193,12 +244,17 @@ pub async fn edit_misc_section(
     }
 }
 
-fn sanitize_recieved_misc_item(recieved_misc_item: &mut MiscItem) {
+fn sanitize_recieved_misc_item(recieved_misc_item: &mut MiscItem, state: &ServerState) {
     recieved_misc_item.description = recieved_misc_item.description.trim().to_string();
 
     recieved_misc_item.title = recieved_misc_item.title.trim().to_string();
 
     recieved_misc_item.url = recieved_misc_item.url.trim().to_lowercase().to_string();
+
+    recieved_misc_item.thumbnail_url = recieved_misc_item
+        .thumbnail_url
+        .as_deref()
+        .and_then(|thumbnail_url| crate::utils::clean_passed_key(thumbnail_url, state));
 }
 
 fn validate_recieved_misc_item(recieved_misc_item: &MiscItem) -> Result<(), String> {
