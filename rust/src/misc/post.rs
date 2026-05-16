@@ -1,16 +1,23 @@
 use crate::misc::structs::MiscItem;
+use crate::utils::PostingSteps;
 use crate::{RootErrors, ServerState, User};
-use crate::utils::{PostingSteps};
-use axum::extract::{State};
+use ammonia::Url;
+use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+pub struct RecievedMiscItems {
+    misc_items: Vec<MiscItem>,
+}
 
 /// Post Request Handler for editing lore categories.
 #[axum::debug_handler]
 pub async fn edit_misc_section(
     State(state): State<ServerState>,
     cookie_jar: tower_cookies::Cookies,
-    Json(posting_steps): Json<PostingSteps<Vec<MiscItem>>>,
+    Json(posting_steps): Json<PostingSteps<RecievedMiscItems>>,
 ) -> Result<Response, RootErrors> {
     let mut db_connection = state
         .db_pool
@@ -30,15 +37,16 @@ pub async fn edit_misc_section(
 
     match posting_steps {
         PostingSteps::RequestPresignedURLs { file_amount } => {
-
             todo!()
-        },
-        PostingSteps::UploadMetadata(mut misc_items) => {
+        }
+        PostingSteps::UploadMetadata(RecievedMiscItems { mut misc_items }) => {
             let existing_items = MiscItem::get_all(&db_connection).await;
 
             // Let's build one big transaction so we don't have a bunch of inbetween moments.
             let sql_transaction = db_connection.transaction().await.map_err(|err| {
-                eprintln!("[EDIT MISC SECTION] Errored trying to create an SQL Transaction! {err:?}");
+                eprintln!(
+                    "[EDIT MISC SECTION] Errored trying to create an SQL Transaction! {err:?}"
+                );
                 RootErrors::InternalServerError
             })?;
 
@@ -183,18 +191,49 @@ pub async fn edit_misc_section(
             Ok(http::StatusCode::CREATED.into_response())
         }
     }
-
-    
 }
 
 fn sanitize_recieved_misc_item(recieved_misc_item: &mut MiscItem) {
-    todo!()
+    recieved_misc_item.description = recieved_misc_item.description.trim().to_string();
+
+    recieved_misc_item.title = recieved_misc_item.title.trim().to_string();
+
+    recieved_misc_item.url = recieved_misc_item.url.trim().to_lowercase().to_string();
 }
 
 fn validate_recieved_misc_item(recieved_misc_item: &MiscItem) -> Result<(), String> {
     if recieved_misc_item.title.len() > 26 {
         return Err("The title should be at most 26 characters long.".to_string());
     }
-    
-    todo!()
+
+    if !is_valid_misc_item_path(&recieved_misc_item.url) {
+        return Err("The target URL is invalid. It should either be a full path (\"https://www.whatever.com\"), or a relative path if it's a page in this site (\"/target/location\").".to_string());
+    }
+
+    if recieved_misc_item.description.len() > 256 {
+        return Err(
+            "Dont write the fuckin bible in there; description should be at most 256 characters."
+                .to_string(),
+        );
+    }
+
+    // TODO: Validate thumbnail makes sense
+
+    Ok(())
+}
+
+/// Checks whether the given misc item's pointed URL is one we accept.
+/// Right now checks if it's a proper URL, or a relative path starting with /.
+fn is_valid_misc_item_path(misc_item_url: &str) -> bool {
+    // Check if it's a complete path
+    if Url::parse(misc_item_url).is_ok_and(|url| matches!(url.scheme(), "http" | "https")) {
+        return true;
+    }
+
+    // Check if it's a relative path
+    misc_item_url.starts_with("/")
+        && Url::parse("https://www.google.com")
+            .unwrap()
+            .join("misc_item_url")
+            .is_ok()
 }

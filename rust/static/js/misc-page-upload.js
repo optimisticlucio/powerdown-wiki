@@ -1,6 +1,6 @@
-const DEFAULT_SRC = '/static/img/pd_logo_with_stroke.png';
+const DEFAULT_SRC = '/static/img/pd_logo.svg';
 
-document.querySelectorAll('.thumbnail-wrap').forEach(applyRelevantActions);
+
 
 function applyRelevantActions(wrap) {
     const img = wrap.querySelector('.thumb-img');
@@ -35,6 +35,7 @@ function createNewMiscItem() {
 
     const miscItemElement = document.createElement("div");
     miscItemElement.classList.add("misc");
+    miscItemElement.draggable = true;
 
     const leftElement = document.createElement("div");
     leftElement.classList.add("left");
@@ -61,7 +62,7 @@ function createNewMiscItem() {
     thumbnailElement.classList.add("thumbnail", "thumbnail-wrap");
 
     const image = document.createElement("img");
-    image.classList.add("thumb-img");
+    image.classList.add("thumb-img", "thumbnail");
     image.dataset.hasThumb = false;
     image.src = DEFAULT_SRC;
 
@@ -83,3 +84,82 @@ function createNewMiscItem() {
 
     miscHolder.appendChild(miscItemElement);
 }
+
+async function updateMiscItems(targetUrl = window.location.pathname) {
+    const miscItemElements = document.querySelectorAll(".misc-holder > .misc");
+
+    const miscItems = [...miscItemElements].map((miscItemElement, index) => {
+        let title = getContentEditableText(miscItemElement.querySelector("h1"));
+        let description = getContentEditableText(miscItemElement.querySelector("h2"));
+        let url = getContentEditableText(miscItemElement.querySelector("span"));
+
+        let id = miscItemElement.id;
+
+        // TODO: Get Thumbnail
+
+        let data_to_send_back = {
+            title,
+            description,
+            url,
+            order_position: parseInt(index)
+        };
+
+        if (id) {
+            data_to_send_back.id = parseInt(id);
+        }
+
+        return data_to_send_back;
+    });
+
+    const messageToSend = {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+            step: "2",
+            misc_items: miscItems
+        })
+    };
+
+    console.log(`SENT: ${JSON.stringify(messageToSend)}`)
+
+    updateErrorText(`Sending misc list data...`);
+
+    const categoryUpdateResponse = await fetch(targetUrl, messageToSend);
+
+    if (categoryUpdateResponse.status >= 400 && categoryUpdateResponse.status < 600) {
+        let errorText = await categoryUpdateResponse.text();
+        updateErrorText(`<b>ERROR ${categoryUpdateResponse.status}, ${categoryUpdateResponse.statusText}:</b> ${errorText}`);
+        return;
+    }
+
+    updateErrorText(`Upload successful!`);
+    window.location.href = categoryUpdateResponse.url;
+}
+
+document.querySelectorAll('.thumbnail-wrap').forEach(applyRelevantActions);
+
+const container = document.getElementsByClassName('misc-holder')[0];
+let draggedEl = null;
+
+container.addEventListener('dragstart', e => {
+    draggedEl = e.target.closest('.misc');
+    e.target.style.opacity = '0.4';
+});
+
+container.addEventListener('dragend', e => {
+    e.target.style.opacity = '';
+});
+
+container.addEventListener('dragover', e => {
+    e.preventDefault(); // required to allow dropping
+    const target = e.target.closest('.misc');
+    if (target && target !== draggedEl) {
+        // Insert before or after based on mouse position
+        const rect = target.getBoundingClientRect();
+        const after = e.clientY > rect.top + rect.height / 2;
+        container.insertBefore(draggedEl, after ? target.nextSibling : target);
+    }
+});

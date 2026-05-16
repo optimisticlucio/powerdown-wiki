@@ -21,7 +21,7 @@
 
     <div class="misc-holder">
         {% for misc_item in misc_items %}
-        <div class="misc">
+        <div class="misc" id="{{ misc_item.id }}" draggable="true">
             <div class="left">
                 <h1 contenteditable="true">{{ misc_item.title }}</h1>
                 <h2 contenteditable="">{{ misc_item.description }}</h2>
@@ -29,9 +29,9 @@
                 <p>Links to: <span contenteditable="true">{{misc_item.url}}</span></p>
             </div>
             <div class="thumbnail thumbnail-wrap">
-                <img alt="Post thumbnail" {% if let Some(thumbnail_url)=misc_item.thumbnail_url %}
-                    src="{{ misc_item.get_thumbnail_url() }}" data-has-thumb="true" {% else %}
-                    src="/static/img/pd_logo_with_stroke.png" data-has-thumb="false" {% endif %}>
+                <img class="thumbnail thumb-img" alt="Post thumbnail" {% if let
+                    Some(thumbnail_url)=misc_item.thumbnail_url %} src="{{ misc_item.get_thumbnail_url() }}"
+                    data-has-thumb="true" {% else %} src="/static/img/pd_logo.svg" data-has-thumb="false" {% endif %}>
                 <input type="file" class="hiddenThumbnailInput" accept="image/*">
                 <button type="button" class="removeButton" title="Remove thumbnail">&#x2715;</button>
             </div>
@@ -41,7 +41,7 @@
 
     <div class="uploaderBar">
         <button class="light" onclick="createNewMiscItem()">Add Misc Section</button>
-        <button class="dark">Update Misc Listings</button>
+        <button class="dark" onclick="updateMiscItems()">Update Misc Listings</button>
     </div>
 
 </div>

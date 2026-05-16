@@ -1,4 +1,3 @@
-use super::structs;
 use crate::{
     errs::RootErrors, misc::structs::MiscItem, user::User, utils::template_to_response, ServerState,
 };
