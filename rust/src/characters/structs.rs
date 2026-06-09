@@ -89,7 +89,7 @@ impl BaseCharacter {
     pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<Self> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
-            "SELECT * FROM character WHERE post_state='public' AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
+            "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::from_db_row).collect()
