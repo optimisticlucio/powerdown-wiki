@@ -306,7 +306,16 @@ pub async fn add_art(
                 page_art.base_art.slug
             );
 
-            Ok(Redirect::to(&format!("/art/{}", page_art.base_art.slug)).into_response())
+            Ok(Redirect::to(&format!(
+                "/art/{}{}",
+                page_art.base_art.slug,
+                if page_art.base_art.is_nsfw {
+                    "?is_nsfw=true"
+                } else {
+                    ""
+                }
+            ))
+            .into_response())
         }
     }
 }
@@ -670,7 +679,16 @@ pub async fn edit_art_put_request(
                 sent_page_art.base_art.slug
             );
 
-            Ok(Redirect::to(&format!("/art/{}", sent_page_art.base_art.slug)).into_response())
+            Ok(Redirect::to(&format!(
+                "/art/{}{}",
+                sent_page_art.base_art.slug,
+                if sent_page_art.base_art.is_nsfw {
+                    "?is_nsfw=true"
+                } else {
+                    ""
+                }
+            ))
+            .into_response())
         }
     }
 }
