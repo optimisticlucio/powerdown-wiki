@@ -66,7 +66,7 @@ pub async fn add_art(
             {
                 return Err(RootErrors::BadRequest(format!(
                     "The slug {} already exists.",
-                    &page_art.base_art.slug
+                    page_art.base_art.slug
                 )));
             }
 
@@ -465,11 +465,11 @@ pub async fn edit_art_put_request(
                 .map_err(|err| {
                     eprintln!(
                         "[ART UPLOAD] Updating metadata of art id {}, named \"{}\", failed. {:?} \nQUERY:{}\nPARAMS:{:?}",
-                        &existing_art.base_art.id,
-                        &existing_art.base_art.title,
+                        existing_art.base_art.id,
+                        existing_art.base_art.title,
                         err,
-                        &query,
-                        &values
+                        query,
+                        values
                     );
                     RootErrors::InternalServerError
                 })?;
@@ -511,7 +511,7 @@ pub async fn edit_art_put_request(
                         .map_err(|err| {
                             eprintln!(
                                 "[MODIFY ART] Failed moving new art for \"{}\", id:{}. Err:{:?}",
-                                &existing_art.base_art.title, &existing_art.base_art.id, err
+                                existing_art.base_art.title, existing_art.base_art.id, err
                             );
 
                             RootErrors::InternalServerError

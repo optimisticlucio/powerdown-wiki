@@ -206,7 +206,7 @@ async fn oauth_process<
             RootErrors::InternalServerError
         })?
         .get(provider.get_identification_url())
-        .header("Authorization", format!("Bearer {}", &tokens.access_token))
+        .header("Authorization", format!("Bearer {}", tokens.access_token))
         .header(USER_AGENT, "powerdown-wiki")
         .send()
         .await

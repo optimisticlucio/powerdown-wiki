@@ -159,7 +159,7 @@ pub async fn delete_character_page(
         .await
         .map_err(|err|
             {
-                eprintln!("[DELETE CHARACTER] When trying to delete character ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {}", &requested_character.base_character.db_id, &requested_character.base_character.name, err);
+                eprintln!("[DELETE CHARACTER] When trying to delete character ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {}", requested_character.base_character.db_id, requested_character.base_character.name, err);
                 RootErrors::InternalServerError
             }
         )?;

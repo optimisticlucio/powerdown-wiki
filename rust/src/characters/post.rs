@@ -90,7 +90,7 @@ pub async fn add_character(
             {
                 return Err(RootErrors::BadRequest(format!(
                     "The slug {} already exists.",
-                    &recieved_page_character.base_character.slug
+                    recieved_page_character.base_character.slug
                 )));
             }
 
@@ -179,7 +179,7 @@ pub async fn add_character(
                 .map_err(|err| {
                     eprintln!(
                         "[CHARACTER POSTING] Character {} failed initial creation! {:?}",
-                        &recieved_page_character.base_character.name, err
+                        recieved_page_character.base_character.name, err
                     );
                     RootErrors::InternalServerError
                 })?
@@ -328,7 +328,7 @@ pub async fn add_character(
 
             Ok(Redirect::to(&format!(
                 "/characters/{}",
-                &recieved_page_character.base_character.slug
+                recieved_page_character.base_character.slug
             ))
             .into_response())
         }
@@ -610,7 +610,7 @@ pub async fn modify_character(
 
             Ok(Redirect::to(&format!(
                 "/characters/{}",
-                &recieved_page_character.base_character.slug
+                recieved_page_character.base_character.slug
             ))
             .into_response())
         }

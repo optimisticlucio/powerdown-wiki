@@ -33,7 +33,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
     println!(
         "Character folder found! There are {} characters. {}",
-        &total_character_amount,
+        total_character_amount,
         "Any files starting with _ were ignored.".italic()
     );
 

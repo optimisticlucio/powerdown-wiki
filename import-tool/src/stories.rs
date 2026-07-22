@@ -31,7 +31,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
     println!(
         "Story folder found! There are {} stories. {}",
-        &total_story_amount,
+        total_story_amount,
         "Any files starting with _ were ignored.".italic()
     );
 

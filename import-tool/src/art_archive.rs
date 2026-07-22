@@ -32,7 +32,7 @@ pub async fn select_import_options(root_path: &Path, server_url: &Url) {
 
     println!(
         "Art Archive folder found! There are {} art pieces. {}",
-        &total_file_amount,
+        total_file_amount,
         "Any files starting with _ were ignored.".italic()
     );
 
@@ -309,24 +309,24 @@ async fn import_given_art_piece(
         }
 
         if art_thumbnail_folder_path
-            .join(format!("{}.png", &file_name))
+            .join(format!("{}.png", file_name))
             .exists()
         {
-            return format!("{}.png", &file_name);
+            return format!("{}.png", file_name);
         }
 
         if art_thumbnail_folder_path
-            .join(format!("{}.jpg", &file_name))
+            .join(format!("{}.jpg", file_name))
             .exists()
         {
-            return format!("{}.jpg", &file_name);
+            return format!("{}.jpg", file_name);
         }
 
         // Well, fuck me.
         format!(
             "ERROR_{}_NOT_FOUND",
             art_thumbnail_folder_path
-                .join(format!("{}.png", &file_name))
+                .join(format!("{}.png", file_name))
                 .as_os_str()
                 .to_str()
                 .unwrap()
@@ -376,7 +376,7 @@ async fn import_given_art_piece(
         let img_file_bytes = fs::read(&img_file_path).map_err(|err| {
             format!(
                 "ERROR IN READING FILE WITH PATH {}, err: {}",
-                &img_relative_path, err
+                img_relative_path, err
             )
         })?;
 

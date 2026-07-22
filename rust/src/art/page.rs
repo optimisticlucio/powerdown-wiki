@@ -213,7 +213,7 @@ pub async fn delete_art_page(
         .await
         .map_err(|err|
             {
-                eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {}", &requested_art.base_art.id, &requested_art.base_art.title, err);
+                eprintln!("[DELETE ART] When trying to delete artwork ID {}, name \"{}\", sending DELETE OBJECTS to S3 failed: {}", requested_art.base_art.id, requested_art.base_art.title, err);
                 RootErrors::InternalServerError
             }
         )?;

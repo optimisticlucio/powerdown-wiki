@@ -124,7 +124,7 @@ pub async fn patch_user(
             if let Some(passed_pfp_key) = &modified_user_info.pfp_temp_key {
                 let random_string = utils::get_random_string(6);
                 let target_file_key =
-                    format!("user/{}/profile_picture_{random_string}", &modified_user.id);
+                    format!("user/{}/profile_picture_{random_string}", modified_user.id);
                 let cleaned_pfp_key = match utils::clean_passed_key(passed_pfp_key, &state) {
                     Some(clean_key) => clean_key,
                     None => {
@@ -225,8 +225,8 @@ pub async fn patch_user(
                 .map_err(|err| {
                     eprintln!(
                         "[USER MODIFICATION] Changing properties of userid {} by userid {} failed when pushing to DB: {:?}",
-                        &modified_user.id,
-                        &requesting_user.id,
+                        modified_user.id,
+                        requesting_user.id,
                         err
                     );
                     RootErrors::InternalServerError
