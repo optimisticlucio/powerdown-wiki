@@ -1,6 +1,7 @@
 /// Given text, puts it in the Error Text div.
 function updateErrorText(text) {
     document.getElementById("errorDisplay").innerHTML = text;
+    document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
 
 /// Properly returns the contents of a contenteditable div.
