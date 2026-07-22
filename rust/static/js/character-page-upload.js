@@ -69,9 +69,11 @@ async function attemptNewCharacterUpload(targetUrl = window.location.pathname) {
 
     let characterShortName = document.getElementById("characterName").value;
 
+    let characterSlug = document.getElementById("characterSlug").value || defaultCharacterSlug;
+
     let postInfo = {
         name: characterShortName,
-        slug: document.getElementById("characterSlug").value || characterShortName.toLowerCase().replaceAll(" ", "-"),
+        slug: characterSlug,
         subtitles: document.getElementById("characterSubtitles").value.split("\n"),
         creator: document.getElementById("characterCreatorName").value,
         is_hidden: document.getElementById("characterIsHidden").checked
@@ -244,4 +246,14 @@ async function sendDeleteRequest(targetUrl = window.location.pathname) {
     await fetch(targetUrl, {
         method: 'DELETE'
     });
+}
+
+// Returns the default slug we set for this character, assuming the user didn't write one
+function defaultCharacterSlug() {
+    return characterShortName
+        .normalize("NFD")   // This line and the next one drops any diacritics
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-") // Replace anything that isn't a-z or 0-9 with a dash
+        .replace(/^-+|-+$/g, ""); // Remove dashes at the start or end.
 }

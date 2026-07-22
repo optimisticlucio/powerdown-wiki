@@ -647,7 +647,7 @@ pub async fn character_posting_page(
 /// Given a user-created Page Art, validates that it makes sense. If it doesn't, returns a readable explanation why.
 fn validate_recieved_page_character(recieved_page_character: &PageCharacter) -> Result<(), String> {
     if !utils::is_valid_slug(&recieved_page_character.base_character.slug) {
-        return Err("Invalid slug. Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.".to_string());
+        return Err(format!("Invalid slug. The slug is the part of the URL which refers to this character, and the slug recieved was \"{}\". Slugs must be made of either lowercase letters or numbers, and may include hyphens or underscores in the middle.", recieved_page_character.base_character.slug));
     }
 
     if recieved_page_character.base_character.name.len() > 10 {
