@@ -1,6 +1,6 @@
 use axum::{
     error_handling::HandleErrorLayer,
-    extract::{OriginalUri, State},
+    extract::{OriginalUri, Path, State},
     response::{IntoResponse, Redirect},
     routing::get,
     BoxError, Router,
@@ -46,8 +46,10 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/characters", characters::router())
         .nest("/art", art::router())
         .route_with_tsr(
-            "/art-archive",
-            get(|uri: Uri| async move { Redirect::permanent(&format!("/art{}", uri.path())) }),
+            "/art-archive/{*rest}",
+            get(|Path(rest): Path<String>| async move {
+                Redirect::permanent(&format!("/art/{rest}"))
+            }),
         )
         .nest("/stories", stories::router())
         .nest("/user", user::router())
