@@ -6,7 +6,6 @@ use axum::{
     BoxError, Router,
 };
 use axum_extra::routing::RouterExt;
-use http::Uri;
 use std::time;
 use tower::ServiceBuilder;
 use tower_cookies::CookieManagerLayer;
@@ -45,12 +44,13 @@ pub fn router(state: ServerState) -> Router<()> {
         .nest("/static", static_files::router())
         .nest("/characters", characters::router())
         .nest("/art", art::router())
-        .route_with_tsr(
+        .route(
             "/art-archive/{*rest}",
             get(|Path(rest): Path<String>| async move {
                 Redirect::permanent(&format!("/art/{rest}"))
             }),
         )
+        .route_with_tsr("/art-archive", get(|| async move {Redirect::permanent("/art")}))
         .nest("/stories", stories::router())
         .nest("/user", user::router())
         .nest("/misc", misc::router())
