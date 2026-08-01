@@ -2,7 +2,8 @@
 
 {% block title %}Admin Panel{% endblock %}
 
-{% block customhead %}<script src="/static/js/admin.js" defer></script>{% endblock %}
+{% block customhead %}
+<script src="/static/js/admin.js" defer></script>{% endblock %}
 
 {% block content %}
 <div class="admin wrapper">
@@ -13,14 +14,14 @@
     <br><br>
 
     <div class="text">
-    <p>If you can see this page, it means you're an admin of the wiki. Congrats! Anyone without access to this page will see a 404. Anywho, here you have quick access to all the areas you'd want as a mod.
+        <p>If you can see this page, it means you're an admin of the wiki. Congrats! Anyone without access to this page
+            will see a 404. Anywho, here you have quick access to all the areas you'd want as a mod.
     </div>
 
     <hr>
-    
+
     <div class="buttons">
         <a href="/admin/arbitrary_values"><button>Arbitrary Value Modification</button></a>
-        <a href="/admin/art_archival_project"><button>Art Archival Project</button></a>
     </div>
 </div>
 {% endblock %}

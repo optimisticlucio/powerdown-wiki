@@ -1,0 +1,1 @@
+DELETE FROM arbitrary_value WHERE item_key LIKE 'art\_archival\_pin\_%';
