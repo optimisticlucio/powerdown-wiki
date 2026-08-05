@@ -80,7 +80,7 @@ pub struct UserSession {
     pub session_id: String,
 }
 
-static USER_SESSION_MAX_LENGTH: Duration = Duration::days(30);
+pub static USER_SESSION_MAX_LENGTH: Duration = Duration::days(30);
 
 /// A struct representing an association between a given user and an OAuth2 provider, will probably only use for login methods.
 #[derive(Debug)]

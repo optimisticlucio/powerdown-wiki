@@ -21,6 +21,7 @@ mod traits;
 
 pub use structs::User;
 pub use structs::UserType;
+pub use structs::USER_SESSION_MAX_LENGTH;
 pub use traits::UsermadePost;
 
 use structs::Oauth2Provider;

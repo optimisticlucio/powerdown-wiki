@@ -40,7 +40,25 @@ pub async fn clean_temp_db_entries(state: &ServerState) {
         }
     };
 
-    let entries_cleaned_up = art_db_cleanup_rows_modified + character_db_cleanup_rows_modified;
+    // Clean up any old user session tokens, so we don't have a bunch just gathering dust in the DB.
+    const SESSION_TOKEN_CLEANUP_QUERY: &str = "DELETE FROM user_session WHERE creation_time < NOW () - ($1::float8 * INTERVAL '1 second')";
+    let session_token_cleanup_rows_modified = match db_connection
+        .execute(
+            SESSION_TOKEN_CLEANUP_QUERY,
+            &[&crate::user::USER_SESSION_MAX_LENGTH.as_seconds_f64()],
+        )
+        .await
+    {
+        Ok(rows_modified) => rows_modified,
+        Err(err) => {
+            eprintln!("[CLEAN TEMP DB ENTRIES] Failed to clean up session tokens! {err:?}. Continuing cleanup.");
+            0
+        }
+    };
+
+    let entries_cleaned_up = art_db_cleanup_rows_modified
+        + character_db_cleanup_rows_modified
+        + session_token_cleanup_rows_modified;
 
     println!("[CLEAN TEMP DB ENTRIES] Cleanup complete, {entries_cleaned_up} entries removed.");
 }
