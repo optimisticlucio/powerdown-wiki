@@ -1,11 +1,11 @@
 function setup_tierlist() {
     var tiers = document.querySelectorAll(".tier");
-    tiers.forEach(function(tier) {
+    tiers.forEach(function (tier) {
         setup_tier(tier);
     });
 
     var characters = document.querySelectorAll(".character-icon");
-    characters.forEach(function(character) {
+    characters.forEach(function (character) {
         character.draggable = true;
         character.ondragstart = char_ondragstart;
     });
@@ -14,10 +14,10 @@ function setup_tierlist() {
 }
 
 function setup_tier(tier) {
-        tier.ondrop = tier_ondrop;
-        tier.ondragover = tier_ondragover;
+    tier.ondrop = tier_ondrop;
+    tier.ondragover = tier_ondragover;
 
-        tier_kill_dragover_for_name(tier);
+    tier_kill_dragover_for_name(tier);
 }
 
 function tier_ondrop(event) {
@@ -44,12 +44,12 @@ function char_ondragstart(event) {
 function tier_kill_dragover_for_name(tier) {
     let name_div = tier.querySelector("name");
     if (name_div == undefined) return;
-    
+
     name_div.addEventListener("dragover", (event) => {
         event.preventDefault();  // prevents default browser behavior
         event.stopPropagation(); // prevents interfering with tierlist
     });
-    
+
     name_div.addEventListener("drop", (event) => {
         event.preventDefault();  // disable dropping
         event.stopPropagation();
@@ -57,7 +57,7 @@ function tier_kill_dragover_for_name(tier) {
 }
 
 // Creates and returns a tier.
-function generate_tier(text="new tier", color="orange") {
+function generate_tier(text = "new tier", color = "orange") {
     let new_tier = document.createElement("div");
     new_tier.classList.add("tier");
 
@@ -89,7 +89,7 @@ function colorpicker_oninput(caller) {
     let name_div = parent_tier.querySelector(".name");
     let color = caller.value;
     name_div.style.backgroundColor = color;
-    
+
     let brightness = getBrightness(color);
     if (brightness > 0.6) {
         name_div.style.color = "black";
@@ -138,14 +138,17 @@ function download_screenshot_of_tierlist() {
 
     const runCapture = () => {
         target.classList.add("hide-settings");
-        html2canvas(target).then(canvas => {
-        const image = canvas.toDataURL('image/png');
-        target.classList.remove("hide-settings");
-        const link = document.createElement('a');
-        link.href = image;
-        title = document.getElementById("tierlist-title").innerHTML.toLowerCase().replaceAll(" ", "-");
-        link.download = `pd-tierlist-${title}`;
-        link.click();
+        html2canvas(target, {
+            useCORS: true
+        }
+        ).then(canvas => {
+            const image = canvas.toDataURL('image/png');
+            target.classList.remove("hide-settings");
+            const link = document.createElement('a');
+            link.href = image;
+            title = document.getElementById("tierlist-title").innerHTML.toLowerCase().replaceAll(" ", "-");
+            link.download = `pd-tierlist-${title}`;
+            link.click();
         });
     };
 
@@ -208,10 +211,10 @@ function getBrightness(color) {
         // Extract numbers from rgb() or rgba()
         const matches = color.match(/\d+/g);
         [r, g, b] = matches.map(Number);
-        } else {
+    } else {
         throw new Error('Unsupported color format');
     }
 
     // Brightness formula
-    return (0.299 * r + 0.587 * g + 0.114 * b)/255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
