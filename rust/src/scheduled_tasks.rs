@@ -21,8 +21,7 @@ pub async fn initiate_scheduled_tasks(state: ServerState) {
     // be run. The syntax here is from the `croner` library so you can check it aswell for info,
     // but in short:
     //
-    // [minute] [hour] [day of month] [month] [day of week]
-    // - if you write all five fields and try to add a sixth, the first field becomes seconds.
+    // [seconds] [minute] [hour] [day of month] [month] [day of week]
     // - * is a wildcard, meaning any value applies
     // - (*/num) means every value that cleanly divides by num. For example, (*/15) is once every 15 min.
     // - There's some shorthands, for example @hourly and @daily, that replace this entire pattern.
@@ -40,7 +39,7 @@ pub async fn initiate_scheduled_tasks(state: ServerState) {
     job_scheduler
         .add(
             // Job runs once every three hours
-            Job::new_async("0 */3 * * *", move |_uuid, _scheduler| {
+            Job::new_async("0 0 */3 * * *", move |_uuid, _scheduler| {
                 let state = cloned_state.clone();
                 Box::pin(async move {
                     clean_temp_db_entries(&state).await;
