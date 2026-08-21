@@ -71,11 +71,11 @@ pub async fn character_page(
             character: chosen_char,
         }))
     } else {
-        Err(RootErrors::NotFound(
+        Err(RootErrors::NotFound(Box::new((
             original_uri,
             cookie_jar,
             requesting_user,
-        ))
+        ))))
     }
 }
 
@@ -129,11 +129,11 @@ pub async fn delete_character_page(
         match super::structs::PageCharacter::get_by_slug(&db_connection, &character_slug).await {
             // If the requested art doesn't exist, also kick them out.
             None => {
-                return Err(RootErrors::NotFound(
+                return Err(RootErrors::NotFound(Box::new((
                     original_uri,
                     cookie_jar,
                     Some(requesting_user),
-                ))
+                ))))
             }
             Some(character) => character,
         };
@@ -182,7 +182,8 @@ pub async fn delete_character_page(
 
     // Yay! The page is deleted! :)
     let mut not_found_but_204 =
-        RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)).into_response();
+        RootErrors::NotFound(Box::new((original_uri, cookie_jar, Some(requesting_user))))
+            .into_response();
     *not_found_but_204.status_mut() = axum::http::StatusCode::NO_CONTENT;
     Ok(not_found_but_204)
 }

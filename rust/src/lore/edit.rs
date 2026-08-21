@@ -92,11 +92,11 @@ pub async fn edit_lore_page(
 
     let Some(requested_lore) = structs::PageLore::get_from_slug(&db_connection, &lore_slug).await
     else {
-        return Err(RootErrors::NotFound(
+        return Err(RootErrors::NotFound(Box::new((
             original_uri,
             cookie_jar,
             requesting_user,
-        ));
+        ))));
     };
 
     let Some(requesting_user) = requesting_user else {

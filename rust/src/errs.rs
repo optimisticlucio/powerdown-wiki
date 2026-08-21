@@ -12,7 +12,7 @@ use tower_cookies::Cookies;
 #[derive(Debug)]
 pub enum RootErrors {
     /// User asked for something that the server doesn't recognize.
-    NotFound(Uri, Cookies, Option<User>),
+    NotFound(Box<(Uri, Cookies, Option<User>)>),
     /// Part of my code ate shit and it's not the user's fault.
     InternalServerError,
     /// My code took too long to respond.
@@ -28,7 +28,8 @@ pub enum RootErrors {
 impl IntoResponse for RootErrors {
     fn into_response(self) -> Response {
         match self {
-            Self::NotFound(original_uri, cookie_jar, logged_in_user) => {
+            Self::NotFound(box_of_elements) => {
+                let (original_uri, cookie_jar, logged_in_user) = *box_of_elements;
                 page_not_found(original_uri, cookie_jar, logged_in_user).into_response()
             }
             Self::InternalServerError => (

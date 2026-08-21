@@ -34,11 +34,11 @@ pub async fn lore_page(
 
     let requested_lore = match PageLore::get_from_slug(&db_connection, &lore_slug).await {
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 requesting_user,
-            ))
+            ))))
         }
         Some(page) => page,
     };

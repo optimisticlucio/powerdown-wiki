@@ -129,11 +129,11 @@ pub async fn edit_lore_page(
     }
 
     let Some(existing_page_lore) = PageLore::get_from_slug(&db_connection, &lore_slug).await else {
-        return Err(RootErrors::NotFound(
+        return Err(RootErrors::NotFound(Box::new((
             original_uri,
             cookie_jar,
             Some(requesting_user),
-        ));
+        ))));
     };
 
     match posting_step {

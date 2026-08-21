@@ -120,7 +120,11 @@ pub async fn art_page(
             newer_art_url,
         }))
     } else {
-        Err(RootErrors::NotFound(original_uri, cookie_jar, user))
+        Err(RootErrors::NotFound(Box::new((
+            original_uri,
+            cookie_jar,
+            user,
+        ))))
     }
 }
 
@@ -188,11 +192,11 @@ pub async fn delete_art_page(
     let requested_art = match structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         // If the requested art doesn't exist, also kick them out.
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ))
+            ))))
         }
         Some(art) => art,
     };
@@ -236,7 +240,8 @@ pub async fn delete_art_page(
 
     // Yay! The page is deleted! :)
     let mut not_found_but_204 =
-        RootErrors::NotFound(original_uri, cookie_jar, Some(requesting_user)).into_response();
+        RootErrors::NotFound(Box::new((original_uri, cookie_jar, Some(requesting_user))))
+            .into_response();
     *not_found_but_204.status_mut() = axum::http::StatusCode::NO_CONTENT;
     Ok(not_found_but_204)
 }

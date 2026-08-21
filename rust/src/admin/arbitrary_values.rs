@@ -35,7 +35,11 @@ pub async fn arbitrary_value_panel(
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
     if !super::user_is_admin(&user) {
-        return Err(RootErrors::NotFound(original_uri, cookie_jar, user));
+        return Err(RootErrors::NotFound(Box::new((
+            original_uri,
+            cookie_jar,
+            user,
+        ))));
     }
 
     let current_discord_invite_url =

@@ -32,11 +32,11 @@ pub async fn add_comment(
     let requested_post = match BaseArt::get_by_slug(&db_connection, &art_slug).await {
         Some(art) => art,
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ))
+            ))))
         }
     };
 

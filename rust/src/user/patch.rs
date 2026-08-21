@@ -48,22 +48,22 @@ pub async fn patch_user(
     let user_id = match user_id.parse() {
         Err(_) => {
             // If the parse failed, it's 100% a nonexistent user ID. Shoot back 404.
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ));
+            ))));
         }
         Ok(id) => id,
     };
     let modified_user = match User::get_by_id(&db_connection, &user_id).await {
         Some(user) => user,
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ));
+            ))));
         }
     };
 
@@ -326,11 +326,11 @@ pub async fn modify_user_page(
     let user_id = match user_id.parse() {
         Err(_) => {
             // If the parse failed, it's 100% a nonexistent user ID. Shoot back 404.
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ));
+            ))));
         }
         Ok(id) => id,
     };
@@ -338,11 +338,11 @@ pub async fn modify_user_page(
     let modified_user = match User::get_by_id(&db_connection, &user_id).await {
         Some(user) => user,
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ));
+            ))));
         }
     };
 

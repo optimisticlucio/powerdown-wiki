@@ -79,10 +79,10 @@ pub async fn story_page(
             content: &converted_story,
         }))
     } else {
-        Err(RootErrors::NotFound(
+        Err(RootErrors::NotFound(Box::new((
             original_uri,
             cookie_jar,
             requesting_user,
-        ))
+        ))))
     }
 }

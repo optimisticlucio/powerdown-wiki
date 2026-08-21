@@ -25,11 +25,11 @@ pub async fn edit_art_page(
 
     let requested_art = match structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ))
+            ))))
         }
         Some(requested_art) => requested_art,
     };

@@ -76,7 +76,13 @@ pub async fn other_user_page(
 
     let parsed_user_id: i32 = match user_id.parse() {
         Ok(id) => id,
-        Err(_err) => return Err(RootErrors::NotFound(original_uri, cookie_jar, user)),
+        Err(_err) => {
+            return Err(RootErrors::NotFound(Box::new((
+                original_uri,
+                cookie_jar,
+                user,
+            ))))
+        }
     };
 
     let viewed_user = User::get_by_id(&db_connection, &parsed_user_id).await;
@@ -88,7 +94,11 @@ pub async fn other_user_page(
 
             viewed_user,
         })),
-        None => Err(RootErrors::NotFound(original_uri, cookie_jar, user)),
+        None => Err(RootErrors::NotFound(Box::new((
+            original_uri,
+            cookie_jar,
+            user,
+        )))),
     }
 }
 

@@ -375,11 +375,11 @@ pub async fn edit_art_put_request(
 
     let existing_art = match PageArt::get_by_slug(&db_connection, &art_slug).await {
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ))
+            ))))
         }
         Some(existing_art) => existing_art,
     };

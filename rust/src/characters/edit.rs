@@ -29,10 +29,10 @@ pub async fn edit_character_page(
             target_button_url: Some(target_button_url),
         }))
     } else {
-        Err(RootErrors::NotFound(
+        Err(RootErrors::NotFound(Box::new((
             original_uri,
             cookie_jar,
             requesting_user,
-        ))
+        ))))
     }
 }

@@ -361,11 +361,11 @@ pub async fn modify_character(
     {
         Some(x) => x,
         None => {
-            return Err(RootErrors::NotFound(
+            return Err(RootErrors::NotFound(Box::new((
                 original_uri,
                 cookie_jar,
                 Some(requesting_user),
-            ))
+            ))))
         }
     };
 
