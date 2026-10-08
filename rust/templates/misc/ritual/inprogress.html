@@ -1,0 +1,38 @@
+{% extends "base-template.html" %}
+
+{% block title %}The Ritual...{% endblock %}
+
+{% block content %}
+<div class="wrapper wide ritual guess">
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            const listOfCharacters = {}; // TODO
+
+            initializeRitual(listOfCharacters);
+        });
+    </script>
+    <div class="text">
+        <h1> WHO'S THAT POKEMON? </h1>
+
+        <div class="mystery">
+            <h1 id="ritual-v3-name" contenteditable="true">???</h1>
+        </div>
+        <div class="mystery">
+            <h1 id="ritual-v3-power" contenteditable="true">???</h1>
+            <p id="ritual-v3-power-desc" style="display:none;">
+                ???
+            </p>
+        </div>
+
+        <div class="remaining">
+            <div id="ritualDone">0</div>/<div id="ritualTotal">?</div>
+        </div>
+        <button id="ritual-v3-button" onclick="ritualV3Button();">REVEAL</button>
+        <div class="motivation">This is gonna take a while</div>
+    </div>
+
+    <div class="img">
+        <img id="ritual-v3-art" src="/assets/img/pd-logo.svg">
+    </div>
+</div>
+{% endblock %}
