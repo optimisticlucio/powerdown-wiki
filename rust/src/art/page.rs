@@ -48,7 +48,7 @@ impl<'a> ArtPage<'a> {
     /// Given a URL, returns true if it's one that should be wrapped in a <video> tag.
     /// Assumes the URL has a file extension. If not, this breaks.
     fn url_is_of_video(&self, url: &&String) -> bool {
-        ["mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"]
+        ["mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v", "webm"]
             .iter()
             .any(|ext| url.ends_with(ext))
     }
