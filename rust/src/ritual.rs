@@ -6,13 +6,19 @@ use axum::{
     routing::get,
     Router,
 };
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use axum_extra::routing::RouterExt;
 use http::Uri;
+use structs::RitualCharacterData;
 
 pub fn router() -> Router<ServerState> {
-    Router::new().route("/", get(index))
+    Router::new()
+        .route("/", get(index))
+        .route_with_tsr("inprogress", get(page::ritual_page))
+        .route_with_tsr("complete", get(page::ritual_done))
 }
+
+mod page;
+mod structs;
 
 const AVERAGE_MINUTES_PER_CHARACTER: f64 = 2.0;
 
@@ -26,9 +32,17 @@ pub async fn index(
 
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let amount_of_main_characters: f64 = 23.0; // TODO
+    let all_characters_in_ritual = RitualCharacterData::get_all_characters(&db_connection).await;
 
-    let amount_of_characters_in_general: f64 = 88.0; // TODO
+    let amount_of_main_characters: f64 = all_characters_in_ritual
+        .iter()
+        .filter(|character| character.is_main_character)
+        // safety: in prod this number isn't gonna cross 50, we're fine.
+        .count() as f64;
+
+    let amount_of_characters_in_general: f64 = all_characters_in_ritual
+        // safety: in prod this number isn't gonna cross 150, we're fine.
+        .len() as f64;
 
     let standard_length =
         minutes_to_human_readable_time(AVERAGE_MINUTES_PER_CHARACTER * amount_of_main_characters);
@@ -79,47 +93,4 @@ fn minutes_to_human_readable_time(minutes: f64) -> String {
     }
 
     returned_string
-}
-
-struct RitualCharacterData {
-    name: String,
-    power_name: String,
-    power_description: String,
-}
-
-impl RitualCharacterData {
-    /// Gets RitualCharacterData for all characters in the database.
-    pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<Self> {
-        // TODO: Select only what's necessary to speed it up.
-        let character_rows = db_connection
-            .query(
-                "SELECT * FROM ritual_info INNER JOIN character ON ritual_info.character_id == character.id ORDER_BY character.short_name",
-                &[],
-            )
-            .await
-            .unwrap();
-
-        let converted_rows: Result<Vec<Self>, _> =
-            character_rows.iter().map(Self::try_from).collect();
-
-        converted_rows
-            .map_err(|err| eprintln!("Failed to read RitualCharacterData: {err:?}"))
-            .unwrap()
-    }
-}
-
-impl TryFrom<&tokio_postgres::Row> for RitualCharacterData {
-    type Error = tokio_postgres::Error;
-
-    fn try_from(row: &tokio_postgres::Row) -> Result<Self, Self::Error> {
-        let long_name: Option<String> = row.try_get("long_name")?;
-
-        let name = long_name.unwrap_or(row.try_get("short_name")?);
-
-        Ok(Self {
-            name,
-            power_name: row.try_get("power_name")?,
-            power_description: row.try_get("power_description")?,
-        })
-    }
 }

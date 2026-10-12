@@ -23,7 +23,7 @@ function ritualV3Reveal() {
 
     nameTag.innerHTML = current_character["name"];
     powerTag.innerHTML = current_character["power"];
-    powerExplanationTag.innerHTML = current_character["power-desc"];
+    powerExplanationTag.innerHTML = current_character["powerDesc"];
     powerExplanationTag.style.display = "block";
     buttonTag.innerHTML = "NEXT →";
 }

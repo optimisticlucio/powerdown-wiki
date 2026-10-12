@@ -6,9 +6,18 @@
 <div class="wrapper wide ritual guess">
     <script>
         window.addEventListener("DOMContentLoaded", () => {
-            const listOfCharacters = {}; // TODO
+            const listOfCharacters = [
+                {% for character in ritual_characters %}
+                {
+                name: "{{character.name}}",
+                power: "{{character.power_name}}",
+                powerDesc: "{{character.power_description}}",
+                img: "{{character.get_art_url()}}"
+            },
+            {% endfor %}
+            ];
 
-            initializeRitual(listOfCharacters);
+        initializeRitual(listOfCharacters);
         });
     </script>
     <div class="text">
