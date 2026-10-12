@@ -4,7 +4,7 @@ services:
     pull_policy: always
 
     build: rust/.
-    
+
     tty: true
     stdin_open: true
     restart: unless-stopped
@@ -39,32 +39,33 @@ services:
   postgres:
     image: postgres:16
     shm_size: 256mb # Needs at least 128mb.
+    restart: unless-stopped
     environment:
       POSTGRES_DB: powerdown_db
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: "Asia/Jerusalem"
     volumes:
-      - pd_postgres:/var/lib/postgresql/data  
+      - pd_postgres:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d
-    
+
   localstack:
-    profiles: [development]
+    profiles: [ development ]
     container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
     image: localstack/localstack
     ports:
-      - "127.0.0.1:4566:4566"            # LocalStack Gateway
-      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+      - "127.0.0.1:4566:4566" # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559" # external services port range
     environment:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - DEBUG=${DEBUG:-0}
-      - PERSISTENCE=1 
+      - PERSISTENCE=1
       - DISABLE_CORS_CHECKS=1
     volumes:
-      - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh"  # Auto-run on ready
+      - "./localstack-init/init-public-bucket.sh:/etc/localstack/init/ready.d/init-public-bucket.sh" # Auto-run on ready
       - "/var/run/docker.sock:/var/run/docker.sock"
       - localstack_data:/var/lib/localstack
 
 volumes:
   pd_postgres:
-  localstack_data: 
+  localstack_data:
