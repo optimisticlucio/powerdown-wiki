@@ -16,8 +16,8 @@ pub struct BaseCharacter {
     pub is_hidden: bool,
     #[serde(skip)] // This should be learned by reference to other values
     pub is_archived: bool,
-    /*#[serde(default)]
-    pub is_main_character: bool,*/
+    #[serde(default)]
+    pub is_main_character: bool,
     pub slug: String,
     pub name: String,
     pub thumbnail_key: String,
@@ -110,18 +110,25 @@ impl BaseCharacter {
 
     /// Converts a DB row with the relevant info to a BaseCharacter struct.
     fn from_db_row(row: &Row) -> Self {
-        let archival_reason: Option<String> = row.get("retirement_reason");
+        Self::try_from(row).unwrap()
+    }
+}
 
-        BaseCharacter {
-            db_id: row.get("id"),
-            is_hidden: row.get("is_hidden"),
-            //is_main_character: row.get("is_main_character"),
+impl TryFrom<&Row> for BaseCharacter {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let archival_reason: Option<String> = row.try_get("retirement_reason")?;
+
+        Ok(Self {
+            db_id: row.try_get("id")?,
+            is_hidden: row.try_get("is_hidden")?,
+            is_main_character: row.try_get("is_main_character")?,
             is_archived: archival_reason.is_some(),
-            name: row.get("short_name"),
-            thumbnail_key: row.get("thumbnail"),
-            slug: row.get("page_slug"),
-            birthday: row.get("birthday"),
-        }
+            name: row.try_get("short_name")?,
+            thumbnail_key: row.try_get("thumbnail")?,
+            slug: row.try_get("page_slug")?,
+            birthday: row.try_get("birthday")?,
+        })
     }
 }
 
@@ -158,31 +165,27 @@ impl PageCharacter {
 
     /// Converts a DB row with the relevant info to a PageCharacter struct.
     fn from_db_row(row: &Row) -> Self {
-        let retirement_reason: Option<String> = row.get("retirement_reason");
+        Self::try_from(row).expect("Failed unwrapping PageCharacter. TODO: Delete from_db_row")
+    }
+}
 
-        Self {
-            base_character: BaseCharacter {
-                db_id: row.get("id"),
-                is_hidden: row.get("is_hidden"),
-                //is_main_character: row.get("is_main_character"),
-                is_archived: retirement_reason.is_some(),
-                name: row.get("short_name"),
-                thumbnail_key: row.get("thumbnail"),
-                slug: row.get("page_slug"),
-                birthday: row.get("birthday"),
-            },
-            long_name: row.get("long_name"),
-            subtitles: row.get("subtitles"),
-            creator: row.get("creator"),
-            retirement_reason,
-            logo_url: row.get("logo"),
-            page_img_key: row.get("page_image"),
-            infobox: row.get("infobox"),
-            overlay_css: row.get("overlay_css"),
-            custom_css: row.get("custom_css"),
-            page_contents: row.get("page_text"),
-            tag: row.get("relevant_tag"),
-        }
+impl TryFrom<&Row> for PageCharacter {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            base_character: BaseCharacter::try_from(row)?,
+            long_name: row.try_get("long_name")?,
+            subtitles: row.try_get("subtitles")?,
+            creator: row.try_get("creator")?,
+            retirement_reason: row.try_get("retirement_reason")?,
+            logo_url: row.try_get("logo")?,
+            page_img_key: row.try_get("page_image")?,
+            infobox: row.try_get("infobox")?,
+            overlay_css: row.try_get("overlay_css")?,
+            custom_css: row.try_get("custom_css")?,
+            page_contents: row.try_get("page_text")?,
+            tag: row.try_get("relevant_tag")?,
+        })
     }
 }
 
