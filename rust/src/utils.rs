@@ -22,7 +22,7 @@ pub mod sql;
 pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
     let day_number = date.day();
 
-    let readable_day = if (11..13).contains(&day_number) {
+    let readable_day = if (11..=13).contains(&day_number) {
         // Handling "11th, 12th, 13th" first.
         format!("{day_number}th")
     } else {
