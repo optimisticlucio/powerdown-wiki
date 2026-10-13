@@ -68,7 +68,7 @@ impl BaseCharacter {
             .await
             .ok()?;
 
-        Some(Self::from_db_row(&character_row))
+        Some(Self::try_from(&character_row).unwrap())
     }
 
     /// Gets BaseCharacter for all characters in the database.
@@ -82,7 +82,10 @@ impl BaseCharacter {
             .await
             .unwrap();
 
-        character_rows.iter().map(Self::from_db_row).collect()
+        character_rows
+            .iter()
+            .map(|row| Self::try_from(row).unwrap())
+            .collect()
     }
 
     /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
@@ -92,7 +95,10 @@ impl BaseCharacter {
             "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
-        character_rows.iter().map(Self::from_db_row).collect()
+        character_rows
+            .iter()
+            .map(|row| Self::try_from(row).unwrap())
+            .collect()
     }
 
     /// Gets a random character from the database.
@@ -105,12 +111,7 @@ impl BaseCharacter {
             .await
             .unwrap();
 
-        Self::from_db_row(&character_row)
-    }
-
-    /// Converts a DB row with the relevant info to a BaseCharacter struct.
-    fn from_db_row(row: &Row) -> Self {
-        Self::try_from(row).unwrap()
+        Self::try_from(&character_row).unwrap()
     }
 }
 
@@ -160,12 +161,7 @@ impl PageCharacter {
             .await
             .ok()?;
 
-        Some(Self::from_db_row(&character_row))
-    }
-
-    /// Converts a DB row with the relevant info to a PageCharacter struct.
-    fn from_db_row(row: &Row) -> Self {
-        Self::try_from(row).expect("Failed unwrapping PageCharacter. TODO: Delete from_db_row")
+        Some(Self::try_from(&character_row).unwrap())
     }
 }
 
