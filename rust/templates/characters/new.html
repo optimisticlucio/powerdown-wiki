@@ -37,6 +37,11 @@
         {%- if let Some(page_character) = character_being_modified %} value="{{page_character.base_character.name}}" {% endif %}/>
     <br />
 
+    <label for="mainCharacter">Is Main Character (each writer gets one 'main character', typically their first and most often used one):</label>
+    <input type="checkbox" id="mainCharacter"
+        {%- if let Some(page_character) = character_being_modified %}{% if page_character.base_character.is_main_character %} checked {% endif %}{%- endif %}>
+    <br />
+
     <label for="characterSubtitles">Subtitles: (Each subtitle in a new line!)</label>
     <textarea type="text" id="characterSubtitles" required minLength="1">
         {%- if let Some(page_character) = character_being_modified %}{{page_character.subtitles.join("\n")}}{%- endif -%}
