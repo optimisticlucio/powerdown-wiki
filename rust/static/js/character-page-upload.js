@@ -76,7 +76,8 @@ async function attemptNewCharacterUpload(targetUrl = window.location.pathname) {
         slug: characterSlug,
         subtitles: document.getElementById("characterSubtitles").value.split("\n"),
         creator: document.getElementById("characterCreatorName").value,
-        is_hidden: document.getElementById("characterIsHidden").checked
+        is_hidden: document.getElementById("characterIsHidden").checked,
+        is_main_character: document.getElementById("mainCharacter").checked,
     };
 
     postInfo.infobox = document.getElementById("characterInfobox").value
