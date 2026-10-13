@@ -17,6 +17,7 @@ pub fn router() -> Router<ServerState> {
         .route_with_tsr("complete", get(page::ritual_done))
 }
 
+mod edit;
 mod page;
 mod structs;
 
@@ -32,11 +33,16 @@ pub async fn index(
 
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let all_characters_in_ritual = RitualCharacterData::get_all_characters(&db_connection).await;
+    let all_characters_in_ritual = RitualCharacterData::get_all_ritualists(&db_connection)
+        .await
+        .map_err(|err| {
+            eprintln!("[RITUAL INDEX] Failed to read ritualist data! {err:?}");
+            RootErrors::InternalServerError
+        })?;
 
     let amount_of_main_characters: f64 = all_characters_in_ritual
         .iter()
-        .filter(|character| character.is_main_character)
+        .filter(|character| character.page_character.base_character.is_main_character)
         // safety: in prod this number isn't gonna cross 50, we're fine.
         .count() as f64;
 

@@ -19,12 +19,17 @@ pub async fn ritual_page(
 
     let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let all_characters_in_ritual = RitualCharacterData::get_all_characters(&db_connection).await;
+    let all_characters_in_ritual = RitualCharacterData::get_all_ritualists(&db_connection)
+        .await
+        .map_err(|err| {
+            eprintln!("[RITUAL PAGE] Failed to read ritualist data! {err:?}");
+            RootErrors::InternalServerError
+        })?;
 
     let ritual_characters = match settings.version {
         RitualVersion::Standard => all_characters_in_ritual
             .into_iter()
-            .filter(|character| character.is_main_character)
+            .filter(|character| character.page_character.base_character.is_main_character)
             .collect(),
         RitualVersion::Full => all_characters_in_ritual,
     };

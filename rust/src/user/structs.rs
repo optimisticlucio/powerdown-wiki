@@ -69,6 +69,8 @@ pub struct UserPermissions {
     pub can_modify_others_content: bool,
     /// Whether the given user type can upload, delete, and modify lore and lore categories.
     pub can_modify_lore: bool,
+    /// Whether the given user type can modify data related to The Ritual
+    pub can_update_ritual: bool,
 }
 
 #[derive(Debug)]
@@ -233,6 +235,7 @@ impl UserType {
                 can_modify_users: false,
                 can_modify_others_content: false,
                 can_modify_lore: false,
+                can_update_ritual: false,
             },
             Self::Uploader => UserPermissions {
                 can_post_art: true,
@@ -243,6 +246,7 @@ impl UserType {
                 can_modify_users: false,
                 can_modify_others_content: false,
                 can_modify_lore: true,
+                can_update_ritual: true,
             },
             Self::Admin => UserPermissions {
                 can_post_art: true,
@@ -253,6 +257,7 @@ impl UserType {
                 can_promote_to_admin: false,
                 can_modify_others_content: true,
                 can_modify_lore: true,
+                can_update_ritual: true,
             },
             Self::Superadmin => UserPermissions {
                 can_post_art: true,
@@ -263,6 +268,7 @@ impl UserType {
                 can_promote_to_admin: true,
                 can_modify_others_content: true,
                 can_modify_lore: true,
+                can_update_ritual: true,
             },
         }
     }

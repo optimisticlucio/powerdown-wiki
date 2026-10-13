@@ -9,7 +9,7 @@
             const listOfCharacters = [
                 {% for character in ritual_characters %}
                 {
-                name: "{{character.name}}",
+                name: "{{character.get_name()}}",
                 power: "{{character.power_name}}",
                 powerDesc: "{{character.power_description}}",
                 img: "{{character.get_art_url()}}"
