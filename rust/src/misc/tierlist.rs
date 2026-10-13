@@ -31,7 +31,12 @@ pub async fn tierlist(
 
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let all_base_characters = BaseCharacter::get_all_characters(&db_connection).await;
+    let all_base_characters = BaseCharacter::get_all_characters(&db_connection)
+        .await
+        .map_err(|err| {
+            eprintln!("[TIERLIST] Failed to read characters! {err:?}");
+            RootErrors::InternalServerError
+        })?;
 
     Ok(template_to_response(TierlistPage {
         user,

@@ -62,17 +62,22 @@ pub struct InfoboxRow {
 
 impl BaseCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
-    pub async fn get_by_slug(db_connection: &Object<Manager>, slug: &String) -> Option<Self> {
+    pub async fn get_by_slug(
+        db_connection: &Object<Manager>,
+        slug: &String,
+    ) -> Option<Result<Self, postgres::Error>> {
         let character_row = db_connection
             .query_one("SELECT * FROM character WHERE page_slug=$1", &[&slug])
             .await
             .ok()?;
 
-        Some(Self::try_from(&character_row).unwrap())
+        Some(Self::try_from(&character_row))
     }
 
     /// Gets BaseCharacter for all characters in the database.
-    pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<Self> {
+    pub async fn get_all_characters(
+        db_connection: &Object<Manager>,
+    ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(
@@ -82,23 +87,19 @@ impl BaseCharacter {
             .await
             .unwrap();
 
-        character_rows
-            .iter()
-            .map(|row| Self::try_from(row).unwrap())
-            .collect()
+        character_rows.iter().map(Self::try_from).collect()
     }
 
     /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
-    pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<Self> {
+    pub async fn get_birthday_characters(
+        db_connection: &Object<Manager>,
+    ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
             "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
-        character_rows
-            .iter()
-            .map(|row| Self::try_from(row).unwrap())
-            .collect()
+        character_rows.iter().map(Self::try_from).collect()
     }
 
     /// Gets a random character from the database.
