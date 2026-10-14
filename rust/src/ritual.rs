@@ -59,11 +59,18 @@ pub async fn index(
 
     let long_length = minutes_to_human_readable_time(
         AVERAGE_MINUTES_PER_CHARACTER * amount_of_characters_in_general,
-    );
+    )
+    .to_ascii_uppercase();
+
+    let show_uploader_bar = requesting_user
+        .as_ref()
+        .is_some_and(|user| user.user_type.permissions().can_update_ritual);
 
     Ok(template_to_response(RitualIndex {
         user: requesting_user,
         original_uri,
+
+        show_uploader_bar,
 
         standard_length,
         long_length,
@@ -75,6 +82,8 @@ pub async fn index(
 struct RitualIndex {
     user: Option<User>,
     original_uri: Uri,
+
+    show_uploader_bar: bool,
 
     /// The length to be listed for how long the standard ritual is.
     standard_length: String,

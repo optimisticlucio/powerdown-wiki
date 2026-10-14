@@ -42,7 +42,7 @@ function ritualV3Progress() {
         var guessedCharactersTag = document.getElementById("ritualDone");
 
         artTag.src = "/assets/img/pd-logo.svg"; // To make the image visibly changed.
-        artTag.src = "/assets/img/" + current_character["img"];
+        artTag.src = current_character["img"];
         nameTag.innerHTML = "NAME?";
         powerTag.innerHTML = "POWER?";
         powerExplanationTag.innerHTML = "???";
@@ -53,7 +53,7 @@ function ritualV3Progress() {
     }
     else {
         console.log("Finished ritual!");
-        window.location.href = new URL("/ritual/complete", window.location.href).href;
+        window.location.href = new URL("/misc/ritual/complete", window.location.href).href;
     }
 }
 

@@ -74,6 +74,21 @@ impl BaseCharacter {
         Some(Self::try_from(&character_row))
     }
 
+    pub async fn get_active_characters(
+        db_connection: &Object<Manager>,
+    ) -> Result<Vec<Self>, postgres::Error> {
+        // TODO: Select only what's necessary to speed it up.
+        let character_rows = db_connection
+            .query(
+                "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL ORDER BY short_name",
+                &[],
+            )
+            .await
+            .unwrap();
+
+        character_rows.iter().map(Self::try_from).collect()
+    }
+
     /// Gets BaseCharacter for all characters in the database.
     pub async fn get_all_characters(
         db_connection: &Object<Manager>,

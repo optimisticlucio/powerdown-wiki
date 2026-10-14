@@ -21,7 +21,7 @@
 
     <div class="ritual-editor">
         {% for character in characters_with_ritual_data %}
-        <div class="character">
+        <div class="character" data-id="{{character.page_character.base_character.db_id}}">
             <div class="info">
                 <img class="character-icon" src="{{character.get_thumbnail()}}" />
                 <div class="name">{{character.get_name()}}</div>
@@ -35,9 +35,9 @@
         </div>
         {% endfor %}
         {% for character in characters_without_ritual_data %}
-        <div class="character">
+        <div class="character" data-id="{{character.db_id}}">
             <div class="info">
-                <img class="character-img" src="{{character.get_thumbnail()}}" />
+                <img class="character-icon" src="{{character.get_thumbnail()}}" />
                 <div class="name">{{character.name}}</div>
             </div>
             <details>

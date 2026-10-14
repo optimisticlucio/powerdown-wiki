@@ -93,15 +93,16 @@
 
 .ritual-editor {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 1ch;
+    grid-template-columns: repeat(auto-fill, 16ch);
+    justify-content: start;
+    gap: 1em;
 
     .character {
         padding: 1ch;
         display: flex;
         flex-direction: column;
         gap: 1ch;
-        width: 16ch;
+        width: 100%;
         font-size: 1.1em;
 
         details {

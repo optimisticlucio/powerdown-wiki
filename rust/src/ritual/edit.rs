@@ -28,7 +28,7 @@ pub async fn edit_ritual_data_page(
         return Err(RootErrors::Forbidden);
     };
 
-    let all_characters = BaseCharacter::get_all_characters(&db_connection)
+    let all_characters = BaseCharacter::get_active_characters(&db_connection)
         .await
         .map_err(|err| {
             eprintln!("[RITUAL EDIT PAGE] Failed to read character data! {err:?}");
@@ -168,6 +168,10 @@ pub async fn edit_ritual_data(
     for added_character_data in added_characters {
         let mut columns: Vec<String> = Vec::new();
         let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
+
+        // TODO: Validate no one passed invalid character IDs. Right now it'll just return 500.
+        columns.push("character_id".into());
+        values.push(&added_character_data.character_id);
 
         columns.push("power_name".into());
         values.push(&added_character_data.power_name);

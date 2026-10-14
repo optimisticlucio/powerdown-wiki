@@ -63,13 +63,14 @@ async function attemptNewCharacterUpload(targetUrl = window.location.pathname) {
     const inputsToCheck = Array.from(document.querySelectorAll(".upload input"));
     if (inputsToCheck.some((inputItem) => !inputItem.checkValidity())) {
         updateErrorText(`<b>ERROR:</b> Some of the values are either not set or invalid. Fix all the sections that are highlighted in red!`);
+        return;
     }
 
     // Now, let's collect all of our data.
 
     let characterShortName = document.getElementById("characterName").value;
 
-    let characterSlug = document.getElementById("characterSlug").value || defaultCharacterSlug;
+    let characterSlug = document.getElementById("characterSlug").value || characterShortName.toLowerCase().replace(" ", "-");
 
     let postInfo = {
         name: characterShortName,
