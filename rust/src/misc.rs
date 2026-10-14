@@ -19,6 +19,7 @@ pub fn router() -> Router<ServerState> {
             get(edit::edit_misc_listing).post(post::edit_misc_section),
         )
         .route_with_tsr("/tierlist", get(tierlist::tierlist))
+        .nest("/ritual", crate::ritual::router())
 }
 
 #[axum::debug_handler]

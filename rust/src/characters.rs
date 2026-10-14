@@ -65,7 +65,12 @@ async fn character_index(
 
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let all_characters = BaseCharacter::get_all_characters(&db_connection).await;
+    let all_characters = BaseCharacter::get_all_characters(&db_connection)
+        .await
+        .map_err(|err| {
+            eprintln!("[CHARACTER INDEX] Failed to get all characters! {err:?}");
+            RootErrors::InternalServerError
+        })?;
 
     let mut active_characters: Vec<BaseCharacter> = all_characters
         .clone()
@@ -84,7 +89,12 @@ async fn character_index(
     let date_today_readable = utils::format_date_to_human_readable(current_time);
 
     let birthday_characters: Vec<BaseCharacter> =
-        BaseCharacter::get_birthday_characters(&db_connection).await;
+        BaseCharacter::get_birthday_characters(&db_connection)
+            .await
+            .map_err(|err| {
+                eprintln!("[CHARACTER INDEX] Failed to read birthday characters! {err:?}");
+                RootErrors::InternalServerError
+            })?;
     let birthday_character_names = {
         let only_names: Vec<&str> = birthday_characters
             .iter()

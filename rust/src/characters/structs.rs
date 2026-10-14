@@ -16,8 +16,8 @@ pub struct BaseCharacter {
     pub is_hidden: bool,
     #[serde(skip)] // This should be learned by reference to other values
     pub is_archived: bool,
-    /*#[serde(default)]
-    pub is_main_character: bool,*/
+    #[serde(default)]
+    pub is_main_character: bool,
     pub slug: String,
     pub name: String,
     pub thumbnail_key: String,
@@ -62,17 +62,37 @@ pub struct InfoboxRow {
 
 impl BaseCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
-    pub async fn get_by_slug(db_connection: &Object<Manager>, slug: &String) -> Option<Self> {
+    pub async fn get_by_slug(
+        db_connection: &Object<Manager>,
+        slug: &String,
+    ) -> Option<Result<Self, postgres::Error>> {
         let character_row = db_connection
             .query_one("SELECT * FROM character WHERE page_slug=$1", &[&slug])
             .await
             .ok()?;
 
-        Some(Self::from_db_row(&character_row))
+        Some(Self::try_from(&character_row))
+    }
+
+    pub async fn get_active_characters(
+        db_connection: &Object<Manager>,
+    ) -> Result<Vec<Self>, postgres::Error> {
+        // TODO: Select only what's necessary to speed it up.
+        let character_rows = db_connection
+            .query(
+                "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL ORDER BY short_name",
+                &[],
+            )
+            .await
+            .unwrap();
+
+        character_rows.iter().map(Self::try_from).collect()
     }
 
     /// Gets BaseCharacter for all characters in the database.
-    pub async fn get_all_characters(db_connection: &Object<Manager>) -> Vec<Self> {
+    pub async fn get_all_characters(
+        db_connection: &Object<Manager>,
+    ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(
@@ -82,17 +102,19 @@ impl BaseCharacter {
             .await
             .unwrap();
 
-        character_rows.iter().map(Self::from_db_row).collect()
+        character_rows.iter().map(Self::try_from).collect()
     }
 
     /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
-    pub async fn get_birthday_characters(db_connection: &Object<Manager>) -> Vec<Self> {
+    pub async fn get_birthday_characters(
+        db_connection: &Object<Manager>,
+    ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
             "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
-        character_rows.iter().map(Self::from_db_row).collect()
+        character_rows.iter().map(Self::try_from).collect()
     }
 
     /// Gets a random character from the database.
@@ -105,23 +127,29 @@ impl BaseCharacter {
             .await
             .unwrap();
 
-        Self::from_db_row(&character_row)
+        Self::try_from(&character_row).unwrap()
     }
 
-    /// Converts a DB row with the relevant info to a BaseCharacter struct.
-    fn from_db_row(row: &Row) -> Self {
-        let archival_reason: Option<String> = row.get("retirement_reason");
+    pub fn get_thumbnail(&self) -> String {
+        crate::utils::get_s3_public_object_url(&self.thumbnail_key)
+    }
+}
 
-        BaseCharacter {
-            db_id: row.get("id"),
-            is_hidden: row.get("is_hidden"),
-            //is_main_character: row.get("is_main_character"),
+impl TryFrom<&Row> for BaseCharacter {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let archival_reason: Option<String> = row.try_get("retirement_reason")?;
+
+        Ok(Self {
+            db_id: row.try_get("id")?,
+            is_hidden: row.try_get("is_hidden")?,
+            is_main_character: row.try_get("is_main_character")?,
             is_archived: archival_reason.is_some(),
-            name: row.get("short_name"),
-            thumbnail_key: row.get("thumbnail"),
-            slug: row.get("page_slug"),
-            birthday: row.get("birthday"),
-        }
+            name: row.try_get("short_name")?,
+            thumbnail_key: row.try_get("thumbnail")?,
+            slug: row.try_get("page_slug")?,
+            birthday: row.try_get("birthday")?,
+        })
     }
 }
 
@@ -153,36 +181,27 @@ impl PageCharacter {
             .await
             .ok()?;
 
-        Some(Self::from_db_row(&character_row))
+        Some(Self::try_from(&character_row).unwrap())
     }
+}
 
-    /// Converts a DB row with the relevant info to a PageCharacter struct.
-    fn from_db_row(row: &Row) -> Self {
-        let retirement_reason: Option<String> = row.get("retirement_reason");
-
-        Self {
-            base_character: BaseCharacter {
-                db_id: row.get("id"),
-                is_hidden: row.get("is_hidden"),
-                //is_main_character: row.get("is_main_character"),
-                is_archived: retirement_reason.is_some(),
-                name: row.get("short_name"),
-                thumbnail_key: row.get("thumbnail"),
-                slug: row.get("page_slug"),
-                birthday: row.get("birthday"),
-            },
-            long_name: row.get("long_name"),
-            subtitles: row.get("subtitles"),
-            creator: row.get("creator"),
-            retirement_reason,
-            logo_url: row.get("logo"),
-            page_img_key: row.get("page_image"),
-            infobox: row.get("infobox"),
-            overlay_css: row.get("overlay_css"),
-            custom_css: row.get("custom_css"),
-            page_contents: row.get("page_text"),
-            tag: row.get("relevant_tag"),
-        }
+impl TryFrom<&Row> for PageCharacter {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            base_character: BaseCharacter::try_from(row)?,
+            long_name: row.try_get("long_name")?,
+            subtitles: row.try_get("subtitles")?,
+            creator: row.try_get("creator")?,
+            retirement_reason: row.try_get("retirement_reason")?,
+            logo_url: row.try_get("logo")?,
+            page_img_key: row.try_get("page_image")?,
+            infobox: row.try_get("infobox")?,
+            overlay_css: row.try_get("overlay_css")?,
+            custom_css: row.try_get("custom_css")?,
+            page_contents: row.try_get("page_text")?,
+            tag: row.try_get("relevant_tag")?,
+        })
     }
 }
 

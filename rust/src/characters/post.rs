@@ -104,6 +104,9 @@ pub async fn add_character(
             columns.push("short_name".into());
             values.push(&recieved_page_character.base_character.name);
 
+            columns.push("is_main_character".into());
+            values.push(&recieved_page_character.base_character.is_main_character);
+
             columns.push("subtitles".into());
             values.push(&recieved_page_character.subtitles);
 
@@ -407,6 +410,13 @@ pub async fn modify_character(
             {
                 columns.push("page_slug".into());
                 values.push(&recieved_page_character.base_character.slug);
+            }
+
+            if recieved_page_character.base_character.is_main_character
+                != modified_character.base_character.is_main_character
+            {
+                columns.push("is_main_character".into());
+                values.push(&recieved_page_character.base_character.is_main_character);
             }
 
             if recieved_page_character.base_character.name != modified_character.base_character.name

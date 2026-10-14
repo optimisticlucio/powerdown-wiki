@@ -95,8 +95,12 @@ async fn homepage(
 
     let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let birthday_characters =
-        characters::BaseCharacter::get_birthday_characters(&db_connection).await;
+    let birthday_characters = characters::BaseCharacter::get_birthday_characters(&db_connection)
+        .await
+        .map_err(|err| {
+            eprintln!("[HOMEPAGE] Failed to read birthday characters! {err:?}");
+            RootErrors::InternalServerError
+        })?;
 
     let discord_link = utils::arbitrary_values::get_discord_link(&db_connection).await;
 

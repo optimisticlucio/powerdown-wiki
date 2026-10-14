@@ -22,6 +22,7 @@ mod lore;
 mod misc;
 mod nsfw_splash;
 mod refinery_migrations;
+mod ritual;
 mod scheduled_tasks;
 mod server_state;
 mod static_files;

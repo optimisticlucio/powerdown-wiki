@@ -1,0 +1,47 @@
+{% extends "base-template.html" %}
+
+{% block title %}The Ritual{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="The Ritual">
+<meta property="og:description" content="Power Down's Notorious Hazing Ritual.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
+{% block content %}
+<div class="wrapper dark">
+    <h1 style="text-align:center;">Commence the Ritual!</h1>
+
+    <img src="/static/img/misc/ritual/ritual-circle.webp" />
+
+    <div class="text">
+        <p>
+            <b>Welcome to The Ritual!</b> The Ritual is an initiation ritual for new members of Power Down. The new
+            member sits down in VC with as large of an audience as can be gathered,
+            and they proceed to go over as many characters as they can, guessing their names and powers.
+        </p>
+
+        <p>
+            We used to do this with someone pulling up every individual art piece in real time which, while endearing,
+            became a bit of a pain once we crossed the 80 character threshold.
+            So now the image and power reveal process is automated! Select your flavor of hellscape, and begin the
+            ritual! (Call everyone to get on VC first &lt;3 )
+        </p>
+    </div>
+
+    <div class="buttons">
+        <a href="/misc/ritual/active"><button class="light">Do the Standard Ritual <small>(takes about {{
+                    standard_length }})</small></button></a>
+        <a href="/misc/ritual/active?version=full"><button class="dark">Do the FULL Ritual <small>(WARNING -
+                    LEGITIMATELY TAKES {{
+                    long_length }})</small></button></a>
+    </div>
+
+    {% if show_uploader_bar %}
+    <div class="uploaderBar">
+        <a href="/misc/ritual/edit"><button class="light">Edit Ritual Data</button></a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
