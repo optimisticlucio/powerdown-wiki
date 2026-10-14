@@ -25,7 +25,7 @@ mod edit;
 mod page;
 mod structs;
 
-const AVERAGE_MINUTES_PER_CHARACTER: f64 = 2.0;
+const AVERAGE_MINUTES_PER_CHARACTER: f64 = 2.3;
 
 #[axum::debug_handler]
 pub async fn index(
