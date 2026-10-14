@@ -80,7 +80,7 @@ impl BaseCharacter {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(
-                "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL ORDER BY short_name",
+                "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND NOT is_hidden ORDER BY short_name",
                 &[],
             )
             .await
@@ -111,7 +111,7 @@ impl BaseCharacter {
     ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
-            "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
+            "SELECT * FROM character WHERE post_state='public' AND retirement_reason IS NULL AND NOT is_hidden AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE) ORDER BY short_name",
             &[]).await.unwrap();
 
         character_rows.iter().map(Self::try_from).collect()
@@ -121,7 +121,7 @@ impl BaseCharacter {
     pub async fn get_random_character(db_connection: &Object<Manager>) -> Self {
         let character_row = db_connection
             .query_one(
-                "SELECT * FROM character WHERE post_state='public' ORDER BY RANDOM() LIMIT 1",
+                "SELECT * FROM character WHERE post_state='public' AND NOT is_hidden ORDER BY RANDOM() LIMIT 1",
                 &[],
             )
             .await
