@@ -15,7 +15,10 @@ pub fn router() -> Router<ServerState> {
         .route("/", get(index))
         .route_with_tsr("/active", get(page::ritual_page))
         .route_with_tsr("/complete", get(page::ritual_done))
-        .route_with_tsr("/edit", get(edit::edit_ritual_data_page))
+        .route_with_tsr(
+            "/edit",
+            get(edit::edit_ritual_data_page).post(edit::edit_ritual_data),
+        )
 }
 
 mod edit;
