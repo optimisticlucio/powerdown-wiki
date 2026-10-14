@@ -100,7 +100,7 @@ fn minutes_to_human_readable_time(minutes: f64) -> String {
     let mut returned_string: String = String::new();
 
     if hours > 0 {
-        returned_string.push_str(&format!("{hours} hours"));
+        returned_string.push_str(&format!("{hours} hour{}", if hours > 1 { "s" } else { "" }));
     }
 
     if minutes > 0 {
@@ -108,7 +108,10 @@ fn minutes_to_human_readable_time(minutes: f64) -> String {
             returned_string.push_str(" and ");
         }
 
-        returned_string.push_str(&format!("{minutes} minutes"));
+        returned_string.push_str(&format!(
+            "{minutes} minute{}",
+            if minutes > 1 { "s" } else { "" }
+        ));
     }
 
     if returned_string.is_empty() {
