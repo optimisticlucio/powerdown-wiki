@@ -6,8 +6,8 @@ async function updateRitualData(targetUrl = window.location.pathname) {
 
     if (invalidRitualists.length) {
         updateErrorText("<b>Some ritualists have incomplete data!</b> Fill them out or delete them before submitting!");
-        incomplete[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        incomplete[0].querySelector('textarea:invalid').focus();
+        invalidRitualists[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        invalidRitualists[0].querySelector('textarea:invalid').focus();
         return;
     }
 
