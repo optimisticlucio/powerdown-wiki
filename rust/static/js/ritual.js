@@ -41,7 +41,7 @@ function ritualV3Progress() {
         var powerExplanationTag = document.getElementById("ritual-v3-power-desc");
         var guessedCharactersTag = document.getElementById("ritualDone");
 
-        artTag.src = "/assets/img/pd-logo.svg"; // To make the image visibly changed.
+        artTag.src = "/static/img/pd_logo.svg"; // To make the image visibly changed.
         artTag.src = current_character["img"];
         nameTag.innerHTML = "NAME?";
         powerTag.innerHTML = "POWER?";
