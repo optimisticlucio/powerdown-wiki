@@ -19,7 +19,7 @@ impl RitualCharacterData {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(
-                "SELECT * FROM ritual_info INNER JOIN character ON ritual_info.character_id == character.id WHERE character.post_state='public' AND character.retirement_reason IS NULL ORDER_BY character.short_name",
+                "SELECT * FROM ritual_info INNER JOIN character ON ritual_info.character_id=character.id WHERE character.post_state='public' AND character.retirement_reason IS NULL ORDER BY character.short_name",
                 &[],
             )
             .await

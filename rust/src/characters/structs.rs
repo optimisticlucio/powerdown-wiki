@@ -114,6 +114,10 @@ impl BaseCharacter {
 
         Self::try_from(&character_row).unwrap()
     }
+
+    pub fn get_thumbnail(&self) -> String {
+        crate::utils::get_s3_public_object_url(&self.thumbnail_key)
+    }
 }
 
 impl TryFrom<&Row> for BaseCharacter {

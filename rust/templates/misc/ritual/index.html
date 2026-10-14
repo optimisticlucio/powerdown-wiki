@@ -2,11 +2,18 @@
 
 {% block title %}The Ritual{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="The Ritual">
+<meta property="og:description" content="Power Down's Notorious Hazing Ritual.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block content %}
 <div class="wrapper dark">
     <h1 style="text-align:center;">Commence the Ritual!</h1>
 
-    <img src="/assets/img/misc/ritual-circle.webp" />
+    <img src="/static/img/misc/ritual/ritual-circle.webp" />
 
     <div class="text">
         <p>
@@ -24,9 +31,10 @@
     </div>
 
     <div class="buttons">
-        <a href="active"><button class="light">Do the Standard Ritual <small>(takes about {{
+        <a href="/misc/ritual/active"><button class="light">Do the Standard Ritual <small>(takes about {{
                     standard_length }})</small></button></a>
-        <a href="active?version=long"><button class="dark">Do the FULL Ritual <small>(WARNING - LEGITIMATELY TAKES {{
+        <a href="/misc/ritual/active?version=full"><button class="dark">Do the FULL Ritual <small>(WARNING -
+                    LEGITIMATELY TAKES {{
                     long_length }})</small></button></a>
     </div>
 </div>

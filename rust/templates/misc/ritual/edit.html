@@ -1,0 +1,65 @@
+{% extends "base-template.html" %}
+
+{% block title %}Edit Ritualists{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="Edit Ritualists">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
+{% block customhead %}
+<script src="/static/js/ritual-upload.js" defer></script>
+<script src="/static/js/upload-pages.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="wrapper wide upload">
+    <h1>Editing Ritual Data.</h1>
+    <h2>Personalizing the suffering sessions.</h2>
+
+    <div id="errorDisplay"></div>
+
+    <div class="ritual-editor">
+        {% for character in characters_with_ritual_data %}
+        <div class="character">
+            <div class="info">
+                <img class="character-icon" src="{{character.get_thumbnail()}}" />
+                <div class="name">{{character.get_name()}}</div>
+            </div>
+            <details>
+                <summary>Power Data</summary>
+                <label>Name: <textarea required name="powerName">{{character.power_name}}</textarea></label>
+                <label>Description: <textarea required
+                        name="powerDescription">{{character.power_description}}</textarea></label>
+            </details>
+        </div>
+        {% endfor %}
+        {% for character in characters_without_ritual_data %}
+        <div class="character">
+            <div class="info">
+                <img class="character-img" src="{{character.get_thumbnail()}}" />
+                <div class="name">{{character.name}}</div>
+            </div>
+            <details>
+                <summary>Power Data</summary>
+                <label>Name: <textarea required name="powerName"></textarea></label>
+                <label>Description: <textarea required name="powerDescription"></textarea></label>
+            </details>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="uploaderBar">
+        <button class="dark" onclick="updateRitualData()">Update Ritualist Data</button>
+    </div>
+
+    <script>
+        document.querySelectorAll('textarea').forEach(el => {
+            const check = () =>
+                el.setCustomValidity(el.value.trim() ? '' : 'Required');
+            el.addEventListener('input', check);
+            check(); // set initial state
+        });
+    </script>
+</div>
+{% endblock %}

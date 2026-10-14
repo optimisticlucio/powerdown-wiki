@@ -90,3 +90,76 @@
         }
     }
 }
+
+.ritual-editor {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1ch;
+
+    .character {
+        padding: 1ch;
+        display: flex;
+        flex-direction: column;
+        gap: 1ch;
+        width: 16ch;
+        font-size: 1.1em;
+
+        details {
+            background-color: alpha(from black / 30%);
+            padding: 0.5ch 1ch;
+
+            &>summary {
+                list-style: none;
+
+                &::-webkit-details-marker {
+                    display: none;
+                }
+            }
+        }
+
+        .info {
+            display: flex;
+            flex-direction: row;
+            text-align: left;
+            justify-content: start;
+            gap: 1ch;
+            align-items: center;
+
+            .name {
+                font-weight: bold;
+            }
+        }
+
+        .character-icon {
+            font-size: 0.6em;
+        }
+
+        textarea {
+            min-height: 1em;
+            height: min-content;
+            width: 100%;
+            resize: none;
+            field-sizing: content;
+        }
+
+        /* The character has no written data */
+        &:not(:has(textarea:valid)) {
+            background-color: var(--bright-shade);
+        }
+
+        /* The character has data */
+        &:not(:has(textarea:invalid)) {
+            background-color: orange;
+
+            .info .name {
+                color: var(--dark-shade);
+            }
+        }
+
+        /* The character has only one of their fields filled, meaning someone didn't finish filling it out */
+        &:has(textarea:valid):has(textarea:invalid) {
+            background-color: darkred;
+        }
+
+    }
+}

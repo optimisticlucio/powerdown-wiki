@@ -13,8 +13,9 @@ use structs::RitualCharacterData;
 pub fn router() -> Router<ServerState> {
     Router::new()
         .route("/", get(index))
-        .route_with_tsr("inprogress", get(page::ritual_page))
-        .route_with_tsr("complete", get(page::ritual_done))
+        .route_with_tsr("/active", get(page::ritual_page))
+        .route_with_tsr("/complete", get(page::ritual_done))
+        .route_with_tsr("/edit", get(edit::edit_ritual_data_page))
 }
 
 mod edit;
@@ -96,6 +97,10 @@ fn minutes_to_human_readable_time(minutes: f64) -> String {
         }
 
         returned_string.push_str(&format!("{minutes} minutes"));
+    }
+
+    if returned_string.is_empty() {
+        returned_string.push_str("no time");
     }
 
     returned_string

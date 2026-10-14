@@ -1,41 +1,41 @@
 img.character-icon {
-    width: 100px;
-    height: 100px;
+    width: 6em;
+    height: 6em;
     object-fit: cover;
 }
 
 .birthday {
-        margin: 1em auto;
-        display: flex;
-        flex-direction: row;
-        width: fit-content;
+    margin: 1em auto;
+    display: flex;
+    flex-direction: row;
+    width: fit-content;
 
-        img {
-            width: 75px;
-            height: 75px;
-            object-fit: cover;
+    img {
+        width: 75px;
+        height: 75px;
+        object-fit: cover;
+    }
+
+    div {
+        margin: auto 1em;
+
+        :first-child {
+            margin-top: 0;
         }
 
-        div {
+        :last-child {
+            margin-bottom: 0;
+        }
+
+        :only-child {
             margin: auto 1em;
+        }
 
-            :first-child {
-                margin-top:0;
-            }
-
-            :last-child {
-                margin-bottom:0;
-            }
-
-            :only-child {
-                margin: auto 1em;
-            }
-
-            h1 {
-                font-size: 1.5em;
-            }
+        h1 {
+            font-size: 1.5em;
         }
     }
+}
 
 .character-selector {
 
@@ -45,13 +45,13 @@ img.character-icon {
         gap: 1ch;
         background-color: var(--dark-shade);
         padding: 1ch;
-        
+
         .character-box {
             display: flex;
             flex-direction: column;
-            align-items: center; 
+            align-items: center;
             text-decoration: none;
-            
+
             p {
                 text-align: center;
                 margin-top: 0.5em;
@@ -74,7 +74,7 @@ img.character-icon {
     strong {
         color: var(--brightest-shade);
     }
-    
+
     h1 {
         margin: revert;
         font-size: 4em;
@@ -84,17 +84,19 @@ img.character-icon {
         font-size: 2em;
         text-transform: uppercase;
         font-family: 'Voltaire';
-        color: var(--brightest-shade);;
+        color: var(--brightest-shade);
+        ;
         margin: 0;
     }
 
     .exclusion-reason {
-        display: flex; 
+        display: flex;
         justify-content: center;
         text-wrap: balance;
         padding: 5px;
         margin: 15px;
-        background-color: var(--darkest-shade);;
+        background-color: var(--darkest-shade);
+        ;
 
         img {
             width: 75px;
@@ -111,7 +113,7 @@ img.character-icon {
                 font-weight: bold;
                 font-size: 1.5em;
             }
-            
+
             p {
                 margin: 7px;
             }
@@ -122,12 +124,12 @@ img.character-icon {
         margin-top: 10px;
         width: 90%;
         margin: auto;
-        display: flex; 
+        display: flex;
         align-content: stretch;
         justify-content: center;
 
         .left {
-            display: flex; 
+            display: flex;
             justify-content: center;
 
             .titles {
@@ -157,7 +159,7 @@ img.character-icon {
                     text-align: center;
 
                     &:hover {
-                        filter:brightness(0.6);
+                        filter: brightness(0.6);
                     }
                 }
 
@@ -165,17 +167,18 @@ img.character-icon {
                     text-align: left;
                 }
 
-                
+
             }
-            
+
             img {
                 z-index: 20;
                 margin: auto;
-                max-width: 4em; 
+                max-width: 4em;
                 max-height: 4em;
             }
-            
+
         }
+
         .right {
             margin-left: 2em;
             align-content: center;
@@ -201,7 +204,8 @@ img.character-icon {
         padding-left: 10%;
         padding-right: 10%;
 
-        h1, h2 {
+        h1,
+        h2 {
             font-size: 2em;
             text-transform: uppercase;
             font-family: 'Voltaire';
@@ -222,14 +226,16 @@ img.character-icon {
                 left: 0;
                 right: 0;
                 height: 2px;
-                background: var(--brightest-shade);;
+                background: var(--brightest-shade);
+                ;
                 z-index: 0;
                 transform: translateY(-50%);
             }
-        
+
             span {
                 position: relative;
-                background: var(--dark-shade);;
+                background: var(--dark-shade);
+                ;
                 padding: 0 0.5ch;
                 z-index: 1;
             }
@@ -243,7 +249,7 @@ img.character-icon {
         .relationship {
             display: flex;
             margin: 0.5em 0;
-            
+
             &.text {
                 padding: 0.5em;
             }
@@ -267,6 +273,7 @@ img.character-icon {
                 a {
                     text-decoration: none;
                 }
+
                 h2 {
                     font-size: 1.2em;
                     margin: 0%;
@@ -280,6 +287,7 @@ img.character-icon {
 
 .overlay {
     position: relative;
+
     &::before {
         content: '';
         position: absolute;
@@ -289,7 +297,7 @@ img.character-icon {
         height: max(100%, 100vh);
         z-index: 10;
         pointer-events: none;
-    } 
+    }
 }
 
 @media screen and (max-width: 1100px) {

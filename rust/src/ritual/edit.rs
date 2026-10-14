@@ -4,7 +4,7 @@ use crate::{
 };
 use askama::Template;
 use axum::{
-    extract::{OriginalUri, Query, State},
+    extract::{OriginalUri, State},
     response::Response,
 };
 use http::Uri;
@@ -46,10 +46,28 @@ pub async fn edit_ritual_data_page(
         .map(|ritual_data| &ritual_data.page_character.base_character)
         .collect();
 
-    let base_characters_without_ritual_data: Vec<&BaseCharacter> = all_characters
-        .iter()
-        .filter(|character| !base_characters_in_ritual.contains(character))
+    let base_characters_without_ritual_data: Vec<BaseCharacter> = all_characters
+        .into_iter()
+        .filter(|character| !base_characters_in_ritual.contains(&character))
         .collect();
 
-    todo!()
+    Ok(template_to_response(RitualEdit {
+        user: Some(requesting_user),
+        original_uri,
+
+        characters_with_ritual_data: ritualist_data,
+
+        characters_without_ritual_data: base_characters_without_ritual_data,
+    }))
+}
+
+#[derive(Debug, Template)]
+#[template(path = "misc/ritual/edit.html")]
+struct RitualEdit {
+    user: Option<User>,
+    original_uri: Uri,
+
+    characters_with_ritual_data: Vec<RitualCharacterData>,
+
+    characters_without_ritual_data: Vec<BaseCharacter>,
 }
