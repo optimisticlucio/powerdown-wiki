@@ -2,7 +2,7 @@ use chrono::{DateTime, Duration, Utc};
 use deadpool_postgres::Object;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
-use rand::Rng;
+use rand::RngExt;
 use serde::Deserialize;
 use std::env;
 use tower_cookies::cookie;

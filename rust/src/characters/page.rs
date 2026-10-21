@@ -83,14 +83,14 @@ fn parse_character_page_contents(unparsed_contents: &str) -> Option<String> {
     let mut parsed_contents = markdown_to_html(
         unparsed_contents,
         &comrak::Options {
-            extension: comrak::ExtensionOptions {
-                ..comrak::ExtensionOptions::default()
+            extension: comrak::options::Extension {
+                ..comrak::options::Extension::default()
             },
-            parse: comrak::ParseOptions {
-                ..comrak::ParseOptions::default()
+            parse: comrak::options::Parse {
+                ..comrak::options::Parse::default()
             },
-            render: comrak::RenderOptions {
-                ..comrak::RenderOptions::default()
+            render: comrak::options::Render {
+                ..comrak::options::Render::default()
             },
         },
     )

@@ -49,7 +49,7 @@ pub async fn story_page(
 
         let converted_story = {
             let mut parsing_options = comrak::Options::default();
-            parsing_options.render.unsafe_ = true; // Allow HTML in input.
+            parsing_options.render.r#unsafe = true; // Allow HTML in input.
 
             let unsafe_story = markdown_to_html(&requested_story.content, &parsing_options);
 
