@@ -8,7 +8,7 @@ authors = ["optimisticlucio <73440828+optimisticlucio@users.noreply.github.com>"
 ammonia = "4.1.1"
 askama = { version = "0.16.1" }
 aws-config = { version = "1.8.5", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "1.106.0"
+aws-sdk-s3 = { version = "1.106.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 axum = { version = "0.8.4", features = ["multipart", "original-uri", "macros"] }
 axum-extra = { version = "0.12.6", features = ["routing"] }
 chrono = { version = "0.4.41", features = ["now", "serde"] }
