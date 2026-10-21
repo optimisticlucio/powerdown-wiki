@@ -1,8 +1,7 @@
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 
 /// Gets the invite link for the discord server. Returns None if err, or if the link is set to null in the DB.
-pub async fn get_discord_link(db_connection: &Object<Manager>) -> Option<String> {
+pub async fn get_discord_link(db_connection: &Object) -> Option<String> {
     const GET_DISCORD_LINK_QUERY: &str =
         "SELECT item_value FROM arbitrary_value WHERE item_key='discord_invite_url';";
 
@@ -28,7 +27,7 @@ pub async fn get_discord_link(db_connection: &Object<Manager>) -> Option<String>
 
 /// Sets the invite link for the discord server. Set to None if the discord goes on lockdown.
 pub async fn set_discord_link(
-    db_connection: &Object<Manager>,
+    db_connection: &Object,
     new_link: &str,
 ) -> Result<u64, postgres::Error> {
     const SET_DISCORD_LINK_QUERY: &str =

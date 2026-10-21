@@ -1,5 +1,4 @@
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use postgres::Row;
 use serde::Deserialize;
 
@@ -37,7 +36,7 @@ impl MiscItem {
     }
 
     /// Returns all MiscItems in the DB, sorted.
-    pub async fn get_all(db_connection: &Object<Manager>) -> Vec<Self> {
+    pub async fn get_all(db_connection: &Object) -> Vec<Self> {
         let requested_category_rows = db_connection
             .query("SELECT * FROM misc", &[])
             .await

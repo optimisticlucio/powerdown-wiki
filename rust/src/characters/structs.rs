@@ -1,6 +1,5 @@
 use chrono;
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
 use serde::Deserialize;
@@ -63,7 +62,7 @@ pub struct InfoboxRow {
 impl BaseCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
     pub async fn get_by_slug(
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
         slug: &String,
     ) -> Option<Result<Self, postgres::Error>> {
         let character_row = db_connection
@@ -75,7 +74,7 @@ impl BaseCharacter {
     }
 
     pub async fn get_active_characters(
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
     ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
@@ -91,7 +90,7 @@ impl BaseCharacter {
 
     /// Gets BaseCharacter for all characters in the database.
     pub async fn get_all_characters(
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
     ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
@@ -107,7 +106,7 @@ impl BaseCharacter {
 
     /// Gets only the characters who's birthday is today. The date is enforced by the Postgres DB.
     pub async fn get_birthday_characters(
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
     ) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection.query(
@@ -118,7 +117,7 @@ impl BaseCharacter {
     }
 
     /// Gets a random character from the database.
-    pub async fn get_random_character(db_connection: &Object<Manager>) -> Self {
+    pub async fn get_random_character(db_connection: &Object) -> Self {
         let character_row = db_connection
             .query_one(
                 "SELECT * FROM character WHERE post_state='public' AND NOT is_hidden ORDER BY RANDOM() LIMIT 1",
@@ -175,7 +174,7 @@ impl Ord for BaseCharacter {
 
 impl PageCharacter {
     /// Returns the page info of a single character, found by their page slug. If no such character exists, returns None.
-    pub async fn get_by_slug(db_connection: &Object<Manager>, slug: &str) -> Option<PageCharacter> {
+    pub async fn get_by_slug(db_connection: &Object, slug: &str) -> Option<PageCharacter> {
         let character_row = db_connection
             .query_one("SELECT * FROM character WHERE page_slug=$1", &[&slug])
             .await

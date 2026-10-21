@@ -1,6 +1,5 @@
 use chrono::{DateTime, Duration, Utc};
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use postgres::Row;
 use postgres_types::{FromSql, ToSql};
 use rand::Rng;
@@ -102,7 +101,7 @@ pub enum Oauth2Provider {
 
 impl User {
     /// Given a user ID, returns the user, if it exists.
-    pub async fn get_by_id(db_connection: &Object<Manager>, given_id: &i32) -> Option<Self> {
+    pub async fn get_by_id(db_connection: &Object, given_id: &i32) -> Option<Self> {
         const GET_USER_QUERY: &str = "SELECT * FROM site_user WHERE id=$1";
 
         let resulted_row = db_connection
@@ -127,7 +126,7 @@ impl User {
 
     /// Given access to a request's cookie jar, attempts to get the logged in user.
     pub async fn get_from_cookie_jar(
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
         cookie_jar: &Cookies,
     ) -> Option<Self> {
         let user_session_id = cookie_jar.get("USER_SESSION_ID")?;
@@ -150,7 +149,7 @@ impl User {
     }
 
     /// Creates a new user in the DB, returns the created user.
-    pub async fn create_in_db(db_connection: &Object<Manager>, display_name: &str) -> Self {
+    pub async fn create_in_db(db_connection: &Object, display_name: &str) -> Self {
         let query = "INSERT INTO site_user (id,display_name) VALUES ($1,$2) RETURNING *";
 
         // To make sure the ID is fully unique, we'll create it just before inserting and let the DB assure it is unique.
@@ -290,7 +289,7 @@ impl UserSession {
     }
 
     /// Given a session ID, returns the session, if it exists.
-    pub async fn get_by_id(db_connection: &Object<Manager>, given_id: &str) -> Option<Self> {
+    pub async fn get_by_id(db_connection: &Object, given_id: &str) -> Option<Self> {
         const QUERY: &str = "SELECT * FROM user_session WHERE session_id=$1";
 
         let resulted_row = db_connection.query_opt(QUERY, &[&given_id]).await.unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
@@ -315,7 +314,7 @@ impl UserSession {
     }
 
     /// Given a valid user_session row, converts it to a UserSession struct.
-    async fn from_row(db_connection: &Object<Manager>, row: Row) -> Self {
+    async fn from_row(db_connection: &Object, row: Row) -> Self {
         Self {
             // Existence of parent user is enforced by DB, unwrap allowed.
             user: User::get_by_id(db_connection, &row.get("user_id"))
@@ -328,7 +327,7 @@ impl UserSession {
     }
 
     /// Starts a new user session for the given user, returns the session.
-    pub async fn create_new_session(db_connection: &Object<Manager>, user: &User) -> Self {
+    pub async fn create_new_session(db_connection: &Object, user: &User) -> Self {
         const QUERY: &str =
             "INSERT INTO user_session (user_id, session_id) VALUES ($1, $2) RETURNING *";
 
@@ -362,7 +361,7 @@ impl UserSession {
     /// Removes the given user session from the database. Will log out any user using this session.
     pub async fn delete_from_db(
         self,
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
     ) -> Result<(), tokio_postgres::Error> {
         const DELETE_QUERY: &str = "DELETE FROM user_session WHERE session_id=$1";
 
@@ -375,7 +374,7 @@ impl UserSession {
 
 impl OAuth2Association {
     /// Creates DB associations between the given OpenID data and the given user.
-    pub async fn associate_with_user(&self, db_connection: &Object<Manager>, user: &User) -> () {
+    pub async fn associate_with_user(&self, db_connection: &Object, user: &User) -> () {
         const QUERY: &str =
             "INSERT INTO user_oauth_association (user_id,provider,oauth_user_id) VALUES ($1,$2,$3)";
 
@@ -458,7 +457,7 @@ impl Oauth2Provider {
     /// Given a user ID, attempts to get a relevant user.
     pub async fn get_user_by_association(
         &self,
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
         oauth_user_id: &str,
     ) -> Option<User> {
         let query = "SELECT * FROM site_user INNER JOIN user_oauth_association ON site_user.id = user_oauth_association.user_id WHERE provider=$1 AND oauth_user_id=$2";

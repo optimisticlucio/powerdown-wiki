@@ -1,5 +1,4 @@
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use derive_builder::Builder;
 use postgres::Row;
 use serde::{Deserialize, Serialize};
@@ -54,7 +53,7 @@ impl BaseStory {
 
     /// Gets [amount_to_return] amount of stories, starting from the [index] newest piece.
     pub async fn get_from_index(
-        db_connection: Object<Manager>,
+        db_connection: Object,
         index: i64,
         amount_to_return: i64,
         search_parameters: &StorySearchParameters,
@@ -80,7 +79,7 @@ impl BaseStory {
 
     /// Returns the total amount of stories currently in the db.
     pub async fn get_total_amount(
-        db_connection: Object<Manager>,
+        db_connection: Object,
         search_params: &StorySearchParameters,
     ) -> Result<i64, Box<dyn std::error::Error>> {
         let mut query_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
@@ -99,7 +98,7 @@ impl BaseStory {
 
 impl PageStory {
     /// Returns the page info of a single story, found by their page slug. If no such story exists, returns None.
-    pub async fn get_by_slug(slug: &str, db_connection: &Object<Manager>) -> Option<Self> {
+    pub async fn get_by_slug(slug: &str, db_connection: &Object) -> Option<Self> {
         let story_row = db_connection
             .query_one("SELECT * FROM story WHERE page_slug=$1", &[&slug])
             .await

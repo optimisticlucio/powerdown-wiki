@@ -1,7 +1,6 @@
 use std::env;
 
-use deadpool::managed::Pool;
-use deadpool_postgres::{self, Manager, ManagerConfig, RecyclingMethod};
+use deadpool_postgres::{self, ManagerConfig, Pool, RecyclingMethod, Runtime};
 use postgres::NoTls;
 use tokio::join;
 
@@ -9,7 +8,7 @@ pub mod config;
 
 #[derive(Debug, Clone)]
 pub struct ServerState {
-    pub db_pool: Pool<Manager>,
+    pub db_pool: Pool,
     pub s3_client: aws_sdk_s3::Client, // Apparently cloning these doesn't cause race conditions.
     // If this ^ ends up being a bottleneck, create a client pool with deadpool.
     pub config: config::Config,
@@ -30,7 +29,7 @@ impl ServerState {
         }
     }
 
-    async fn initialize_db() -> Pool<Manager> {
+    async fn initialize_db() -> Pool {
         let mut db_config = deadpool_postgres::Config::new();
 
         db_config.manager = Some(ManagerConfig {
@@ -42,7 +41,7 @@ impl ServerState {
         db_config.user = env::var("POSTGRES_USER").ok();
 
         db_config
-            .create_pool(Some(deadpool::Runtime::Tokio1), NoTls)
+            .create_pool(Some(Runtime::Tokio1), NoTls)
             .unwrap()
     }
 

@@ -4,8 +4,7 @@ use crate::{
     utils::sql::PostState,
 };
 use chrono::{DateTime, Utc};
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use postgres::Row;
 use serde::{Deserialize, Deserializer};
 
@@ -41,7 +40,7 @@ pub struct PageArt {
 }
 
 impl BaseArt {
-    pub async fn get_by_slug(db_connection: &Object<Manager>, page_slug: &str) -> Option<Self> {
+    pub async fn get_by_slug(db_connection: &Object, page_slug: &str) -> Option<Self> {
         let requested_art = db_connection
             .query_one("SELECT * FROM art WHERE page_slug=$1", &[&page_slug])
             .await
@@ -50,7 +49,7 @@ impl BaseArt {
         Some(Self::from_db_row(&requested_art))
     }
 
-    pub async fn get_random_art(db_connection: &Object<Manager>) -> Self {
+    pub async fn get_random_art(db_connection: &Object) -> Self {
         let random_art = db_connection
             .query_one(
                 "SELECT * FROM art WHERE post_state='public' ORDER BY RANDOM() LIMIT 1",
@@ -64,7 +63,7 @@ impl BaseArt {
 
     /// Gets [amount_to_return] amount of art pieces, starting from the [index] newest piece.
     pub async fn get_art_from_index(
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
         index: i64,
         amount_to_return: i64,
         search_parameters: &ArtSearchParameters,
@@ -106,7 +105,7 @@ impl BaseArt {
 }
 
 impl PageArt {
-    pub async fn get_by_slug(db_connection: &Object<Manager>, page_slug: &str) -> Option<Self> {
+    pub async fn get_by_slug(db_connection: &Object, page_slug: &str) -> Option<Self> {
         let requested_art = db_connection
             .query_one("SELECT * FROM art WHERE page_slug=$1", &[&page_slug])
             .await
@@ -116,7 +115,7 @@ impl PageArt {
     }
 
     /// Converts a DB row with the relevant info to a PageArt struct.
-    async fn from_db_row(db_connection: &Object<Manager>, row: &Row) -> Self {
+    async fn from_db_row(db_connection: &Object, row: &Row) -> Self {
         let art_id: i32 = row.get("id");
 
         // Get the relevant art URLs from the art_file table.
@@ -171,7 +170,7 @@ impl PageArt {
     }
 
     /// Returns the comments underneath a given art post, sorted by posting time.
-    pub async fn get_comments(post_id: &i32, db_connection: &Object<Manager>) -> Vec<Comment> {
+    pub async fn get_comments(post_id: &i32, db_connection: &Object) -> Vec<Comment> {
         // Get the relevant art URLs from the art_file table.
         let comment_futures: Vec<_> = db_connection
             .query("SELECT * FROM art_comment WHERE under_post=$1", &[post_id])
@@ -373,7 +372,7 @@ pub struct Comment {
 
 impl Comment {
     /// Converts a DB row with the relevant info to a Comment struct.
-    async fn from_db_row(row: &Row, db_connection: &Object<Manager>) -> Self {
+    async fn from_db_row(row: &Row, db_connection: &Object) -> Self {
         Self {
             posting_user: User::get_by_id(db_connection, &row.get("poster_id")).await,
             posting_time: row.get("posting_time"),

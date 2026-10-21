@@ -13,8 +13,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use comrak::markdown_to_html;
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use http::Uri;
 use postgres_types::ToSql;
 
@@ -133,7 +132,7 @@ pub async fn art_page(
 async fn get_older_and_newer_art_slugs(
     slug: &str,
     params: &structs::ArtSearchParameters,
-    db_connection: &Object<Manager>,
+    db_connection: &Object,
 ) -> (Option<String>, Option<String>) {
     let mut sql_params: Vec<&(dyn ToSql + Sync)> = vec![&slug];
 

@@ -9,8 +9,7 @@ use axum::{
     Router,
 };
 use axum_extra::routing::RouterExt;
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use http::Uri;
 use structs::ArtSearchParameters;
 use tower_cookies::Cookies;
@@ -185,7 +184,7 @@ async fn art_index(
 
 /// Returns the total amount of art currently in the db. May be given tags to constrain the search
 pub async fn get_total_amount_of_art(
-    db_connection: &Object<Manager>,
+    db_connection: &Object,
     search_params: &ArtSearchParameters,
 ) -> Result<i64, Box<dyn std::error::Error>> {
     let mut query_params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
@@ -208,7 +207,7 @@ fn get_search_url(params: ArtSearchParameters) -> String {
 
 /// Returns all the unique tags in all art.
 // TODO: Should probably cache this. Not a frequently changing field, and even if it does, a short discrepancy is ok.
-pub async fn get_all_tags(db_connection: &Object<Manager>) -> Vec<String> {
+pub async fn get_all_tags(db_connection: &Object) -> Vec<String> {
     let answers = db_connection
         .query("SELECT DISTINCT unnest(tags) AS tags FROM art;", &[])
         .await
@@ -222,7 +221,7 @@ pub async fn get_all_tags(db_connection: &Object<Manager>) -> Vec<String> {
 
 /// Returns all the unique artists in all art.
 // TODO: Should probably cache this. Not a frequently changing field, and even if it does, a short discrepancy is ok.
-pub async fn get_all_artists(db_connection: &Object<Manager>) -> Vec<String> {
+pub async fn get_all_artists(db_connection: &Object) -> Vec<String> {
     let answers = db_connection
         .query(
             "SELECT DISTINCT unnest(creators) AS creators FROM art;",

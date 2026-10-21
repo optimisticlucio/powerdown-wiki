@@ -1,6 +1,5 @@
 use crate::user::UsermadePost;
-use deadpool::managed::Object;
-use deadpool_postgres::Manager;
+use deadpool_postgres::Object;
 use postgres::Row;
 use serde::Deserialize;
 
@@ -41,7 +40,7 @@ impl LoreCategory {
     /// Returns the lore pages which have this category as their parent.
     pub async fn get_associated_lore_bases(
         &self,
-        db_connection: &Object<Manager>,
+        db_connection: &Object,
     ) -> Vec<BaseLore> {
         let requested_lore_bases = db_connection
             .query(
@@ -58,7 +57,7 @@ impl LoreCategory {
     }
 
     // Given a LoreCategory ID, returns the relevant object.
-    pub async fn get_by_id(db_connection: &Object<Manager>, given_id: i32) -> Option<Self> {
+    pub async fn get_by_id(db_connection: &Object, given_id: i32) -> Option<Self> {
         let requested_category = db_connection
             .query_one("SELECT * FROM lore_category WHERE id=$1", &[&given_id])
             .await
@@ -68,7 +67,7 @@ impl LoreCategory {
     }
 
     /// Returns all LoreCategories in the DB, sorted.
-    pub async fn get_all_categories(db_connection: &Object<Manager>) -> Vec<Self> {
+    pub async fn get_all_categories(db_connection: &Object) -> Vec<Self> {
         let requested_category_rows = db_connection
             .query("SELECT * FROM lore_category", &[])
             .await
@@ -150,7 +149,7 @@ impl PageLore {
     }
 
     /// Given a lore page slug, returns the relevant lore page. Returns none if the slug doesn't exist in the DB.
-    pub async fn get_from_slug(db_connection: &Object<Manager>, slug: &str) -> Option<Self> {
+    pub async fn get_from_slug(db_connection: &Object, slug: &str) -> Option<Self> {
         let requested_page = db_connection
             .query_one("SELECT * FROM lore WHERE slug=$1", &[&slug])
             .await
@@ -160,7 +159,7 @@ impl PageLore {
     }
 
     /// Returns the LoreCategory which owns the given PageLore
-    pub async fn get_parent_category(&self, db_connection: &Object<Manager>) -> LoreCategory {
+    pub async fn get_parent_category(&self, db_connection: &Object) -> LoreCategory {
         // Unwrap is ok here because DB enforces parent_category_id exists.
         LoreCategory::get_by_id(db_connection, self.parent_category_id)
             .await
