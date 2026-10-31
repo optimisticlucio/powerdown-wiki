@@ -12,9 +12,7 @@ pub struct RitualCharacterData {
 
 impl RitualCharacterData {
     /// Gets RitualCharacterData for all characters in the database.
-    pub async fn get_all_ritualists(
-        db_connection: &Object,
-    ) -> Result<Vec<Self>, postgres::Error> {
+    pub async fn get_all_ritualists(db_connection: &Object) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(

@@ -89,9 +89,7 @@ impl BaseCharacter {
     }
 
     /// Gets BaseCharacter for all characters in the database.
-    pub async fn get_all_characters(
-        db_connection: &Object,
-    ) -> Result<Vec<Self>, postgres::Error> {
+    pub async fn get_all_characters(db_connection: &Object) -> Result<Vec<Self>, postgres::Error> {
         // TODO: Select only what's necessary to speed it up.
         let character_rows = db_connection
             .query(
