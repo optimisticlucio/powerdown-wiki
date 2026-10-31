@@ -19,7 +19,7 @@ pub async fn add_lore_page(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };
@@ -119,7 +119,7 @@ pub async fn edit_lore_page(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };
@@ -261,7 +261,7 @@ pub async fn edit_lore_categories(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };

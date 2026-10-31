@@ -63,7 +63,7 @@ async fn character_index(
         .await
         .map_err(|_| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let all_characters = BaseCharacter::get_all_characters(&db_connection)
         .await

@@ -144,7 +144,7 @@ async fn oauth_process<
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let logged_in_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let logged_in_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     // Did the user give us an authorization code?
     let authorization_code = match query.code {

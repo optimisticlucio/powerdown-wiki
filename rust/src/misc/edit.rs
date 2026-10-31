@@ -16,7 +16,7 @@ pub async fn edit_misc_listing(
     let db_connection = state.db_pool.get().await.unwrap();
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };

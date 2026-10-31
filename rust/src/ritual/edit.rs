@@ -18,7 +18,7 @@ pub async fn edit_ritual_data_page(
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
 
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let Some(requesting_user) = requesting_user else {
         return Err(RootErrors::Unauthorized);
@@ -94,7 +94,7 @@ pub async fn edit_ritual_data(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };

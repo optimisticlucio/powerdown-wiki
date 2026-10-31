@@ -29,7 +29,7 @@ pub async fn tierlist(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let all_base_characters = BaseCharacter::get_all_characters(&db_connection)
         .await

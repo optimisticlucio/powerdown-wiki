@@ -39,7 +39,7 @@ pub async fn story_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(requested_story) =
         structs::PageStory::get_by_slug(&story_slug, &db_connection).await
@@ -61,7 +61,7 @@ pub async fn story_page(
         };
 
         Ok(template_to_response(StoryPage {
-            user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+            user: User::easy_login_with_cookie_jar(&state, &cookie_jar).await?,
             original_uri,
 
             story_title: &requested_story

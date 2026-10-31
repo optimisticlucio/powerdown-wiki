@@ -36,7 +36,7 @@ pub async fn index(
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
 
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     // This is an unholy mess. I apologize to whoever needs to fix this later, likely me.
     // We just need to get all of the categories and their subpages.

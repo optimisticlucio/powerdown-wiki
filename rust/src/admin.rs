@@ -37,7 +37,7 @@ pub async fn admin_panel(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     if !user_is_admin(&user) {
         return Err(RootErrors::NotFound(Box::new((

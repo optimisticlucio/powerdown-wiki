@@ -12,7 +12,7 @@ pub async fn edit_character_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(requested_character) =
         structs::PageCharacter::get_by_slug(&db_connection, &character_slug).await

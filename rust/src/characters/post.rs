@@ -45,7 +45,7 @@ pub async fn add_character(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };
@@ -354,7 +354,7 @@ pub async fn modify_character(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };
@@ -646,7 +646,7 @@ pub async fn character_posting_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     Ok(template_to_response(CharacterPostingPage {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        user: User::easy_login_with_cookie_jar(&state, &cookie_jar).await?,
         original_uri,
 
         character_being_modified: None,

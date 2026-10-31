@@ -122,16 +122,19 @@ impl User {
         resulting_rows.iter().map(Self::try_from).collect()
     }
 
-    /// Given access to a request's cookie jar, attempts to get the logged in user.
-    pub async fn get_from_cookie_jar(db_connection: &Object, cookie_jar: &Cookies) -> Option<Self> {
+    /// Given access to a request's cookie jar, attempts to get the logged in user. Has side effects!
+    pub async fn login_with_cookie_jar(
+        db_connection: &Object,
+        cookie_jar: &Cookies,
+    ) -> Option<Self> {
         let user_session_id = cookie_jar.get("USER_SESSION_ID")?;
         let user_session = UserSession::get_by_id(db_connection, user_session_id.value()).await?;
 
         Some(user_session.user)
     }
 
-    /// Given access to a request's cookie jar, attempts to get the logged in user. Convenience function; get_from_cookie_jar version for the proper one.
-    pub async fn easy_get_from_cookie_jar(
+    /// Given access to a request's cookie jar, attempts to get the logged in user. Convenience function; login_with_cookie_jar version for the proper one.
+    pub async fn easy_login_with_cookie_jar(
         state: &ServerState,
         cookie_jar: &Cookies,
     ) -> Result<Option<Self>, RootErrors> {
@@ -140,7 +143,7 @@ impl User {
             .get()
             .await
             .map_err(|_| RootErrors::InternalServerError)?;
-        Ok(User::get_from_cookie_jar(&db_connection, cookie_jar).await)
+        Ok(User::login_with_cookie_jar(&db_connection, cookie_jar).await)
     }
 
     /// Creates a new user in the DB, returns the created user.

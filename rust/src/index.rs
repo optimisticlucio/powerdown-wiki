@@ -93,7 +93,7 @@ async fn homepage(
             .get(0)
     };
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let birthday_characters = characters::BaseCharacter::get_birthday_characters(&db_connection)
         .await
@@ -140,7 +140,7 @@ async fn onboarding(
         .await
         .map_err(|_| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let discord_link = utils::arbitrary_values::get_discord_link(&db_connection).await;
 

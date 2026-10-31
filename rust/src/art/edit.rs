@@ -18,7 +18,7 @@ pub async fn edit_art_page(
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
 
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         None => return Err(RootErrors::Unauthorized),
         Some(requesting_user) => requesting_user,
     };

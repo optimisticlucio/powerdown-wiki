@@ -37,7 +37,7 @@ pub async fn add_art(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };
@@ -102,7 +102,7 @@ pub async fn add_art(
             columns.push("is_nsfw".into());
             values.push(&page_art.base_art.is_nsfw);
 
-            let uploading_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+            let uploading_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
             if let Some(uploading_user) = &uploading_user {
                 columns.push("uploading_user_id".into());
@@ -344,7 +344,7 @@ pub async fn art_posting_page(
     let db_connection = state.db_pool.get().await.unwrap();
 
     Ok(template_to_response(ArtPostingPage {
-        user: User::get_from_cookie_jar(&db_connection, &cookie_jar).await,
+        user: User::login_with_cookie_jar(&db_connection, &cookie_jar).await,
         original_uri,
 
         art_being_modified: None,
@@ -368,7 +368,7 @@ pub async fn edit_art_put_request(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's asking to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         None => return Err(RootErrors::Unauthorized),
         Some(requesting_user) => requesting_user,
     };
