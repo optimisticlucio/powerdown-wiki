@@ -38,8 +38,28 @@
     }
 
     table.userlist {
-        .profile-pic {
-            font-size: 0.5em;
+        border-collapse: collapse;
+        width: 100%;
+
+        th {
+            background-color: var(--dark-shade);
         }
+
+        tr {
+            border-bottom: 0.5ch solid var(--dark-shade);
+        }
+
+        tr:last-child {
+            border-bottom: none;
+        }
+
+        td {
+            padding: 1ch;
+        }
+
+        .profile-pic {
+            font-size: 0.7em;
+        }
+
     }
 }

@@ -28,10 +28,22 @@ pub async fn user_list(
         ))));
     }
 
-    let all_users = User::get_all_users(&db_connection).await.map_err(|err| {
+    let mut all_users = User::get_all_users(&db_connection).await.map_err(|err| {
         eprintln!("[USER LIST] Error in getting all users: {err:?}");
         RootErrors::InternalServerError
     })?;
+
+    // For convenience of reading (and likely relevance), sort by user type, then by last seen.
+    // Lastly by ID just so we have *something* that's consistent incase two users are last seen together.
+
+    all_users.sort_by(|user1, user2| {
+        user1
+            .user_type
+            .cmp(&user2.user_type)
+            .reverse() // Descending "priority".
+            .then_with(|| user1.last_seen.cmp(&user2.last_seen).reverse()) // Descending times last seen.
+            .then_with(|| user1.id.cmp(&user2.id))
+    });
 
     Ok(template_to_response(UserListPage {
         user,

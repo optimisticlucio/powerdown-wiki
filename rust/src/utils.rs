@@ -65,7 +65,7 @@ pub fn format_duration_to_lossy_human_readable(duration: Duration) -> String {
         })
         .unwrap_or(format!(
             "{total_seconds} second{}",
-            if total_seconds > 1 { "s" } else { "" }
+            if total_seconds != 1 { "s" } else { "" }
         ))
 }
 

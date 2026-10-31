@@ -36,7 +36,7 @@ pub struct User {
     pub last_seen: DateTime<Utc>,     // The last time this user interacted with the wiki.
 }
 
-#[derive(FromSql, ToSql, Debug, Clone, Deserialize, PartialEq)]
+#[derive(FromSql, ToSql, Debug, Clone, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
 #[postgres(name = "user_type", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")] // Add this line
 pub enum UserType {
@@ -231,7 +231,9 @@ impl User {
         format!(
             "{} ago",
             utils::format_duration_to_lossy_human_readable(
-                (self.last_seen - chrono::Utc::now()).to_std().unwrap(),
+                (chrono::Utc::now() - self.last_seen)
+                    .to_std()
+                    .unwrap_or_default(),
             )
         )
     }
@@ -241,7 +243,9 @@ impl User {
         format!(
             "{} ago",
             utils::format_duration_to_lossy_human_readable(
-                (self.last_modified - chrono::Utc::now()).to_std().unwrap(),
+                (chrono::Utc::now() - self.last_modified)
+                    .to_std()
+                    .unwrap_or_default(),
             )
         )
     }
