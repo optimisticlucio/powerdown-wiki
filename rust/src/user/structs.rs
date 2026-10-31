@@ -33,6 +33,7 @@ pub struct User {
     pub profile_pic_s3_key: Option<String>, // The S3 key of their pfp image. Assumed to be in public bucket.
     pub last_modified: DateTime<Utc>,       // The last time that this user's info was modified.
     pub creator_name: Option<String>, // The name which identifies this user in art posts and such.
+    pub last_seen: DateTime<Utc>,     // The last time this user interacted with the wiki.
 }
 
 #[derive(FromSql, ToSql, Debug, Clone, Deserialize, PartialEq)]
@@ -109,26 +110,20 @@ impl User {
             .await
             .unwrap(); // Can unwrap here because ID uniqueness enforced by DB.
 
-        resulted_row.map(Self::from_row)
+        resulted_row.map(|row| Self::try_from(&row).unwrap())
     }
 
-    /// Given a valid site_user row, converts it to a User struct.
-    fn from_row(row: Row) -> Self {
-        Self {
-            id: row.get("id"),
-            display_name: row.get("display_name"),
-            user_type: row.get("user_type"),
-            profile_pic_s3_key: row.get("profile_picture_s3_key"),
-            creator_name: row.get("creator_name"),
-            last_modified: row.get("last_modified_date"),
-        }
+    /// Returns all users currently listed in the DB. Returns error if the call to the DB failed in some way.
+    pub async fn get_all_users(db_connection: &Object) -> Result<Vec<Self>, tokio_postgres::Error> {
+        const GET_USERS_QUERY: &str = "SELECT * FROM site_user";
+
+        let resulting_rows = db_connection.query(GET_USERS_QUERY, &[]).await?;
+
+        resulting_rows.iter().map(Self::try_from).collect()
     }
 
     /// Given access to a request's cookie jar, attempts to get the logged in user.
-    pub async fn get_from_cookie_jar(
-        db_connection: &Object,
-        cookie_jar: &Cookies,
-    ) -> Option<Self> {
+    pub async fn get_from_cookie_jar(db_connection: &Object, cookie_jar: &Cookies) -> Option<Self> {
         let user_session_id = cookie_jar.get("USER_SESSION_ID")?;
         let user_session = UserSession::get_by_id(db_connection, user_session_id.value()).await?;
 
@@ -164,7 +159,7 @@ impl User {
 
             // If the insert was successful, return the created user!
             if let Ok(successful_user_row) = result_of_insert {
-                created_user = Some(Self::from_row(successful_user_row));
+                created_user = Some(Self::try_from(&successful_user_row).unwrap());
             }
         }
 
@@ -212,6 +207,21 @@ impl User {
     /// Returns whether a given user can modify this user's visible data. (Pfp, nickname, etc)
     pub fn can_have_visible_data_modified_by(&self, other: &Self) -> bool {
         self == other || other.user_type.permissions().can_modify_users
+    }
+}
+
+impl TryFrom<&Row> for User {
+    type Error = tokio_postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            display_name: row.try_get("display_name")?,
+            user_type: row.try_get("user_type")?,
+            profile_pic_s3_key: row.try_get("profile_picture_s3_key")?,
+            creator_name: row.try_get("creator_name")?,
+            last_modified: row.try_get("last_modified_date")?,
+            last_seen: row.try_get("last_seen")?,
+        })
     }
 }
 
@@ -359,10 +369,7 @@ impl UserSession {
     }
 
     /// Removes the given user session from the database. Will log out any user using this session.
-    pub async fn delete_from_db(
-        self,
-        db_connection: &Object,
-    ) -> Result<(), tokio_postgres::Error> {
+    pub async fn delete_from_db(self, db_connection: &Object) -> Result<(), tokio_postgres::Error> {
         const DELETE_QUERY: &str = "DELETE FROM user_session WHERE session_id=$1";
 
         db_connection
@@ -467,6 +474,6 @@ impl Oauth2Provider {
             .await
             .unwrap(); // Can unwrap here because access token uniqueness enforced by DB.
 
-        resulted_row.map(User::from_row)
+        resulted_row.map(|row| User::try_from(&row).unwrap())
     }
 }
