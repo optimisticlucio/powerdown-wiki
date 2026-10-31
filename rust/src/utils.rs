@@ -73,7 +73,7 @@ pub fn format_duration_to_lossy_human_readable(duration: Duration) -> String {
 pub fn format_relative_lossy_time(time: DateTime<Utc>) -> String {
     let time_delta = (chrono::Utc::now() - time).to_std().unwrap_or_default();
 
-    if time_delta.is_zero() {
+    if time_delta.as_secs() < 1 {
         "right now".to_string()
     } else {
         format!(
