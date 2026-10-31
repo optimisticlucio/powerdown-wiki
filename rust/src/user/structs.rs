@@ -228,26 +228,12 @@ impl User {
 
     /// Returns the "last_seen" field in a human-readable way.
     pub fn last_seen_readable(&self) -> String {
-        format!(
-            "{} ago",
-            utils::format_duration_to_lossy_human_readable(
-                (chrono::Utc::now() - self.last_seen)
-                    .to_std()
-                    .unwrap_or_default(),
-            )
-        )
+        utils::format_relative_lossy_time(self.last_seen)
     }
 
     /// Returns the "last_modified" field in a human-readable way.
     pub fn last_modified_readable(&self) -> String {
-        format!(
-            "{} ago",
-            utils::format_duration_to_lossy_human_readable(
-                (chrono::Utc::now() - self.last_modified)
-                    .to_std()
-                    .unwrap_or_default(),
-            )
-        )
+        utils::format_relative_lossy_time(self.last_modified)
     }
 }
 

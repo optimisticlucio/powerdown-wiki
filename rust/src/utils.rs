@@ -69,6 +69,20 @@ pub fn format_duration_to_lossy_human_readable(duration: Duration) -> String {
         ))
 }
 
+/// Given a date, returns a readable, lossy version of how long it's been since then.
+pub fn format_relative_lossy_time(time: DateTime<Utc>) -> String {
+    let time_delta = (chrono::Utc::now() - time).to_std().unwrap_or_default();
+
+    if time_delta.is_zero() {
+        "right now".to_string()
+    } else {
+        format!(
+            "{} ago",
+            format_duration_to_lossy_human_readable(time_delta)
+        )
+    }
+}
+
 pub fn join_names_human_readable(names: Vec<&str>) -> String {
     match names.len() {
         0 => String::new(),
