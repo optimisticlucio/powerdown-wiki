@@ -10,12 +10,17 @@ use axum_extra::routing::RouterExt;
 use http::Uri;
 
 mod arbitrary_values;
+mod user_list;
 
 pub fn router() -> Router<ServerState> {
-    Router::new().route("/", get(admin_panel)).route_with_tsr(
-        "/arbitrary_values",
-        get(arbitrary_values::arbitrary_value_panel).patch(arbitrary_values::patch_arbitrary_value),
-    )
+    Router::new()
+        .route("/", get(admin_panel))
+        .route_with_tsr(
+            "/arbitrary_values",
+            get(arbitrary_values::arbitrary_value_panel)
+                .patch(arbitrary_values::patch_arbitrary_value),
+        )
+        .route_with_tsr("/user_list", get(user_list::user_list))
 }
 
 #[derive(Debug, Template)]
@@ -37,7 +42,7 @@ pub async fn admin_panel(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     if !user_is_admin(&user) {
         return Err(RootErrors::NotFound(Box::new((

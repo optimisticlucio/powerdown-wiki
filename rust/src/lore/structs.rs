@@ -38,10 +38,7 @@ pub struct PageLore {
 
 impl LoreCategory {
     /// Returns the lore pages which have this category as their parent.
-    pub async fn get_associated_lore_bases(
-        &self,
-        db_connection: &Object,
-    ) -> Vec<BaseLore> {
+    pub async fn get_associated_lore_bases(&self, db_connection: &Object) -> Vec<BaseLore> {
         let requested_lore_bases = db_connection
             .query(
                 "SELECT * FROM lore WHERE belongs_to_category=$1",

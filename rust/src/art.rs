@@ -77,7 +77,7 @@ async fn art_index(
 
     let db_connection = state.db_pool.get().await.unwrap();
 
-    let user: Option<User> = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user: Option<User> = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     // If the user is looking for something spicy, make sure we allow them to.
     if query_params.is_nsfw {

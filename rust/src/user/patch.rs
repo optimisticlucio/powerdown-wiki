@@ -37,7 +37,7 @@ pub async fn patch_user(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(requesting_user) => requesting_user,
         None => {
             return Err(RootErrors::Unauthorized);
@@ -315,7 +315,7 @@ pub async fn modify_user_page(
     let db_connection = state.db_pool.get().await.unwrap();
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(requesting_user) => requesting_user,
         None => {
             return Err(RootErrors::Unauthorized);

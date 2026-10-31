@@ -69,7 +69,7 @@ pub async fn story_index(
     .await;
 
     Ok(template_to_response(StoryIndex {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?,
+        user: User::easy_login_with_cookie_jar(&state, &cookie_jar).await?,
         original_uri,
 
         stories: relevant_stories,

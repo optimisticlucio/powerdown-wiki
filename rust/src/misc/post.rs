@@ -33,7 +33,7 @@ pub async fn edit_misc_section(
         .map_err(|_| RootErrors::InternalServerError)?;
 
     // Who's trying to do this?
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         Some(user) => user,
         None => return Err(RootErrors::Unauthorized),
     };

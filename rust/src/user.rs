@@ -41,7 +41,7 @@ pub async fn self_user_page(
     State(state): State<ServerState>,
     cookie_jar: Cookies,
 ) -> Result<Response, RootErrors> {
-    let session_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
+    let session_user = User::easy_login_with_cookie_jar(&state, &cookie_jar).await?;
 
     match session_user {
         // If they aren't logged in, we have no user data to show em. Toss towards the login page!
@@ -72,7 +72,7 @@ pub async fn other_user_page(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let parsed_user_id: i32 = match user_id.parse() {
         Ok(id) => id,
@@ -109,7 +109,7 @@ pub async fn login_page(
     cookie_jar: Cookies,
 ) -> Result<Response, RootErrors> {
     Ok(utils::template_to_response(LoginTemplate {
-        user: User::easy_get_from_cookie_jar(&state, &cookie_jar).await?, // TODO: Check if user is logged in, and if so, connect more accounts!
+        user: User::easy_login_with_cookie_jar(&state, &cookie_jar).await?, // TODO: Check if user is logged in, and if so, connect more accounts!
         original_uri,
 
         discord_oauth_url: &Oauth2Provider::Discord.get_user_login_url(),

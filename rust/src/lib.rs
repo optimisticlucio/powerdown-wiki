@@ -81,7 +81,7 @@ async fn fallback(
     OriginalUri(original_uri): OriginalUri,
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<RootErrors, RootErrors> {
-    let requesting_user = User::easy_get_from_cookie_jar(&state, &cookie_jar).await?;
+    let requesting_user = User::easy_login_with_cookie_jar(&state, &cookie_jar).await?;
     Ok(errs::RootErrors::NotFound(Box::new((
         original_uri,
         cookie_jar,

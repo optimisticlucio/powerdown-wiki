@@ -61,7 +61,7 @@ pub async fn art_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     if let Some(requested_art) = structs::PageArt::get_by_slug(&db_connection, &art_slug).await {
         // If the user is looking for something spicy, make sure we allow them to.
@@ -182,7 +182,7 @@ pub async fn delete_art_page(
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
 
-    let requesting_user = match User::get_from_cookie_jar(&db_connection, &cookie_jar).await {
+    let requesting_user = match User::login_with_cookie_jar(&db_connection, &cookie_jar).await {
         // If the user isn't logged in, kick them out.
         None => return Err(RootErrors::Unauthorized),
         Some(user) => user,

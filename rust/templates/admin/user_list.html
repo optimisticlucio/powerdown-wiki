@@ -1,0 +1,41 @@
+{% extends "base-template.html" %}
+
+{% block title %}User List{% endblock %}
+
+{% block customhead %}
+<script src="/static/js/admin.js" defer></script>{% endblock %}
+
+{% block content %}
+<div class="admin arbitrary wrapper">
+    <a href="/admin"> &lt;-- Back to Admin Panel</a>
+
+    <h1>User List</h1>
+
+    <p class="text">
+        This page lets you see all the registered users on the site, along with <em>most</em> stored data on them. Right
+        now you can't edit data on them directly because lucio was lazy. However, you can be a creep and regularly check
+        this place!
+    </p>
+
+    <table class="userlist">
+        <tr>
+            <th>ID</th>
+            <th>Img</th>
+            <th>Username</th>
+            <th>Type</th>
+            <th>Last Seen</th>
+            <th>Last Modified</th>
+        </tr>
+        {% for user in all_users %}
+        <tr>
+            <td><a href="/user/{{user.id}}">{{user.id}}</a></td>
+            <td><img src="{{user.get_pfp_url()}}" class="profile-pic" /></td>
+            <td>{{user.display_name}}</td>
+            <td>{{user.user_type}}</td>
+            <td>{{user.last_seen_readable()}}</td>
+            <td>{{user.last_modified_readable()}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

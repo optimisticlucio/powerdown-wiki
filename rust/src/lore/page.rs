@@ -30,7 +30,7 @@ pub async fn lore_page(
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
 
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let requested_lore = match PageLore::get_from_slug(&db_connection, &lore_slug).await {
         None => {

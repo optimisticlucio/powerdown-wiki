@@ -32,7 +32,7 @@ pub async fn arbitrary_value_panel(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     if !super::user_is_admin(&user) {
         return Err(RootErrors::NotFound(Box::new((
@@ -70,7 +70,7 @@ pub async fn patch_arbitrary_value(
         .await
         .map_err(|_err| RootErrors::InternalServerError)?;
 
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let requesting_admin = match requesting_user {
         Some(_) => {

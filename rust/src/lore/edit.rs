@@ -24,7 +24,7 @@ pub async fn edit_categories(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let Some(requesting_user) = requesting_user else {
         return Err(RootErrors::Unauthorized);
@@ -60,7 +60,7 @@ pub async fn new_lore_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let Some(requesting_user) = requesting_user else {
         return Err(RootErrors::Unauthorized);
@@ -88,7 +88,7 @@ pub async fn edit_lore_page(
     cookie_jar: tower_cookies::Cookies,
 ) -> Result<Response, RootErrors> {
     let db_connection = state.db_pool.get().await.unwrap();
-    let requesting_user = User::get_from_cookie_jar(&db_connection, &cookie_jar).await;
+    let requesting_user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
     let Some(requested_lore) = structs::PageLore::get_from_slug(&db_connection, &lore_slug).await
     else {
