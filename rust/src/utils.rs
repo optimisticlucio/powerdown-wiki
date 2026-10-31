@@ -38,6 +38,37 @@ pub fn format_date_to_human_readable(date: DateTime<Utc>) -> String {
     format!("{readable_month} {readable_day}")
 }
 
+/// Returns the most "major" precision of the given duration.
+pub fn format_duration_to_lossy_human_readable(duration: Duration) -> String {
+    let total_seconds = duration.as_secs();
+
+    const SECONDS_PER_UNIT: [(u64, &str); 6] = [
+        (365 * 24 * 60 * 60, "year"),
+        (30 * 24 * 60 * 60, "month"),
+        (7 * 24 * 60 * 60, "week"),
+        (24 * 60 * 60, "day"),
+        (60 * 60, "hour"),
+        (60, "minute"),
+    ];
+
+    SECONDS_PER_UNIT
+        .iter()
+        .find(|(time_unit, _)| *time_unit <= total_seconds)
+        .map(|(seconds_per_unit, unit_name)| {
+            let amount_of_unit = total_seconds / seconds_per_unit;
+            format!(
+                "{} {}{}",
+                amount_of_unit,
+                unit_name,
+                if amount_of_unit > 1 { "s" } else { "" }
+            )
+        })
+        .unwrap_or(format!(
+            "{total_seconds} second{}",
+            if total_seconds > 1 { "s" } else { "" }
+        ))
+}
+
 pub fn join_names_human_readable(names: Vec<&str>) -> String {
     match names.len() {
         0 => String::new(),

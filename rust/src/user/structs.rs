@@ -130,7 +130,12 @@ impl User {
         let user_session_id = cookie_jar.get("USER_SESSION_ID")?;
         let user_session = UserSession::get_by_id(db_connection, user_session_id.value()).await?;
 
-        Some(user_session.user)
+        // If we reached this point, this is a valid, logged-in user. We update their last_seen field.
+        let logged_user = user_session.user;
+        // If it fails, who cares, it's a side effect, just move on.
+        let _ = logged_user.update_last_seen(db_connection).await;
+
+        Some(logged_user)
     }
 
     /// Given access to a request's cookie jar, attempts to get the logged in user. Convenience function; login_with_cookie_jar version for the proper one.
@@ -190,6 +195,15 @@ impl User {
         format!("{}/user/{}", std::env::var("WEBSITE_URL").unwrap(), self.id)
     }
 
+    async fn update_last_seen(&self, db_connection: &Object) -> Result<u64, tokio_postgres::Error> {
+        const UPDATE_LAST_SEEN_QUERY: &str =
+            "UPDATE site_user SET last_seen=CURRENT_TIMESTAMP WHERE id=$1";
+
+        db_connection
+            .execute(UPDATE_LAST_SEEN_QUERY, &[&self.id])
+            .await
+    }
+
     // Returns whether another user can modify this user's type.
     pub fn can_have_user_type_modified_by(&self, other: &Self) -> bool {
         // Can't change your own permissions.
@@ -210,6 +224,26 @@ impl User {
     /// Returns whether a given user can modify this user's visible data. (Pfp, nickname, etc)
     pub fn can_have_visible_data_modified_by(&self, other: &Self) -> bool {
         self == other || other.user_type.permissions().can_modify_users
+    }
+
+    /// Returns the "last_seen" field in a human-readable way.
+    pub fn last_seen_readable(&self) -> String {
+        format!(
+            "{} ago",
+            utils::format_duration_to_lossy_human_readable(
+                (self.last_seen - chrono::Utc::now()).to_std().unwrap(),
+            )
+        )
+    }
+
+    /// Returns the "last_modified" field in a human-readable way.
+    pub fn last_modified_readable(&self) -> String {
+        format!(
+            "{} ago",
+            utils::format_duration_to_lossy_human_readable(
+                (self.last_modified - chrono::Utc::now()).to_std().unwrap(),
+            )
+        )
     }
 }
 

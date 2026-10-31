@@ -6,7 +6,7 @@
     }
 
     a {
-        color:black;
+        color: black;
         background-color: white;
         mix-blend-mode: lighten;
         font-weight: bold;
@@ -34,6 +34,12 @@
             h3 {
                 color: var(--brightest-shade);
             }
+        }
+    }
+
+    table.userlist {
+        .profile-pic {
+            font-size: 0.5em;
         }
     }
 }
