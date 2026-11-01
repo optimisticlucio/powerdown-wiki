@@ -32,6 +32,13 @@
         <div class="character-box">
             Sorry, but your characters are in another castle!
         </div>
+        {% else %}
+        <a href="/characters/random" class="character-box">
+            <img class="character-icon" src="/static/img/pd_character_face.png">
+            <p>
+                Random
+            </p>
+        </a>
         {% endif %}
         {% for character in active_characters %}
         <a href="/characters/{{ character.slug }}" class="character-box">
