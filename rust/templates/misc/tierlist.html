@@ -5,6 +5,13 @@
 {% block customhead %}
 <script src="/static/js/tierlist.js" defer></script>{% endblock %}
 
+{% block meta %}
+<meta property="og:title" content="Tierlist Maker">
+<meta property="og:description" content="For arguing over which characters most fit their given boxes.">
+<meta property="og:image" itemprop="image"
+    content="{{ *crate::askama::WEBSITE_URL }}/static/img/pd_logo_with_stroke.png">
+{% endblock %}
+
 {% block content %}
 <div class="wrapper tierlist wide">
     <script>
