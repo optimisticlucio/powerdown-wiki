@@ -133,7 +133,7 @@
                 position-area: left center;
                 margin: 0;
                 margin-right: 1em;
-                box-shadow: 0px 0.5em 0.25em black;
+                filter: drop-shadow(0px 0.5em 0.25em rgba(0, 0, 0, 50%));
                 border-radius: 1ch;
                 padding: 1ch;
 
