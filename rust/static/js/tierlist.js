@@ -61,23 +61,39 @@ function generate_tier(text = "new tier", color = "orange") {
     let new_tier = document.createElement("div");
     new_tier.classList.add("tier");
 
-    let tier_settings = document.createElement("div");
-    tier_settings.classList.add("settings");
-    tier_settings.innerHTML = `<img src="/static/img/ui/up-arrow.png" onclick="move_tier_up(this)">
+    let tier_label = document.createElement("div");
+    tier_label.classList.add("label");
+    tier_label.style.backgroundColor = color;
+
+    let tier_settings_popover = document.createElement("div");
+    tier_settings_popover.popover = "auto";
+    tier_settings_popover.classList.add("label-settings-popover");
+
+    let tier_settings_flex = document.createElement("div");
+    tier_settings_flex.classList.add("label-settings");
+    tier_settings_flex.innerHTML = `<img src="/static/img/ui/up-arrow.png" onclick="move_tier_up(this)">
                 <input type="color" value="#ff0000" oninput="colorpicker_oninput(this)">
                 <img src="/static/img/ui/down-arrow.png" onclick="move_tier_down(this)">`;
+    tier_settings_popover.appendChild(tier_settings_flex);
+
+
+    let tier_label_gear = document.createElement("button");
+    tier_label_gear.classList.add("gear");
+    tier_label_gear.innerText = "⚙️";
+    tier_label_gear.popoverTargetElement = tier_settings_popover;
 
     let tier_name = document.createElement("div");
-    tier_name.classList.add("name");
+    tier_name.classList.add("label-text");
     tier_name.contentEditable = true;
     tier_name.innerHTML = text;
-    tier_name.style.backgroundColor = color;
     tier_name.spellcheck = false;
+
+    tier_label.append(tier_label_gear, tier_name, tier_settings_popover);
 
     let tier_holder = document.createElement("div");
     tier_holder.classList.add("holder");
 
-    new_tier.append(tier_settings, tier_name, tier_holder);
+    new_tier.append(tier_label, tier_holder);
 
     setup_tier(new_tier);
     return new_tier;
@@ -86,7 +102,7 @@ function generate_tier(text = "new tier", color = "orange") {
 // Fired by color-pickers; changes the color of the relevant tier name.
 function colorpicker_oninput(caller) {
     let parent_tier = caller.closest(".tier");
-    let name_div = parent_tier.querySelector(".name");
+    let name_div = parent_tier.querySelector(".label");
     let color = caller.value;
     name_div.style.backgroundColor = color;
 
@@ -161,36 +177,6 @@ function download_screenshot_of_tierlist() {
         script.onload = runCapture;
         script.onerror = () => alert('Failed to load screenshot tool.');
         document.head.appendChild(script);
-    }
-}
-
-// If retired characters are hidden, shows them. Otherwise, hides them. Updates button accordingly.
-function flip_retired_characters(caller) {
-    let document_wrapper = document.querySelector(".wrapper");
-    if (document_wrapper.classList.contains("hide-retired")) {
-        document_wrapper.classList.remove("hide-retired");
-        caller.classList.remove("dark");
-        caller.innerHTML = "Hide Retired Characters";
-    }
-    else {
-        document_wrapper.classList.add("hide-retired");
-        caller.classList.add("dark");
-        caller.innerHTML = "Show Retired Characters";
-    }
-}
-
-// If hidden characters are hidden, shows them. Otherwise, hides them. Updates button accordingly.
-function flip_hidden_characters(caller) {
-    let document_wrapper = document.querySelector(".wrapper");
-    if (document_wrapper.classList.contains("hide-hidden")) {
-        document_wrapper.classList.remove("hide-hidden");
-        caller.classList.remove("dark");
-        caller.innerHTML = "Hide Hidden Characters";
-    }
-    else {
-        document_wrapper.classList.add("hide-hidden");
-        caller.classList.add("dark");
-        caller.innerHTML = "Show Hidden Characters";
     }
 }
 

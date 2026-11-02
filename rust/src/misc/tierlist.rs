@@ -31,7 +31,7 @@ pub async fn tierlist(
 
     let user = User::login_with_cookie_jar(&db_connection, &cookie_jar).await;
 
-    let all_base_characters = BaseCharacter::get_all_characters(&db_connection)
+    let all_base_characters = BaseCharacter::get_active_characters(&db_connection)
         .await
         .map_err(|err| {
             eprintln!("[TIERLIST] Failed to read characters! {err:?}");

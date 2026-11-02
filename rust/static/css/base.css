@@ -27,6 +27,10 @@ a {
     color: white;
 }
 
+button {
+    cursor: pointer;
+}
+
 .profile-pic {
     height: 3.25em;
     aspect-ratio: 1/1;
