@@ -57,13 +57,12 @@ function tier_kill_dragover_for_name(tier) {
 }
 
 // Creates and returns a tier.
-function generate_tier(text = "new tier", color = "orange") {
+function generate_tier(text = "new tier") {
     let new_tier = document.createElement("div");
     new_tier.classList.add("tier");
 
     let tier_label = document.createElement("div");
     tier_label.classList.add("label");
-    tier_label.style.backgroundColor = color;
 
     let tier_settings_popover = document.createElement("div");
     tier_settings_popover.popover = "auto";
@@ -71,15 +70,25 @@ function generate_tier(text = "new tier", color = "orange") {
 
     let tier_settings_flex = document.createElement("div");
     tier_settings_flex.classList.add("label-settings");
-    tier_settings_flex.innerHTML = `<img src="/static/img/ui/up-arrow.png" onclick="move_tier_up(this)">
-                <input type="color" value="#ff0000" oninput="colorpicker_oninput(this)">
-                <img src="/static/img/ui/down-arrow.png" onclick="move_tier_down(this)">`;
+    tier_settings_flex.innerHTML = `<div class="top">
+    <div class="butt">
+    <button class="fancy-button" style="background-color:purple" onclick="add_tier_after_this(this)">
+    <img src="/static/img/ui/plus.svg"/>Add Tier
+    </button>
+    <button class="fancy-button" style="background-color:red" onclick="delete_current_tier(this)">
+    <img src="/static/img/ui/delete.svg"/>BEGONE
+    </button>
+    </div>
+    <img class="arr" src="/static/img/ui/up_arrow.svg" onclick="move_tier_up(this)"><img class="arr" src="/static/img/ui/down_arrow.svg" onclick="move_tier_down(this)">
+    </div>
+                <input type="range" class="hue" min="0" max="360" value="0" oninput="colorpicker_oninput(this)">
+                `;
     tier_settings_popover.appendChild(tier_settings_flex);
 
 
     let tier_label_gear = document.createElement("button");
     tier_label_gear.classList.add("gear");
-    tier_label_gear.innerText = "⚙️";
+    tier_label_gear.innerHTML = `<img src="/static/img/ui/settings.svg"/>`;
     tier_label_gear.popoverTargetElement = tier_settings_popover;
 
     let tier_name = document.createElement("div");
@@ -103,22 +112,20 @@ function generate_tier(text = "new tier", color = "orange") {
 function colorpicker_oninput(caller) {
     let parent_tier = caller.closest(".tier");
     let name_div = parent_tier.querySelector(".label");
-    let color = caller.value;
-    name_div.style.backgroundColor = color;
-
-    let brightness = getBrightness(color);
-    if (brightness > 0.6) {
-        name_div.style.color = "black";
-    }
-    else if (brightness < 0.5) {
-        name_div.style.color = "white";
-    }
+    let hue = caller.value;
+    name_div.style.setProperty("--v", hue);
 }
 
 // Creates and adds a new tier at the bottom of the current ones
 function add_tier() {
     let new_tier = generate_tier();
     document.getElementById("tierlist-holder").appendChild(new_tier);
+}
+
+function add_tier_after_this(caller) {
+    let new_tier = generate_tier();
+    let parent_tier = caller.closest(".tier");
+    parent_tier.after(new_tier);
 }
 
 function move_tier_up(calling_button) {
@@ -139,6 +146,15 @@ function move_tier_down(calling_button) {
 
 function delete_last_tier() {
     let deleted_tier = document.getElementById("tierlist-holder").lastChild;
+    delete_given_tier(deleted_tier);
+}
+
+function delete_current_tier(caller) {
+    let parent_tier = caller.closest(".tier");
+    delete_given_tier(parent_tier);
+}
+
+function delete_given_tier(deleted_tier) {
     let rescuable_characters = deleted_tier.querySelectorAll(".character-icon");
     let tierlist_origin = document.getElementById("tierlist-origin").querySelector(".holder");
     tierlist_origin.append(...rescuable_characters);

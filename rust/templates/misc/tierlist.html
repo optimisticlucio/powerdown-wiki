@@ -6,28 +6,20 @@
 <script src="/static/js/tierlist.js" defer></script>{% endblock %}
 
 {% block content %}
-<div class="wrapper tierlist wide hide-retired hide-hidden">
+<div class="wrapper tierlist wide">
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             setup_tierlist();
         });
     </script>
     <h1>Tierlist Generator</h1>
-    <p>Because TierMaker can go suck my hog.</p>
-
-    <p>You can edit the tierlist title by double-clicking on it, by the way.</p>
-
-    <hr>
-
-    <div class="buttons">
-        <button onclick="add_tier()">Add Tier</button>
-        <button onclick="delete_last_tier()">Delete Last Tier</button>
-    </div>
+    <h2>Because TierMaker can go suck my hog.</h2>
 
     <div id="tierlist-collector">
         <div class="tierlist-top">
             <h1 id="tierlist-title" contenteditable="true" spellcheck="false">Tierlist Title</h1>
-            <button id="export-button" onclick="download_screenshot_of_tierlist()">Export</button>
+            <button id="export-button" class="fancy-button" onclick="download_screenshot_of_tierlist()"><img
+                    src="/static/img/ui/outbound.svg" />Export</button>
         </div>
         <div id="tierlist-holder">
         </div>
