@@ -20,6 +20,16 @@ function setup_tier(tier) {
     tier_kill_dragover_for_name(tier);
 }
 
+// Returns the first icon in the holder that should come after the cursor, if any.
+function find_icon_after_cursor(holder, event) {
+    return [...holder.querySelectorAll(".character-icon")].find((icon) => {
+        const rect = icon.getBoundingClientRect();
+        const is_in_lower_row = event.clientY < rect.top;
+        const is_in_same_row = event.clientY <= rect.bottom;
+        return is_in_lower_row || (is_in_same_row && event.clientX < rect.left + rect.width / 2);
+    });
+}
+
 function tier_ondrop(event) {
     event.preventDefault();
     const id = event.dataTransfer.getData("text/plain");
@@ -27,7 +37,7 @@ function tier_ondrop(event) {
 
     const holder = event.currentTarget.querySelector(".holder");
     if (holder && draggedElement) {
-        holder.appendChild(draggedElement);
+        holder.insertBefore(draggedElement, find_icon_after_cursor(holder, event) ?? null);
     }
 }
 
@@ -42,7 +52,7 @@ function char_ondragstart(event) {
 }
 
 function tier_kill_dragover_for_name(tier) {
-    let name_div = tier.querySelector("name");
+    let name_div = tier.querySelector("label");
     if (name_div == undefined) return;
 
     name_div.addEventListener("dragover", (event) => {
