@@ -70,7 +70,7 @@
 
     .tier {
         background-color: var(--darkest-shade);
-        min-height: 100px;
+        min-height: 6em;
         height: min-content;
         width: 100%;
         display: flex;
@@ -230,7 +230,8 @@
             flex-direction: row;
             align-items: start;
             flex-wrap: wrap;
-            gap: 1ch;
+            gap: 0.5ch;
+            padding: 0 0.5ch;
         }
     }
 
@@ -239,6 +240,7 @@
 
         .holder {
             padding: 2ch;
+            gap: 1ch;
             justify-content: center;
         }
     }
