@@ -15,7 +15,7 @@ struct EditCategoriesPage {
     user: Option<User>,
     original_uri: Uri,
 
-    sorted_lore_categories: Vec<structs::LoreCategory>,
+    lore_categories: Vec<structs::LoreCategoryWithChildren>,
 }
 
 pub async fn edit_categories(
@@ -34,13 +34,14 @@ pub async fn edit_categories(
         return Err(RootErrors::Forbidden);
     }
 
-    let sorted_lore_categories = structs::LoreCategory::get_all_categories(&db_connection).await;
+    let lore_categories =
+        structs::LoreCategoryWithChildren::get_all_categories(&db_connection).await;
 
     Ok(template_to_response(EditCategoriesPage {
         user: Some(requesting_user),
         original_uri,
 
-        sorted_lore_categories,
+        lore_categories,
     }))
 }
 
