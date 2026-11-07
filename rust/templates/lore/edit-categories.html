@@ -16,13 +16,21 @@
     </div>
     <script>
         const serverGivenCategories = [
-            {% for lore_category in sorted_lore_categories %}
+            {% for category_with_children in lore_categories %}
         {
-            name: "{{lore_category.title}}",
-                id: "{{lore_category.id}}",
-                    {% if let Some(category_description) = lore_category.description %}
-        description: "{{category_description}}"
+            name: "{{category_with_children.category.title}}",
+                id: "{{category_with_children.category.id}}",
+                    {% if let Some(category_description) = category_with_children.category.description %}
+        description: "{{category_description}}",
         {% endif %}
+        children: [
+            {% for child_page in category_with_children.children_pages %}
+            {
+                id: "{{child_page.id}}",
+                title: "{{child_page.title}}"
+            },
+            {% endfor %}
+        ],
             },
         {% endfor %}
         ];

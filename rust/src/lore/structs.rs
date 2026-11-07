@@ -16,6 +16,14 @@ pub struct LoreCategory {
 }
 
 #[derive(Debug, Deserialize)]
+// Mainly for the lore category editing.
+pub struct LoreCategoryWithChildren {
+    #[serde(flatten)]
+    pub category: LoreCategory,
+    pub children_pages: Vec<BaseLore>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct BaseLore {
     #[serde(default)]
     pub id: i32,
@@ -70,16 +78,14 @@ impl LoreCategory {
     /// Returns all LoreCategories in the DB, sorted.
     pub async fn get_all_categories(db_connection: &Object) -> Vec<Self> {
         let requested_category_rows = db_connection
-            .query("SELECT * FROM lore_category", &[])
+            .query("SELECT * FROM lore_category ORDER BY order_position", &[])
             .await
             .unwrap();
 
-        let mut requested_categories: Vec<LoreCategory> = requested_category_rows
+        let requested_categories: Vec<LoreCategory> = requested_category_rows
             .iter()
             .map(|row| Self::try_from(row).unwrap())
             .collect();
-
-        requested_categories.sort_by_key(|category| category.order_position);
 
         requested_categories
     }
@@ -120,6 +126,27 @@ impl TryFrom<&Row> for LoreCategory {
             title: row.try_get("title")?,
             description: row.try_get("description")?,
         })
+    }
+}
+
+impl LoreCategoryWithChildren {
+    /// Returns all LoreCategories in the DB, sorted.
+    pub async fn get_all_categories(db_connection: &Object) -> Vec<Self> {
+        let lore_categories = LoreCategory::get_all_categories(db_connection).await;
+
+        let mut lore_categories_and_contents = Vec::with_capacity(lore_categories.len());
+        for category in lore_categories {
+            let lore_bases = category.get_associated_lore_bases(db_connection).await;
+            lore_categories_and_contents.push((category, lore_bases));
+        }
+
+        lore_categories_and_contents
+            .into_iter()
+            .map(|(category, children_pages)| Self {
+                category,
+                children_pages,
+            })
+            .collect()
     }
 }
 

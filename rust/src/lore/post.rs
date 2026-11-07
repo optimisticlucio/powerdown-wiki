@@ -1,5 +1,5 @@
 use super::structs::PageLore;
-use crate::lore::structs::LoreCategory;
+use crate::lore::structs::{LoreCategory, LoreCategoryWithChildren};
 use crate::{utils::PostingSteps, RootErrors, ServerState, User};
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{IntoResponse, Redirect, Response};
@@ -260,7 +260,7 @@ fn validate_recieved_lore_page(given_lore_page: &PageLore) -> Result<(), String>
 pub async fn edit_lore_categories(
     State(state): State<ServerState>,
     cookie_jar: tower_cookies::Cookies,
-    Json(mut lore_categories): Json<Vec<LoreCategory>>,
+    Json(mut lore_categories): Json<Vec<LoreCategoryWithChildren>>,
 ) -> Result<Response, RootErrors> {
     let mut db_connection = state
         .db_pool
@@ -278,7 +278,7 @@ pub async fn edit_lore_categories(
         return Err(RootErrors::Forbidden);
     }
 
-    let existing_categories = LoreCategory::get_all_categories(&db_connection).await;
+    let existing_categories = LoreCategoryWithChildren::get_all_categories(&db_connection).await;
 
     // Let's build one big transaction so we don't have a bunch of inbetween moments.
     let sql_transaction = db_connection.transaction().await.map_err(|err| {
@@ -289,9 +289,9 @@ pub async fn edit_lore_categories(
     // Firstly let's sanitize and validate everything the user passed us.
 
     for category in &mut lore_categories {
-        sanitize_recieved_lore_category(category);
+        sanitize_recieved_lore_category(&mut category.category);
 
-        validate_recieved_lore_category(category).map_err(RootErrors::BadRequest)?;
+        validate_recieved_lore_category(&category.category).map_err(RootErrors::BadRequest)?;
     }
 
     // TODO: Validate the given order positions make sense. No duplicates and the like.
@@ -299,7 +299,7 @@ pub async fn edit_lore_categories(
     // Let's see if any of these are new, and add them to the db. As only positive id values are DB Generated, look for any nonpositive ones.
     let (new_categories, modified_categories): (Vec<_>, Vec<_>) = lore_categories
         .into_iter()
-        .partition(|category| category.id <= 0);
+        .partition(|category| category.category.id <= 0);
 
     for modified_category in modified_categories {
         // Check if anything changed. If so, toss a transaction on the pile.
@@ -309,34 +309,65 @@ pub async fn edit_lore_categories(
 
         let Some(existing_category) = existing_categories
             .iter()
-            .find(|category| category.id == modified_category.id)
+            .find(|category| category.category.id == modified_category.category.id)
         else {
             return Err(RootErrors::BadRequest(format!(
                 "Sent category named \"{}\" has nonexistent ID - {}",
-                modified_category.title, modified_category.id
+                modified_category.category.title, modified_category.category.id
             )));
         };
 
-        if existing_category.title != modified_category.title {
+        if existing_category.category.title != modified_category.category.title {
             columns.push("title".into());
-            values.push(&modified_category.title);
+            values.push(&modified_category.category.title);
         }
 
-        if existing_category.description != modified_category.description {
+        if existing_category.category.description != modified_category.category.description {
             columns.push("description".into());
-            values.push(&modified_category.description);
+            values.push(&modified_category.category.description);
         }
 
-        if existing_category.order_position != modified_category.order_position {
+        if existing_category.category.order_position != modified_category.category.order_position {
             columns.push("order_position".into());
-            values.push(&modified_category.order_position);
+            values.push(&modified_category.category.order_position);
+        }
+
+        // Check whether any of the children pages had their order within the category changed.
+        for modified_child in &modified_category.children_pages {
+            let Some(existing_child) = existing_category
+                .children_pages
+                .iter()
+                .find(|child| child.id == modified_child.id)
+            else {
+                return Err(RootErrors::BadRequest(format!(
+                    "Sent lore page named \"{}\" with ID {} does not belong to category \"{}\"",
+                    modified_child.title, modified_child.id, existing_category.category.title
+                )));
+            };
+
+            if existing_child.category_order_position == modified_child.category_order_position {
+                continue;
+            }
+
+            sql_transaction
+                .execute(
+                    "UPDATE lore SET category_order_position=$1 WHERE id=$2;",
+                    &[&modified_child.category_order_position, &modified_child.id],
+                )
+                .await
+                .map_err(|err| {
+                    eprintln!(
+                        "[EDIT LORE CATEGORIES] Adding SQL lore page order update query failed! {err:?}"
+                    );
+                    RootErrors::InternalServerError
+                })?;
         }
 
         if columns.is_empty() {
             continue;
         }
 
-        values.push(&modified_category.id);
+        values.push(&modified_category.category.id);
 
         // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
         let query = format!(
@@ -360,7 +391,7 @@ pub async fn edit_lore_categories(
 
         println!(
                 "[EDIT LORE CATEGORIES] User {} (ID:{}) is attempting to edit lore category {}. Proceeding with transaction.",
-                requesting_user.display_name, requesting_user.id, existing_category.title,
+                requesting_user.display_name, requesting_user.id, existing_category.category.title,
             );
     }
 
@@ -369,13 +400,15 @@ pub async fn edit_lore_categories(
         let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
         columns.push("title".into());
-        values.push(&new_category.title);
+        values.push(&new_category.category.title);
 
         columns.push("description".into());
-        values.push(&new_category.description);
+        values.push(&new_category.category.description);
 
         columns.push("order_position".into());
-        values.push(&new_category.order_position);
+        values.push(&new_category.category.order_position);
+
+        // A new category should not have any children listed under it, so I'm just gonna not check for that at all.
 
         // SAFETY: we're not inserting anything the user sent into the query. Everything user-inputted is passed as values later.
         let query = format!(
@@ -397,7 +430,7 @@ pub async fn edit_lore_categories(
 
         println!(
                 "[EDIT LORE CATEGORIES] User {} (ID:{}) is attempting to upload lore category {}. Proceeding with transaction.",
-                requesting_user.display_name, requesting_user.id, new_category.title,
+                requesting_user.display_name, requesting_user.id, new_category.category.title,
             );
     }
 

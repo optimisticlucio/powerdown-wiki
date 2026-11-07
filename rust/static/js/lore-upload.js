@@ -70,7 +70,7 @@ async function postLorePage(targetUrl = window.location.pathname) {
 
 
 // For the lore category section - creates a new Category, with the given name and description
-function createNewCategory(name = "New Category", description = null, id = null) {
+function createNewCategory(name = "New Category", description = null, id = null, children = []) {
     let categoryHolder = document.getElementsByClassName("categories")[0];
 
     let newCategory = document.createElement("div");
@@ -98,14 +98,52 @@ function createNewCategory(name = "New Category", description = null, id = null)
     moveDownButton.onclick = (el) => newCategory.nextElementSibling?.after(newCategory);
     moveDownButton.innerHTML = "↓";
 
-    newCategory.append(categoryTitle, categoryDescription, moveUpButton, moveDownButton);
+    let childrenCollapsible = document.createElement("details");
+
+    let childrenCollapsibleName = document.createElement("summary");
+    childrenCollapsibleName.innerText = "Lore Pages";
+    let childrenHolder = document.createElement("div");
+    childrenHolder.classList.add("childHolder")
+
+    Array.from(children).forEach((child) => {
+        let childDiv = document.createElement("div");
+        childDiv.classList.add("child");
+        childDiv.dataset.id = child.id;
+
+        let childName = document.createElement("b");
+        childName.innerText = child.title;
+
+        if (children.length > 1) {
+            let moveChildUpButton = document.createElement("button");
+            moveChildUpButton.onclick = (el) => childDiv.previousElementSibling?.before(childDiv);
+            moveChildUpButton.innerHTML = "↑";
+
+            let moveChildDownButton = document.createElement("button");
+            moveChildDownButton.onclick = (el) => childDiv.nextElementSibling?.after(childDiv);
+            moveChildDownButton.innerHTML = "↓";
+
+            childDiv.append(moveChildUpButton, moveChildDownButton);
+        }
+
+        childDiv.appendChild(childName);
+
+        childrenHolder.appendChild(childDiv);
+    });
+
+    if (children.length == 0) {
+        childrenHolder.innerText = "This category has no lore pages attributed to it yet.";
+    }
+
+    childrenCollapsible.append(childrenCollapsibleName, childrenHolder);
+
+    newCategory.append(categoryTitle, categoryDescription, childrenCollapsible, moveUpButton, moveDownButton);
 
     categoryHolder.appendChild(newCategory);
 }
 
 // Ran at when the edit-categories page is loaded to show the existing pages.
 function generateGivenCategories(givenCategories) {
-    givenCategories.forEach((givenCategory) => createNewCategory(givenCategory.name, givenCategory.description, givenCategory.id));
+    givenCategories.forEach((givenCategory) => createNewCategory(givenCategory.name, givenCategory.description, givenCategory.id, givenCategory.children));
 }
 
 // For the Lore Categories page. Uploads all the current lore categories.
@@ -116,7 +154,7 @@ async function uploadLoreCategories(targetUrl = window.location.pathname) {
     let categoryHolder = document.getElementsByClassName("categories")[0];
 
     Array.from(categoryHolder.children).forEach((categoryDiv, index) => {
-        let title = categoryDiv.querySelector("h3").innerHTML.trim();
+        let title = getContentEditableText(categoryDiv.querySelector("h3"));
 
         if (!title) {
             updateErrorText("One of the categories is missing a title!");
@@ -127,10 +165,11 @@ async function uploadLoreCategories(targetUrl = window.location.pathname) {
 
         let sendableCategory = {
             title,
-            order_position
+            order_position,
+            children_pages: []
         };
 
-        let description = categoryDiv.querySelector(".text").innerHTML.trim();
+        let description = getContentEditableText(categoryDiv.querySelector(".text"));
 
         if (description) {
             sendableCategory.description = description;
@@ -139,6 +178,16 @@ async function uploadLoreCategories(targetUrl = window.location.pathname) {
         if (categoryDiv.dataset.id) {
             sendableCategory.id = parseInt(categoryDiv.dataset.id);
         }
+
+        Array.from(categoryDiv.querySelectorAll(".child")).forEach((childDiv, index) => {
+            sendableCategory.children_pages.push({
+                id: parseInt(childDiv.dataset.id),
+                category_order_position: parseInt(index),
+                // Everything else here is dummy data. If you actually read it, dumbass.
+                title: "dummy",
+                slug: "dummy",
+            });
+        });
 
         sendableCategoryData.push(sendableCategory);
     });
