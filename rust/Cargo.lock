@@ -3256,6 +3256,7 @@ dependencies = [
  "tower",
  "tower-cookies",
  "tower-http 0.7.1",
+ "tracing",
  "tree_magic_mini",
  "urlencoding",
  "webp",
