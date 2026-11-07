@@ -23,6 +23,10 @@ pub struct BaseLore {
     pub title: String,
     pub description: Option<String>,
 
+    /// The position of this lore page within the broader category. Zero-indexed.
+    #[serde(default)]
+    pub category_order_position: i32,
+
     pub slug: String,
 }
 
@@ -41,7 +45,7 @@ impl LoreCategory {
     pub async fn get_associated_lore_bases(&self, db_connection: &Object) -> Vec<BaseLore> {
         let requested_lore_bases = db_connection
             .query(
-                "SELECT * FROM lore WHERE belongs_to_category=$1",
+                "SELECT * FROM lore WHERE belongs_to_category=$1 ORDER BY category_order_position",
                 &[&self.id],
             )
             .await
@@ -49,7 +53,7 @@ impl LoreCategory {
 
         requested_lore_bases
             .iter()
-            .map(BaseLore::from_db_row)
+            .map(|row| BaseLore::try_from(row).unwrap())
             .collect()
     }
 
@@ -60,7 +64,7 @@ impl LoreCategory {
             .await
             .ok()?;
 
-        Some(Self::from_db_row(&requested_category))
+        Some(Self::try_from(&requested_category).unwrap())
     }
 
     /// Returns all LoreCategories in the DB, sorted.
@@ -72,22 +76,12 @@ impl LoreCategory {
 
         let mut requested_categories: Vec<LoreCategory> = requested_category_rows
             .iter()
-            .map(Self::from_db_row)
+            .map(|row| Self::try_from(row).unwrap())
             .collect();
 
         requested_categories.sort_by_key(|category| category.order_position);
 
         requested_categories
-    }
-
-    /// Converts a DB row with the relevant info to a LoreCategory struct.
-    fn from_db_row(row: &Row) -> Self {
-        Self {
-            id: row.get("id"),
-            order_position: row.get("order_position"),
-            title: row.get("title"),
-            description: row.get("description"),
-        }
     }
 }
 
@@ -117,15 +111,28 @@ impl UsermadePost for LoreCategory {
     }
 }
 
-impl BaseLore {
-    /// Converts a DB row with the relevant info to a LoreBase struct.
-    fn from_db_row(row: &Row) -> Self {
-        Self {
-            id: row.get("id"),
-            title: row.get("title"),
-            description: row.get("description"),
-            slug: row.get("slug"),
-        }
+impl TryFrom<&Row> for LoreCategory {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            order_position: row.try_get("order_position")?,
+            title: row.try_get("title")?,
+            description: row.try_get("description")?,
+        })
+    }
+}
+
+impl TryFrom<&Row> for BaseLore {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            title: row.try_get("title")?,
+            description: row.try_get("description")?,
+            slug: row.try_get("slug")?,
+            category_order_position: row.try_get("category_order_position")?,
+        })
     }
 }
 
@@ -136,15 +143,6 @@ impl UsermadePost for BaseLore {
 }
 
 impl PageLore {
-    /// Converts a DB row with the relevant info to a LorePage struct.
-    fn from_db_row(row: &Row) -> Self {
-        Self {
-            base: BaseLore::from_db_row(row),
-            parent_category_id: row.get("belongs_to_category"),
-            content: row.get("content"),
-        }
-    }
-
     /// Given a lore page slug, returns the relevant lore page. Returns none if the slug doesn't exist in the DB.
     pub async fn get_from_slug(db_connection: &Object, slug: &str) -> Option<Self> {
         let requested_page = db_connection
@@ -152,7 +150,7 @@ impl PageLore {
             .await
             .ok()?;
 
-        Some(Self::from_db_row(&requested_page))
+        Some(Self::try_from(&requested_page).unwrap())
     }
 
     /// Returns the LoreCategory which owns the given PageLore
@@ -161,6 +159,17 @@ impl PageLore {
         LoreCategory::get_by_id(db_connection, self.parent_category_id)
             .await
             .unwrap()
+    }
+}
+
+impl TryFrom<&Row> for PageLore {
+    type Error = postgres::Error;
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            base: BaseLore::try_from(row)?,
+            parent_category_id: row.try_get("belongs_to_category")?,
+            content: row.try_get("content")?,
+        })
     }
 }
 

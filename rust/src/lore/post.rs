@@ -55,6 +55,8 @@ pub async fn add_lore_page(
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
+            // NOTE: We *intentionally* ignore the passed "category_order_by" field, as it shouldn't be set manually on this page.
+
             columns.push("belongs_to_category".into());
             values.push(&given_page_lore.parent_category_id);
 
@@ -153,9 +155,15 @@ pub async fn edit_lore_page(
             let mut columns: Vec<String> = Vec::new();
             let mut values: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = Vec::new();
 
+            // NOTE: We *intentionally* ignore the passed "category_order_by" field, as it shouldn't be set manually on this page.
+
             if existing_page_lore.parent_category_id != given_page_lore.parent_category_id {
                 columns.push("belongs_to_category".into());
                 values.push(&given_page_lore.parent_category_id);
+
+                // If we changed what category it belongs to, just float this to the top of that category and let someone else deal with it.
+                columns.push("category_order_position".into());
+                values.push(&0);
             }
 
             if existing_page_lore.base.slug != given_page_lore.base.slug {
